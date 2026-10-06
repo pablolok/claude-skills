@@ -11,6 +11,7 @@ For most users, we recommend installing the **Compliance Audit Orchestrator**. I
 | **[Compliance Audit Orchestrator](./skills/compliance-audit-orchestrator/)** | **[Recommended]** Smart dispatcher that determines the correct specialized audit (C#, Scripts, Angular, or Avalonia UI) to perform. |
 | **[Pre-Implementation Review](./skills/pre-implementation-review/)** | Reuse-first planning skill that checks for existing abstractions and duplication risk before implementation starts. |
 | **[Conductor](./skills/conductor/)** | Context-Driven Development workflow. Provides the `/conductor:*` commands for planning, tracking, and executing implementation phases. |
+| **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. Installs two hooks (Node) that log the skills used and ask for the retrospective after an archived backlog entry or 8 commits. |
 
 ## Specialized Skills
 

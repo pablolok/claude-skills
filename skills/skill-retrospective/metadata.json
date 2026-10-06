@@ -1,0 +1,5 @@
+{
+  "name": "skill-retrospective",
+  "version": "1.0.0",
+  "description": "When a piece of work closes, rewrite the skills it used in place with what it taught; two hooks log the skills used and ask for the retrospective."
+}

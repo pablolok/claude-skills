@@ -1252,6 +1252,11 @@ class SkillInstaller:
         failed = False
         path = os.path.join(target_project_path, ".claude", "skills", skill_name)
         if os.path.isdir(path):
+            # A skill that wired something outside its own folder (settings hooks) undoes it first,
+            # while its scripts still exist; otherwise the project keeps pointing at deleted files.
+            hook_path = os.path.join(path, "pre_uninstall.py")
+            if os.path.isfile(hook_path):
+                self._run_post_install_hook(hook_path, target_project_path)
             try:
                 self._remove_directory_tree(path)
                 removed = True
@@ -1346,7 +1351,7 @@ class SkillInstaller:
             raise last_error
 
     def _run_post_install_hook(self, hook_path: str, target_project_path: str) -> None:
-        """Execute the post_install.py script for a skill."""
+        """Execute a skill's lifecycle script (post_install.py or pre_uninstall.py) against the project."""
         self.logger.info(f"Running post-install hook: {os.path.basename(hook_path)}...")
         try:
             hook_env = os.environ.copy()

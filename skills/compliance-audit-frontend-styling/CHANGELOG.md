@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-10-06
+- The audit never edits the skills themselves: the installed copy in .claude/skills/ as well as the skills repository sources
+
+
 ## [1.0.4] - 2026-07-01
 - Publish Claude Code migration (retarget from Gemini CLI distribution)
 

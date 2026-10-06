@@ -33,6 +33,7 @@ These repo-local skills are expected to be usable when their task type matches:
 - `review-optimization`
 - `skill-manager`
 - `skill-publisher`
+- `skill-retrospective`
 - `subagent-balancer`
 - `subagent-balancer-api`
 - `subagent-balancer-orchestrator`
@@ -56,6 +57,11 @@ These repo-local skills are expected to be usable when their task type matches:
 - Treat `skills/` as the source of truth.
 - Keep `skills/<skill>/metadata.json`, `CHANGELOG.md`, `README.md`, and `SKILL.md` aligned before publishing.
 - Let the publish flow update metadata/changelog versions and copy to `published/`.
+
+## Skill Retrospective On This Repo
+
+- This repository runs `skill-retrospective` on its own work: install it here like the other repo skills (`python install.py`, or `/skill-manager:install`), which wires its two hooks into `.claude/settings.local.json`.
+- A lesson about a skill is written in `skills/<skill>/` and published with `skill-publisher` — never in an installed copy under `.claude/skills/`, which the next update overwrites.
 
 ## Audit Expectations
 

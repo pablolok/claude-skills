@@ -1,5 +1,5 @@
 {
   "name": "compliance-audit-frontend-styling",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A specialized compliance audit for cross-framework frontend styling systems. Enforces reusable styling primitives, design tokens, selector discipline, and accessibility-aware CSS/SCSS practices across Angular, React, Vue, Svelte, and other web UI stacks."
 }

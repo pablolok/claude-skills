@@ -45,6 +45,9 @@
     },
     "pre-implementation-review": {
       "category": "workflow"
+    },
+    "skill-retrospective": {
+      "category": "workflow"
     }
   }
 }

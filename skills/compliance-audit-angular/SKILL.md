@@ -11,7 +11,9 @@ When you invoke this skill, you must perform a strict, holistic audit of the Ang
 
 This skill is read-only with respect to skill infrastructure and workflow definitions.
 
-- Do not edit `skills/`, `published/`, installer/publisher tooling, or `conductor/workflow.md` as part of this audit.
+- Do not edit the skills themselves as part of this audit — the installed copy in `.claude/skills/`, or `skills/`,
+  `published/` and the installer/publisher tooling in the skills repository — nor `conductor/workflow.md`: a skill
+  that rewrites its own checklist stops being a check.
 - If the audit reveals a missing Angular rule, a gap in the orchestrator, or a skill-design problem, report it to the user as a proposal.
 - Let the user decide whether that follow-up should be handled in the skill repository as a separate task.
 

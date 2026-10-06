@@ -169,4 +169,5 @@ cython_debug/
 .claude/skills/review-optimization/
 .claude/skills/skill-manager/
 .claude/skills/skill-publisher/
+.claude/skills/skill-retrospective/
 # <<< skill-manager managed workspace files <<<
