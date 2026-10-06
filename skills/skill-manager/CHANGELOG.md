@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.16] - 2026-10-06
+- The managed .gitignore block keeps the lines it already has (the file is shared by every clone, the manifest knows only this machine) and the file's line endings
+
+
 ## [1.6.15] - 2026-07-01
 - Publish Claude Code migration (retarget from Gemini CLI distribution)
 
