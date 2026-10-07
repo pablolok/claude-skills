@@ -82,6 +82,8 @@ Behavior:
 - If updates are available, Claude shows a startup message telling you to run `/skill-manager:update`.
 
 Expected settings change:
+`<python>` is the interpreter that ran the install (`sys.executable`, forward slashes): `python3` is not used because it may be missing or a Microsoft Store stub on Windows.
+
 ```json
 {
   "hooks": {
@@ -91,7 +93,7 @@ Expected settings change:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/skills/skill-manager/scripts/session_start_hook.py"
+            "command": "\"<python>\" .claude/skills/skill-manager/scripts/session_start_hook.py"
           }
         ]
       }
@@ -119,7 +121,7 @@ These commands are invoked as:
 
 Each command is a Markdown file with a `description:` frontmatter line and a body that uses `$ARGUMENTS` and invokes the matching helper script through a bash line, e.g.:
 ```
-!`python3 .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
+!`"<python>" .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
 ```
 
 Restart Claude Code or start a new session after installing or updating so the new hook and commands are picked up.

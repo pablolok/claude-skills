@@ -14,7 +14,12 @@ import sys
 from typing import Any, Dict, List
 
 
-HOOK_COMMAND = "python3 .claude/skills/skill-manager/scripts/session_start_hook.py"
+def python_command() -> str:
+    """The interpreter running this install, quoted, forward slashes: `python3` may be absent or a store stub (Windows)."""
+    return '"' + sys.executable.replace("\\", "/") + '"'
+
+
+HOOK_COMMAND = f"{python_command()} .claude/skills/skill-manager/scripts/session_start_hook.py"
 COMMAND_TEMPLATES = {
     "list.md": '''---
 description: List installed skills, available published skills, and pending updates.
@@ -25,7 +30,7 @@ Use the command output below as the source of truth. Summarize:
 - available published skills
 - any updates available right now
 
-!`python3 .claude/skills/skill-manager/scripts/list_skills.py`
+!`{python} .claude/skills/skill-manager/scripts/list_skills.py`
 ''',
     "update.md": '''---
 description: Update installed Claude skills from the configured skills repository.
@@ -38,7 +43,7 @@ Use the command output below as the source of truth. Report the result clearly:
 - if no updates were available, say that explicitly
 - if the updater failed, surface the failure reason
 
-!`python3 .claude/skills/skill-manager/scripts/update_skills.py`
+!`{python} .claude/skills/skill-manager/scripts/update_skills.py`
 ''',
     "install.md": '''---
 description: Install one or more published skills into the current project.
@@ -49,7 +54,7 @@ A skill installation was requested. The raw arguments are: $ARGUMENTS
 Use the command output below as the source of truth. If the install succeeds, summarize what was installed and tell the user to restart Claude Code (or start a new session) so the new skills are discovered.
 If the user did not provide any skill names, explain the available skills from the command output and tell them to rerun `/skill-manager:install <category/skill> [more-skills]`.
 
-!`python3 .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
+!`{python} .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
 ''',
     "uninstall.md": '''---
 description: Uninstall one or more skills from the current project.
@@ -60,7 +65,7 @@ A skill uninstall was requested. The raw arguments are: $ARGUMENTS
 Use the command output below as the source of truth. If the uninstall succeeds, summarize what was removed.
 If the user did not provide any skill names, explain the installed skills from the command output and tell them to rerun `/skill-manager:uninstall <skill-name> [more-skills]`.
 
-!`python3 .claude/skills/skill-manager/scripts/uninstall_skills.py $ARGUMENTS`
+!`{python} .claude/skills/skill-manager/scripts/uninstall_skills.py $ARGUMENTS`
 ''',
 }
 GITIGNORE_MARKER_START = "# >>> skill-manager managed workspace files >>>"
@@ -121,7 +126,7 @@ def _write_custom_commands(target_project_path: str) -> None:
     for filename, content in COMMAND_TEMPLATES.items():
         command_path = os.path.join(command_dir, filename)
         with open(command_path, "w", encoding="utf-8") as handle:
-            handle.write(content)
+            handle.write(content.replace("{python}", python_command()))
 
 
 def _write_runtime_config(target_project_path: str, source_repo_root: str) -> None:

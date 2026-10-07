@@ -94,14 +94,14 @@ Installing `skill-manager` configures two project-local Claude Code integration 
 - A `SessionStart` hook in `<project>/.claude/settings.json` that checks for updates when a session starts.
 - A slash-command set under `<project>/.claude/commands/skill-manager/`, invoked as `/skill-manager:list`, `/skill-manager:install`, `/skill-manager:update`, and `/skill-manager:uninstall`.
 
-The Claude Code SessionStart hook JSON is:
+The Claude Code SessionStart hook JSON is (`<python>` is the interpreter that ran the install (`sys.executable`, forward slashes): `python3` is not used because it may be missing or a Microsoft Store stub on Windows.):
 ```json
-{"hooks": {"SessionStart": [{"matcher": "startup", "hooks": [{"type": "command", "command": "python3 .claude/skills/skill-manager/scripts/session_start_hook.py"}]}]}}
+{"hooks": {"SessionStart": [{"matcher": "startup", "hooks": [{"type": "command", "command": "\"<python>\" .claude/skills/skill-manager/scripts/session_start_hook.py"}]}]}}
 ```
 
 Slash commands are Markdown files with a `description:` frontmatter line and a body that uses `$ARGUMENTS` for arguments and invokes the helper script via a bash line, e.g.:
 ```
-!`python3 .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
+!`"<python>" .claude/skills/skill-manager/scripts/install_skills.py $ARGUMENTS`
 ```
 
 Important:

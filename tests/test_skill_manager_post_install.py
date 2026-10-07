@@ -62,7 +62,9 @@ class TestSkillManagerPostInstall(unittest.TestCase):
             self.assertEqual(len(hooks), 1)
             self.assertEqual(hooks[0]["matcher"], "startup")
             self.assertEqual(hooks[0]["hooks"][0]["command"], POST_INSTALL.HOOK_COMMAND)
-            self.assertIn("python3 .claude/skills/skill-manager/scripts/session_start_hook.py", POST_INSTALL.HOOK_COMMAND)
+            self.assertIn(".claude/skills/skill-manager/scripts/session_start_hook.py", POST_INSTALL.HOOK_COMMAND)
+            self.assertTrue(POST_INSTALL.HOOK_COMMAND.startswith(POST_INSTALL.python_command()))
+            self.assertNotIn("python3 ", POST_INSTALL.HOOK_COMMAND)
 
             with open(os.path.join(command_dir, "update.md"), "r", encoding="utf-8") as handle:
                 update_command = handle.read()
@@ -72,10 +74,10 @@ class TestSkillManagerPostInstall(unittest.TestCase):
                 install_command = handle.read()
 
             self.assertIn("Update installed Claude skills", update_command)
-            self.assertIn("python3 .claude/skills/skill-manager/scripts/update_skills.py", update_command)
-            self.assertIn("python3 .claude/skills/skill-manager/scripts/list_skills.py", list_command)
+            self.assertIn(POST_INSTALL.python_command() + " .claude/skills/skill-manager/scripts/update_skills.py", update_command)
+            self.assertIn(POST_INSTALL.python_command() + " .claude/skills/skill-manager/scripts/list_skills.py", list_command)
             self.assertIn("$ARGUMENTS", install_command)
-            self.assertIn("python3 .claude/skills/skill-manager/scripts/install_skills.py", install_command)
+            self.assertIn(POST_INSTALL.python_command() + " .claude/skills/skill-manager/scripts/install_skills.py", install_command)
             self.assertNotIn("--with-claude", install_command)
             self.assertNotIn("--with-codex", install_command)
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.17] - 2026-10-07
+- SessionStart hook and /skill-manager:* commands run the interpreter that did the install (sys.executable) instead of a fixed python3, which is missing or a Store stub on Windows
+
+
 ## [1.6.16] - 2026-10-06
 - The managed .gitignore block keeps the lines it already has (the file is shared by every clone, the manifest knows only this machine) and the file's line endings
 

@@ -40,8 +40,10 @@ GITIGNORE_ENTRIES = [
     MANAGED_SKILL_MANIFEST,
 ]
 INSTALL_CONFIG_FILENAME = "install.config.json"
+# The interpreter running the install, quoted, forward slashes: `python3` may be absent or a store stub (Windows).
 SESSION_START_HOOK_COMMAND = (
-    "python3 .claude/skills/skill-manager/scripts/session_start_hook.py"
+    '"' + sys.executable.replace("\\", "/") + '"'
+    " .claude/skills/skill-manager/scripts/session_start_hook.py"
 )
 
 

@@ -91,9 +91,11 @@ test("the state folder keeps itself out of git", () => {
 });
 
 function run(hook, payload, root, extraEnv = {}) {
+  // the developer's own SKILL_RETRO_* settings must not leak into the hook under test
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("SKILL_RETRO_")));
   try {
     const stdout = execFileSync("node", [join(HOOKS, hook)], {
-      input: JSON.stringify(payload), env: { ...process.env, CLAUDE_PROJECT_DIR: root, ...extraEnv }, encoding: "utf8",
+      input: JSON.stringify(payload), env: { ...inherited, CLAUDE_PROJECT_DIR: root, ...extraEnv }, encoding: "utf8",
     });
     return stdout;
   } catch (error) {
