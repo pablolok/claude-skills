@@ -18,11 +18,21 @@ The file sits next to the work's spec:
   diagrams/        NN-name.mmd + NN-name.svg
 ```
 
+## The project's conventions come first
+
+What this skill gives — section names, the citation of an entry, folder names, the notes written into a document —
+are **defaults**. Before writing, read how the project already does it: its existing architecture documents, its
+backlog register's preamble (and the **.claude/backlog.json** the backlog skill's gates read), its CLAUDE.md or
+AGENTS.md. The document is written **in the project's language**, its sections named in the project's terms, its
+entries cited in the project's format; the structure below (the questions, their order, what each section holds)
+stays. A project that declares nothing gets the defaults.
+
 ## ⚠️ Two documents, two places, two lives
 
 The first question — **how it is built today** — does not live as long as the other two, and keeping them in one
-file makes them rot together. When the area is also **described stably elsewhere** (a living document under
-`docs/architecture/`, the one that answers "how does X work"), the two split like this:
+file makes them rot together. When the area is also **described stably elsewhere** (a living document in the
+project's architecture folder — `docs/architecture/` by default, the backlog's `architectureDir` — the one that
+answers "how does X work"), the two split like this:
 
 | | where | what it holds | when it changes | when it dies |
 |---|---|---|---|---|
@@ -65,7 +75,7 @@ requirements and the point evidence live there; here they are linked, not repeat
 
 ## ⚠️ The tail of a LIVING document: four sections, always the same
 
-For the stable documents under `docs/architecture/`, and the part forgotten first — because it is the only one that
+For the stable documents in the architecture folder, and the part forgotten first — because it is the only one that
 speaks not about the code but about **who keeps it**. At the end, in this order:
 
 | section | what it holds | what it asks the reader |
@@ -73,10 +83,13 @@ speaks not about the code but about **who keeps it**. At the end, in this order:
 | **Open defects** | numbered items `D<n>`, each with its evidence at `file:line` | *"this must be done"* |
 | **Declared limits, and what they cost** | **measured and accepted** consequences of the design, which nobody will close | *"this is the price, and here is how much"* |
 | **Defect owners** | `D<n> / closed by / state` | the only place that shows **what nobody is closing** |
-| **Who worked on it** | `[[BKLG-NNN]] / what it left in the code` | the story lives here, **one line per entry** |
+| **Who worked on it** | `<entry> / what it left in the code` | the story lives here, **one line per entry** |
 
-(These are the section names the `backlog` skill's gates read by default; a project writing in another language
-declares its own names to them.)
+These are the default names. A project names them in its own language and terms — take the names its existing
+architecture documents use. When the project runs the `backlog` skill's gates, which look for these sections, its
+names are declared in **.claude/backlog.json** (`words`: `openDefects`, `owners`, `contributions`, and the owner
+column's `ownerColumn`), so the gates find them; the document never bends to the defaults. An entry is cited in the
+project's format; under the backlog gates that is `[[BKLG-NNN]]`, the form they read as a citation.
 
 The first two under one heading make the area read as **half broken**: a defect to close and an accepted limit do not
 ask the same thing. And a limit **is not deleted** when it is decided not to close it — the measurement behind the
@@ -94,7 +107,8 @@ work on the area, not that nobody looked.
 
 ## The skeleton
 
-Five sections. Each exists for a question; if a question has no answer, the section is removed, not filled.
+Five sections. Each exists for a question; if a question has no answer, the section is removed, not filled. The
+titles are the questions, written in the document's language.
 
 | # | section | must contain |
 |---|---|---|
@@ -149,6 +163,8 @@ The skeleton is the easy part. What separates a useful document from a neat essa
    | [[BKLG-012]] | every import asks the catalogue for the record's identity |
    | [[BKLG-019]] | the CSV import goes through the same lookup |
    ```
+
+   (The default section name and citation; a project's own replace them, as above.)
 
    One line per entry, no story: whoever wants to know *what* happened opens the entry, which has the plan, the
    measurements and the migration's diagram. Duplicating it here makes two versions of the same story, and the one in
@@ -226,7 +242,8 @@ flowchart LR
 **From three diagrams up, live blocks do not show** — the VS Code preview cancels the render in progress and leaves
 empty boxes, with no error. Above that threshold the sources live in `diagrams/*.mmd` and the document embeds the
 SVGs. Procedure, validator and renderer: the **mermaid-diagrams** skill. The document opens with the note that says
-why:
+why — written in the document's language, like the line under each image; the project's own wording, when its
+documents already carry one, wins over this default:
 
 ```markdown
 > The diagrams are **SVGs pre-rendered** from the sources in `diagrams/*.mmd`, not live mermaid blocks: the VS Code

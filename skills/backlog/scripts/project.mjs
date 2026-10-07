@@ -19,7 +19,7 @@
  *     "pastPaths": ["docs/old-notes/"],               extra docs that describe the past (citations not checked)
  *     "pathExceptions": { "a/b.png": "why it is not a file of the repo" },
  *     "architectureExclusions": { "docs/architecture/glossary.md": "why it has no defects of its own" },
- *     "fieldNames": { "Architecture": "Architettura" },  the project's name for an entry field the scripts read
+ *     "fieldNames": { "Architecture": "Architettura" },  the project's name for an entry field (and the close fields)
  *     "words": { "openDefects": "I difetti aperti", ... }  the words the gates look for in the documents
  *   }
  *
@@ -36,8 +36,14 @@ import path from "node:path";
 /** The project's config file, relative to its root. */
 export const CONFIG_FILE = ".claude/backlog.json";
 
-/** The entry fields the scripts read, by their canonical (English) name. */
-export const FIELDS = Object.freeze(["Status", "Priority", "Added", "Manual", "Architecture", "Doc", "Summary", "Issue"]);
+/**
+ * The entry fields, by their canonical (English) name: those the scripts read, and the history line's close fields
+ * (`Done`, `Obsolete`) — no gate parses those, but a project's own tools may, so the close line is written under
+ * the project's name for them.
+ */
+export const FIELDS = Object.freeze([
+  "Status", "Priority", "Added", "Manual", "Architecture", "Doc", "Summary", "Issue", "Done", "Obsolete",
+]);
 
 /** The words the gates look for in the documents, with their English defaults. */
 export const WORDS = Object.freeze({

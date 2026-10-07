@@ -33,6 +33,12 @@ test("⛔ an unknown key fails, naming it: a typo silently ignored is a rule sil
   assert.throws(() => parseConfig(JSON.stringify({ pathException: {} })), /unknown key "pathException"/);
 });
 
+test("the history line's close fields take the project's names: a project closing with `Chiusa` declares it", () => {
+  const c = parseConfig(JSON.stringify({ fieldNames: { Done: "Chiusa", Obsolete: "Superata" } }));
+  assert.equal(c.fieldNames.Done, "Chiusa");
+  assert.equal(c.fieldNames.Obsolete, "Superata");
+});
+
 test("⛔ a value of the wrong shape fails", () => {
   assert.throws(() => parseConfig(JSON.stringify({ lineExtensions: "gd" })), /"lineExtensions" has the wrong shape/);
   assert.throws(() => parseConfig(JSON.stringify({ pathExceptions: { "a/b.png": 3 } })), /"pathExceptions"/);

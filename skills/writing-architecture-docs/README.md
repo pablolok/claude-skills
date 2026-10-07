@@ -6,9 +6,11 @@ of an area.
 
 ## What It Holds
 
+- **The project's conventions first**: the document is written in the project's language, its sections named and
+  its entries cited the way the project already does; the skill's names and formats are the defaults.
 - **Three questions, in order**: how it is today, what shape it must take, why that one and not another.
-- **Two documents, two places, two lives**: the stable doc under `docs/architecture/` describes the code as it is
-  now and owns the defect map; the work's own doc carries the target, the phases and the acceptance criterion, and
+- **Two documents, two places, two lives**: the stable doc in the architecture folder (`docs/architecture/` by
+  default) describes the code as it is now and owns the defect map; the work's own doc carries the target, the phases and the acceptance criterion, and
   is archived with the work.
 - **The skeleton** (five sections) and **the tail of a living doc** (open defects, declared limits, who owns each
   defect, who worked on it).

@@ -40,8 +40,9 @@ export function retroText(reason, skills) {
   const list = skills.length ? skills.join(", ") : "the skills the work used (see git log since the last retrospective)";
   return `${reason} Before the next piece of work, run the skill-retrospective skill on: ${list}. ` +
     "Rewrite those skills in place with what this work taught — fix the step, delete what proved wrong or useless, " +
-    "keep them short — never append a lessons log. Project lessons go in the project's skills, general ones stay " +
-    "generic in the user-level skills; a skill installed as a copy is changed at its source.";
+    "keep them short — never append a lessons log. Project lessons go in the project's skills; general ones stay " +
+    "generic and go to the skill's source — for a plugin, the skill repository the plugin comes from (its clone, or " +
+    "an issue there without one), never the installed copy. Commit following the project's commit conventions.";
 }
 
 /** The reason to hold the stop, or null: an archived entry, or enough commits since the last retrospective. */

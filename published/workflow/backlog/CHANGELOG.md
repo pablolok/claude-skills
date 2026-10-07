@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0] - 2026-10-07
+- Follows the project's conventions: the close line in the project's declared form (preamble, fieldNames.Done/Obsolete, or the history's own lines), commit messages in the project's format, field and section names the project's; new next-id script: the next id from the backlog folder's documents only (registers, activity folders, archive), also used by sync-all's adoption; bootstrap VERSION 1.2.0
+
+
 ## [1.1.5] - 2026-10-07
 - The description fits 500 characters and is the metadata's too (it was 777 against a different 128-character summary); bootstrap VERSION 1.1.5
 

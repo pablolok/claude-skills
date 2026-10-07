@@ -20,6 +20,31 @@ const OPEN_HEADING = /^(#{2,3}) (BKLG-\d+)\b(?:\s+[—–-]\s+(.*))?/;
 /** A closed line: the id in bold, optionally followed by a phase inside the same bold. */
 const CLOSED_LINE = /^- \*\*(BKLG-\d+)([^*\n]*)\*\*/;
 
+/**
+ * Every entry number a text mentions, in any form (a heading, a citation, a folder name) — what claims an id when
+ * the next one is allocated.
+ * @param {string} text
+ * @returns {number[]}
+ */
+export function extractBklgIds(text) {
+  return [...String(text).matchAll(/BKLG-(\d+)/g)].map((m) => Number(m[1]));
+}
+
+/**
+ * The next free number: the highest of every source + 1 (the first entry is 1).
+ * @param {number[][]} idSources
+ * @returns {number}
+ */
+export function nextBklgId(...idSources) {
+  const all = idSources.flat();
+  return (all.length ? Math.max(...all) : 0) + 1;
+}
+
+/** Zero-pad an entry number to the canonical 3-digit id string. */
+export function formatBklgId(n) {
+  return `BKLG-${String(n).padStart(3, "0")}`;
+}
+
 /** The ids of the open entries: the headings, not the `[[BKLG-NNN]]` mentions in the text. */
 export function openIds(text) {
   return text.split(/\r?\n/).map((l) => OPEN_HEADING.exec(l)?.[2]).filter(Boolean);

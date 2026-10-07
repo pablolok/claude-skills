@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 
 /** The skill and the version this project uses: change it here to upgrade. */
 const SKILL = "mermaid-diagrams";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 const REPO_URL = "https://github.com/pablolok/claude-skills.git";
 const PUBLISHED_PATH = "published/workflow/mermaid-diagrams";
 

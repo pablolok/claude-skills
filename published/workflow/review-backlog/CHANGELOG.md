@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - 2026-10-07
+- What the cleanup writes follows the project's conventions (language, field names, commit format); the contributions section is the project's words.contributions
+
+
 ## [1.0.2] - 2026-10-07
 - The description is one line, the metadata's too; the README names the backlog skill instead of linking into its folder
 

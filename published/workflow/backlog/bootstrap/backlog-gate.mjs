@@ -6,6 +6,7 @@
  *
  *   node scripts/backlog-gate.mjs check-doc-refs
  *   node scripts/backlog-gate.mjs backlog-anchor --all
+ *   node scripts/backlog-gate.mjs next-id
  *   node scripts/backlog-gate.mjs backlog-github-sync sync-all --execute
  *
  * Where the skill comes from, first match wins:
@@ -23,7 +24,7 @@ import { fileURLToPath } from "node:url";
 
 /** The skill and the version this project uses: change it here to upgrade. */
 const SKILL = "backlog";
-const VERSION = "1.1.5";
+const VERSION = "1.2.0";
 const REPO_URL = "https://github.com/pablolok/claude-skills.git";
 const PUBLISHED_PATH = "published/workflow/backlog";
 

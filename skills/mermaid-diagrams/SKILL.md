@@ -106,7 +106,8 @@ that work's `diagrams/`: the same rule, **one per document**, not one per reposi
 node scripts/mermaid.mjs render docs/architecture/diagrams/billing
 ```
 
-In the document (the link starts from the document):
+In the document (the link starts from the document; the caption in the document's language, or in the wording the
+project's documents already use):
 
 ```markdown
 ![What the diagram shows](./diagrams/billing/01-flow.svg)
@@ -192,10 +193,11 @@ draws** — only Procedure A or a manual render catches it.
 
 What holds: `<br/>` in labels (mermaid treats it apart, not as HTML), parentheses and punctuation in quoted strings,
 cylinders `[( )]`, circles `(( ))`, `classDef`/`class`/`style`, a `subgraph` with a quoted title, `<<interface>>`,
-`alt`/`else` in sequence diagrams.
+`alt`/`else` in sequence diagrams, and accented letters — labels are written in the document's language (measured:
+`"Perché è già"` parses in `check` and comes out whole in the rendered SVG).
 
-Rule of thumb: **quoted strings and plain ASCII in labels.** Whatever is not text goes in the prose around the
-diagram, where no parser can break it.
+Rule of thumb: **quoted strings and plain text in labels** — no entities, no tags. Whatever is not text goes in the
+prose around the diagram, where no parser can break it.
 
 ## The race — why the preview leaves empty boxes
 

@@ -42,12 +42,12 @@ For every skill, open the whole file and edit it as its owner would:
   from before touching it:
   - **the project's own** (committed under its `.claude/skills/`): edit it there, in the project's commit;
   - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`, its files in the plugin cache):
-    the source is that repository. When a clone of it is
-    on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
+    the source is the repository the plugin comes from. When a clone of it is on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
     the skill there, run its tests, publish a new version with the repository's own flow (patch for a lesson, minor
     for a new step), commit, tag and push; then bring the projects up to it (`claude plugin update`, or the
     version a project pins). Without a clone — a cloud session, a collaborator's machine — never edit the installed
-    copy: open an issue on the skill repository with the lesson as the instruction to add, and say so in the report;
+    copy: open an issue on the skill repository the plugin comes from, with the lesson as the instruction to add,
+    and say so in the report;
   - **user-level** (`~/.claude/skills`) kept in a versioned repo: edit it, then copy it back there and push.
 - **Scripts follow the skill**: a script the skill no longer calls is deleted; a fix that recurs becomes a script
   option, not a paragraph.
@@ -60,7 +60,10 @@ For every skill, open the whole file and edit it as its owner would:
 
 ## 4. Record and report
 
-- Commit: `skills: retrospective — <the work>`, the body listing per skill what changed and why.
+- Commit following the conventions of the repository the commit lands in — its CLAUDE.md or AGENTS.md, a
+  commit-message rule or hook, its recent `git log`: the language, the subject's form and length, subject and body.
+  The body lists per skill what changed and why. Only a repository with no convention gets the default subject
+  `skills: retrospective — <the work>`.
 - Write the HEAD commit to `.claude/.state/last-retrospective`; empty `.claude/.state/skills-used.txt`.
 - Memory is for the user's preferences and the project's facts, not for skill content: a lesson about how to
   do the work lives in the skill.

@@ -14,7 +14,9 @@ on false premises, the very defect this review exists to remove.
 
 The register's format and the project's conventions (its extra fields, its pending ledgers, how it verifies, its
 roadmap) are the `backlog` skill's and the preamble of the project's `BACKLOG.md`, with the conventions document it
-links when it has one: read them first.
+links when it has one: read them first. What the cleanup writes (a rewritten Status, a moved ledger line, a merged
+entry, a commit) follows them too — the project's language, field names and commit format; the forms here are the
+defaults.
 
 ---
 
@@ -42,7 +44,7 @@ of how many examined" cannot be told apart from "didn't look".
 | an **orphan folder** under the activity folders | an entry was closed without moving its folder to `archive/`, **or** a folder was born without an entry — the most frequent finding | move the folder, or open the entry |
 | a bare `BKLG-NNN` | the entry is named but not cited: the tools reading references don't see it | write `[[BKLG-NNN]]` |
 | a dead `[path]` or `[link]` | the doc points at a file that isn't there: it gets believed, and its evidence can't be opened | update it; if the code was deleted, **remove the claim**. A legitimate case goes in `pathExceptions` with its reason |
-| a declared doc that doesn't cite its entry | the close didn't add the row in `## Who worked on it` | add the row; once closed, the `#D<n>` marker must **leave** the open defects |
+| a declared doc that doesn't cite its entry | the close didn't add the row in the doc's contributions section (`## Who worked on it` by default; the project's `words.contributions`) | add the row; once closed, the `#D<n>` marker must **leave** the open defects |
 | "touched and not declared" | a **list**, not a red: the git footprint over-attributes shared files | look, don't necessarily fix |
 
 ⚠️ The gates answer **one question each**. None can tell whether a **number written in a document is still true** —

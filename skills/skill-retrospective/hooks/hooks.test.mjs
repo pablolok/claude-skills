@@ -37,6 +37,15 @@ test("the request names the skills to rewrite and forbids a lessons log", () => 
   assert.match(retroText("Done.", []), /git log/);
 });
 
+test("a general lesson goes to the skill's source — for a plugin, the skill repository it comes from — and is " +
+  "committed the project's way", () => {
+  const text = retroText("Done.", ["backlog"]);
+  assert.match(text, /skill repository the plugin comes from/);
+  assert.match(text, /an issue there/);
+  assert.match(text, /project's commit conventions/);
+  assert.doesNotMatch(text, /user-level skills/, "a collaborator's lessons on a plugin do not go to their own ~/.claude");
+});
+
 test("only a file moved INTO the archive counts, once per folder", () => {
   const out = [
     "docs/implementations/archive/old-bug/plan.md",

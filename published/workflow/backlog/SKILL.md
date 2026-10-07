@@ -25,8 +25,14 @@ What differs between projects is written **in the project**, never in this skill
   propose one the first time a project-specific need shows up. When the rules outgrow a few lines, the preamble
   keeps a short summary and links a conventions document beside the register: read it too, before the first change
   to the register.
-- **.claude/backlog.json** — the values the gates read (folders, extra file kinds, exceptions). Optional; see
-  the skill's README.
+- **.claude/backlog.json** — the values the gates read (folders, extra file kinds, exceptions, the project's
+  field names and section words). Optional; see the skill's README.
+- **What the register already says** — its existing entries, history lines and ledgers show the project's language,
+  field names, date format and wording; its CLAUDE.md (or AGENTS.md) and recent `git log` show how it commits.
+
+**Everything this skill writes into the project follows those conventions**: headings, field names and values,
+ledger lines, the close line, doc titles, commit messages — in the project's language and form. The templates below
+are the defaults for a project that declares none, never a correction to one that does.
 
 The scripts live in this skill's `scripts` folder: run them as `node <this skill's base directory>/scripts/<name>.mjs`
 from anywhere in the project (they find the project from `CLAUDE_PROJECT_DIR` or the git work tree). Node is the
@@ -45,7 +51,8 @@ only requirement.
 - **Summary**: 1–2 lines — what's wrong/wanted + the gist of the fix.
 ```
 
-Plus the project's fields from the preamble. Each field on **its own line** (the gates and the mirror parse lines
+Plus the project's fields from the preamble. The field names are the project's (`fieldNames`, or what its entries
+use); the English ones above are the defaults. Each field on **its own line** (the gates and the mirror parse lines
 that start with `- **Field**:`; a value appended after a `·` is not seen).
 
 - **Manual**: anything the AI **cannot do** — an action in a tool only a person runs, a judgement, a login, a
@@ -54,7 +61,8 @@ that start with `- **Field**:`; a value appended after a `·` is not seen).
   the documents this work changes, comma-separated, then in prose what changes. `—` is a statement ("changes
   none"), not a blank. It may carry a structural defect's marker (`billing.md#D3`), checked **both ways** by
   `backlog-anchor`: while the entry is open the defect **must** be among the doc's `## Open defects`; once closed it
-  must be **gone** from there and one row `| [[BKLG-NNN]] | what it did |` must be in its `## Who worked on it`.
+  must be **gone** from there and one row `| [[BKLG-NNN]] | what it did |` must be in its `## Who worked on it`
+  (the section names are the project's `words`; these are the defaults).
   ⚠️ **Never back-filled**: the field binds new work; a value deduced from memory for an old entry is invented.
 
 ### `Status` carries the INTERNAL state, not just the word
@@ -189,9 +197,11 @@ gates read them; never rename a project's fields to suit the gates.
 
 ## add
 
-1. **The highest id across ALL documents**, not just the cards — an id is also claimed by creating its folder, and
-   a parallel session may have taken one: search the whole repository for `BKLG-` followed by three digits (e.g.
-   `git grep -hoE "BKLG-[0-9]{3}" | sort -u | tail -1`), then NNN+1 (the first entry is `BKLG-001`).
+1. **The next id**: `node <this skill's base directory>/scripts/next-id.mjs` prints it — the highest id in the
+   register's own documents + 1 (the first entry is `BKLG-001`). It reads every document of the backlog folder, not
+   just the cards: an id is also claimed by creating its folder, and a parallel session may have taken one. A
+   mention outside that folder (a bridge doc, a plan copied from another project) is not the register's and is not
+   counted. Read its control line (the highest id, the files read).
 2. **Keep the entry lean** — the format's fields plus a 1–2 line Summary. Context, the real fix, acceptance and
    progress go in the **Doc**. From a one-liner, infer the rest from the code and the conversation and write a
    concrete plan — no placeholders. A temporary patch just shipped: its commit and why it isn't the real fix.
@@ -199,7 +209,8 @@ gates read them; never rename a project's fields to suit the gates.
    from `- **Doc**:`. A shape change carries its target shape and acceptance from the start.
 4. Insert the entry at the TOP of `## Open`. Don't touch other entries.
 5. Confirm the new id + one-line summary; **say the Manual step out loud**. Commit only in a commit flow or when
-   asked (`docs(backlog): add BKLG-NNN — <title>`).
+   asked, in the project's commit format (its CLAUDE.md or AGENTS.md, its recent `git log`); with none,
+   `docs(backlog): add BKLG-NNN — <title>`.
 6. Mirror (if on): `upsert-issue BKLG-NNN --execute`.
 
 ## list
@@ -217,28 +228,37 @@ the highest-priority item, anything in a pending ledger. Full entries only when 
 4. **Verify** the way the preamble / CLAUDE.md says (build, tests, probes, a look at the result). What cannot run
    now goes in the pending ledger in the same change.
 5. Commit; a user-visible change also goes to the project's changelog if it keeps one.
-6. **Close**: remove the entry from `## Open`; add at the **top** of `BACKLOG-HISTORY.md`:
+6. **Close**: remove the entry from `## Open`; add at the **top** of `BACKLOG-HISTORY.md` one line **in the
+   project's declared form** — the close line its preamble or conventions document gives, the close field it names
+   in **.claude/backlog.json** (`fieldNames.Done`), else the shape of the newest history lines: the field's name, the
+   date format, how the commit is written. Copy it exactly: a project's own tools may parse that line. Only a
+   history that declares and shows nothing takes the default:
    ```
    - **BKLG-NNN** <title> — <what shipped, one line> · **Done**: YYYY-MM-DD (commit `<sha>`) · [doc](archive/<name>/<file>.md)
    ```
+   Whatever the form, the line opens with `- **BKLG-NNN**` (or the card moves whole, with its heading): that is
+   what the gates read as closed.
    ⛔ Only when its pending lines are gone: an entry closes when the work is done **and verified**.
 7. **Archive the doc — check the filesystem, not just the entry**: `git mv <type>/<name> archive/<name>` (inside
    the backlog folder) and point the history line there — even if the entry's Doc is `—`: look in every type
    folder for one belonging to this item.
-8. Declared `Architecture`: the `D<n>` leaves the doc's open defects, a row lands in `## Who worked on it`.
+8. Declared `Architecture`: the `D<n>` leaves the doc's open defects, a row lands in its contributions section
+   (`## Who worked on it` by default; the project's `words.contributions`).
 9. Mirror: `close-issue BKLG-NNN --execute`. Run the gates.
 10. Tell the user what shipped, what is still pending, and any Manual step.
 
 ## done / archive BKLG-NNN
 
 `process` steps 6–9 without implementing — for work that landed by other means or became obsolete (the history line
-then says `**Obsolete**: <why>` instead of `**Done**`).
+then carries the project's obsolete field instead of its close field — `fieldNames.Obsolete`, or what its history
+shows; by default `**Obsolete**: <why>` instead of `**Done**`).
 
 ## Conventions
 
 - One concern per entry, self-contained so it is actionable months later (file paths and the concrete change, not
   "fix the bug").
-- Cite entries as `[[BKLG-NNN]]` in documents; the entry's own heading `## BKLG-NNN — …` stays bare, and so does a
-  history line's leading `- **BKLG-NNN**`.
+- Cite entries as `[[BKLG-NNN]]` in documents — the form the gates read as a citation (`check-doc-refs` reports a
+  bare id in a live document); the entry's own heading `## BKLG-NNN — …` stays bare, and so does a history line's
+  leading `- **BKLG-NNN**`.
 - Newest at the top in both files. Never delete history — archive.
 - Absolute dates (the session's current date).

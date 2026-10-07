@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0] - 2026-10-07
+- Commits follow the conventions of the repository they land in (language, subject form and length, body), the fixed subject only as the fallback; a plugin's lesson goes to the skill repository the plugin comes from (its clone, or an issue there), also in the Stop hook's request
+
+
 ## [1.3.2] - 2026-10-07
 - No person in it: the dated quotes became the rules they set; a shared skill (plugin or user-level) stays generic, no rule owned by someone; the human is 'the user'; the metadata description is the frontmatter's
 

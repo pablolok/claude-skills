@@ -15,6 +15,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | `scripts/backlog-coherence.mjs` | Gate: an entry lives in one place — never open and closed at once, never twice in one register. |
 | `scripts/closed-defects.mjs` | Gate: a defect row with a state says what the entry that closes it says (both directions). |
 | `scripts/related-docs.mjs` | Not a gate (always exit 0): the live docs that cite the entry being worked on or name a file a change touched — a post-commit hook's job. |
+| `scripts/next-id.mjs` | Not a gate: prints the next entry id — the highest one the backlog folder's documents mention (registers, activity folders, archive; nothing outside it), + 1. |
 | `scripts/backlog-github-sync.mjs` | The GitHub Issues mirror (`upsert-issue`, `close-issue`, `sync-all`; dry-run unless `--execute`). |
 | `scripts/project.mjs`, `scripts/register.mjs`, `scripts/docIndex.mjs` | The project root and its config; what an entry looks like in the two registers; the shared reference vocabulary. |
 | `scripts/*.test.mjs` | The scripts' tests (`node --test`). |
@@ -56,7 +57,7 @@ Everything has a default. A project that differs writes **.claude/backlog.json**
 | `pastPaths` | `BACKLOG-HISTORY.md`, any `archive/` | extra docs that describe the past (not checked for citations or pointers) |
 | `pathExceptions` | none | backticked paths that are legitimately not files of the repo, each with its reason |
 | `architectureExclusions` | none (the folder's `README.md` is always left out) | architecture docs that have no defects of their own, each with its reason |
-| `fieldNames` | the English names | the project's name for an entry field the scripts read: `Status`, `Priority`, `Added`, `Manual`, `Architecture`, `Doc`, `Summary`, `Issue` |
+| `fieldNames` | the English names | the project's name for an entry field the scripts read: `Status`, `Priority`, `Added`, `Manual`, `Architecture`, `Doc`, `Summary`, `Issue`; and for the history line's close fields, `Done` and `Obsolete` (no gate parses them: the skill writes the close line under the project's name, e.g. `"Done": "Chiusa"`) |
 | `words` | English | the words the gates look for in the documents (below) |
 
 `words` — a register written in another language names its sections and states in it:

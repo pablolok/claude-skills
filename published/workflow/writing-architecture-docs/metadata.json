@@ -1,5 +1,5 @@
 {
   "name": "writing-architecture-docs",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Use when a piece of work must be designed before it is written \u2014 a large feature, a rework, a defect that crosses several layers, a multi-phase job \u2014 or when the question is \"how is it built today\", \"what shape must it take\", \"why this and not something else\". Any project, any language. The diagram mechanics are NOT here: they are in the mermaid-diagrams skill."
 }

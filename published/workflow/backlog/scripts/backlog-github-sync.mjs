@@ -47,8 +47,12 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import { registerIds } from "./next-id.mjs";
 import { DEFAULTS, project } from "./project.mjs";
-import { openEntries } from "./register.mjs";
+import { extractBklgIds, formatBklgId, nextBklgId, openEntries } from "./register.mjs";
+
+// The id helpers live in register.mjs (next-id uses them too); re-exported for the mirror's callers.
+export { extractBklgIds, formatBklgId, nextBklgId };
 
 const GH = process.platform === "win32" ? "gh.exe" : "gh";
 
@@ -110,37 +114,6 @@ export function parseOpenEntries(md, config = DEFAULTS) {
     fields: e.fields,
     issue: e.fields.Issue ? Number(/#(\d+)/.exec(e.fields.Issue)?.[1] ?? NaN) || null : null,
   }));
-}
-
-/**
- * Extract every BKLG id referenced in a markdown file (open entries or history
- * one-liners) — used for race-safe next-id allocation.
- * @param {string} md
- * @returns {number[]}
- */
-export function extractBklgIds(md) {
-  const ids = [];
-  const re = /BKLG-(\d+)/g;
-  let m;
-  while ((m = re.exec(md)) !== null) ids.push(Number(m[1]));
-  return ids;
-}
-
-/**
- * Race-safe next id = max(all known ids) + 1, across the open file, the history
- * file, and the BKLG ids already present on GitHub issue titles.
- * @param {number[][]} idSources
- * @returns {number}
- */
-export function nextBklgId(...idSources) {
-  const all = idSources.flat();
-  const max = all.length ? Math.max(...all) : 0;
-  return max + 1;
-}
-
-/** Zero-pad a BKLG number to the canonical 3-digit id string. */
-export function formatBklgId(n) {
-  return `BKLG-${String(n).padStart(3, "0")}`;
 }
 
 /** Every id either backlog file mentions, in the canonical form issues carry (`BKLG-001`, not `BKLG-1`). */
@@ -528,7 +501,7 @@ function cmdClose(bklgArg, { repo }, flags) {
   if (!r.ok) warn(`close #${issue.number} failed: ${r.error}`);
 }
 
-function cmdSyncAll({ repo, where, backlogPath, historyPath, config }, flags) {
+function cmdSyncAll({ repo, where, root, backlogPath, historyPath, config }, flags) {
   console.log(`sync-all ⟷ ${repo}  (${flags.dryRun ? "DRY-RUN" : "EXECUTE"})\n`);
   const backlogMd = readFileSafe(backlogPath);
   const historyMd = readFileSafe(historyPath);
@@ -555,8 +528,9 @@ function cmdSyncAll({ repo, where, backlogPath, historyPath, config }, flags) {
   const openIds = new Set(entries.map((e) => e.idStr));
   const knownIds = knownBklgIds(backlogMd, historyMd);
 
-  // New backlog issues a collaborator opened without a BKLG id yet → adopt.
-  const nextId = nextBklgId(extractBklgIds(backlogMd), extractBklgIds(historyMd), issues.map((i) => Number(/BKLG-(\d+)/.exec(i.title)?.[1] ?? 0)));
+  // New backlog issues a collaborator opened without a BKLG id yet → adopt. The ids already taken are the register's
+  // own documents' (the activity folders and the archive too, as `next-id` reads them) and the issues' titles.
+  const nextId = nextBklgId(registerIds(root, config).ids, issues.map((i) => Number(/BKLG-(\d+)/.exec(i.title)?.[1] ?? 0)));
   let adoptCounter = nextId;
   const orphans = issues.filter((i) => !i.bklg && i.state === "open");
   for (const i of orphans) {
@@ -599,6 +573,7 @@ function main() {
   const ctx = {
     repo,
     where: { branch: deriveBranch(root, repo), docsDir: config.docsDir },
+    root,
     backlogPath: path.join(root, backlog),
     historyPath: path.join(root, history),
     config,
