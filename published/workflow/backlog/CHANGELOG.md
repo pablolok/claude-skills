@@ -1,7 +1,11 @@
 # Changelog
 
+## [1.1.2] - 2026-10-07
+- The 1.1.1 changelog line quoted an entry id outside backticks, which check-doc-refs reports in a project that keeps the skill's files in git: quoted as code
+
+
 ## [1.1.1] - 2026-10-07
-- History lines that carry the title inside the bold (- **BKLG-085 — Title**) close the entry (they read as phases); links with any URI scheme (mem:, vscode:) are not repo files; the bootstrap's first fetch is quiet
+- History lines that carry the title inside the bold (`- **BKLG-085 — Title**`) close the entry (they read as phases); links with any URI scheme (mem:, vscode:) are not repo files; the bootstrap's first fetch is quiet
 
 
 ## [1.1.0] - 2026-10-07
