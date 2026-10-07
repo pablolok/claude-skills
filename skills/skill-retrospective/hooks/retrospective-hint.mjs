@@ -11,7 +11,8 @@
  * The last retrospective is the commit in .claude/.state/last-retrospective (the skill writes it); the skills used
  * are in .claude/.state/skills-used.txt (log-skill-use.mjs). With no baseline the hook writes HEAD as the baseline and
  * says nothing: counting the whole history would hold the first turn on a new machine for nothing.
- * Fail-open: any error (no git, no commits, unreadable input) exits 0 with no output.
+ * Fail-open: any error (no git, no commits, unreadable input) exits 0 with no output; without CLAUDE_PROJECT_DIR
+ * (no project) it does nothing.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -78,6 +79,7 @@ function git(root, args) {
 function main(input, env) {
   const event = JSON.parse(input || "{}");
   const root = projectRoot(env);
+  if (!root) return null;
   const dir = stateDir(env);
   const markFile = join(dir, MARK);
   const mark = existsSync(markFile) ? readFileSync(markFile, "utf8").trim() : "";

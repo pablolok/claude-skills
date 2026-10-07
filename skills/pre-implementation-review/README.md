@@ -27,15 +27,15 @@ Use this when a request is still in the reasoning or planning phase, especially 
 
 ## Installing
 
-As a Claude Code plugin (no Python needed): `claude plugin marketplace add pablolok/claude-skills`, then
-`claude plugin install pre-implementation-review@pablolok-skills` (`--scope user` to have it in every project).
-A hook that gates on this skill sees the name `pre-implementation-review:pre-implementation-review` when it runs
-from the plugin: match the part after the last colon.
+As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`, then
+`claude plugin install pre-implementation-review@pablolok-skills --scope user` (every project) or
+`--scope project`. A hook that gates on this skill sees the name
+`pre-implementation-review:pre-implementation-review` when it runs from the plugin: match the part after the last
+colon.
 
-## Conductor Workflow Integration
+## In a Task Workflow
 
-In a Conductor-driven project, this skill should run at the beginning of each task workflow, after the task is marked in progress and before tests or implementation begin.
+Run the review at the start of each task, once the task is picked and before tests or implementation begin.
 
-If the review changes the intended implementation boundary, identifies reusable abstractions that deserve explicit tracking, or reveals additional consumer/test work, update the current phase tasks in `plan.md` before coding starts.
-
-When installed through `install.py` or `/skill-manager:install`, the skill may update `conductor/workflow.md` through its `post_install.py` hook when a Conductor workflow is present.
+If the review changes the intended implementation boundary, identifies reusable abstractions that deserve explicit
+tracking, or reveals additional consumer/test work, update the task's plan before coding starts.

@@ -7,6 +7,18 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
+#: Skills and tools removed from this repository (lower case: the docs are compared case-insensitively).
+RETIRED = (
+    "compliance-audit",
+    "review-optimization",
+    "conductor",
+    "subagent-balancer",
+    "skill-manager",
+    "changelog-manager",
+    "install.py",
+    "post_install",
+)
+
 
 class TestPolicyDocs(unittest.TestCase):
     def test_legacy_policy_docs_are_removed(self) -> None:
@@ -18,16 +30,18 @@ class TestPolicyDocs(unittest.TestCase):
         self.assertNotIn("AGENTS.md", names)
         self.assertIn("CLAUDE.md", names, "control: the listing does see the policy doc")
 
-    def test_no_skill_tells_the_agent_a_retired_skill_name(self) -> None:
-        # Installed skills carry the new name only: an instruction naming the old one finds nothing to invoke
-        # (the orchestrator never ran the C# audit that way). Changelogs keep the history.
-        retired = "compliance-audit-c#"
+    def test_no_skill_or_root_doc_names_a_retired_skill_or_tool(self) -> None:
+        # An instruction naming a removed skill or the removed installer finds nothing to invoke.
+        # Changelogs keep the history.
+        docs = [ROOT / "CLAUDE.md", ROOT / "README.md"] + [
+            path for folder in ("skills", "published") for path in (ROOT / folder).rglob("*.md")
+        ]
         offenders = [
-            path.relative_to(ROOT).as_posix()
-            for folder in ("skills", "published")
-            for path in (ROOT / folder).rglob("*.md")
+            f"{path.relative_to(ROOT).as_posix()}: {name}"
+            for path in docs
             if path.is_file() and path.name != "CHANGELOG.md"
-            and retired in path.read_text(encoding="utf-8", errors="ignore")
+            for name in RETIRED
+            if name in path.read_text(encoding="utf-8", errors="ignore").lower()
         ]
         self.assertEqual(offenders, [])
 

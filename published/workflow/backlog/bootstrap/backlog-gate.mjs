@@ -10,7 +10,7 @@
  *
  * Where the skill comes from, first match wins:
  *   1. BACKLOG_SKILL_DIR — a folder holding the skill (its `scripts/` inside);
- *   2. `.claude/skills/backlog` in the project, when skill-manager installed it there at this same version;
+ *   2. `.claude/skills/backlog` in the project, when the project keeps a copy of the skill there at this same version;
  *   3. a shallow clone of the skill repo at the pinned tag, cached under CLAUDE_SKILLS_CACHE (default: the user's
  *      `.cache/claude-skills`) — fetched once, then reused offline.
  * The gate runs with CLAUDE_PROJECT_DIR set to this project, whatever the cwd.
@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 /** The skill and the version this project uses: change it here to upgrade. */
 const SKILL = "backlog";
-const VERSION = "1.1.3";
+const VERSION = "1.1.4";
 const REPO_URL = "https://github.com/pablolok/claude-skills.git";
 const PUBLISHED_PATH = "published/workflow/backlog";
 

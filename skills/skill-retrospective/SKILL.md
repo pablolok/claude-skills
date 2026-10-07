@@ -41,8 +41,8 @@ For every skill, open the whole file and edit it as its owner would:
 - **Edit a skill at its source** — an installed copy is overwritten at the next update. Find where each skill comes
   from before touching it:
   - **the project's own** (committed under its `.claude/skills/`): edit it there, in the project's commit;
-  - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`), or a skill manager's copy (its
-    manifest names it, and the folder is usually git-ignored): the source is that repository. When a clone of it is
+  - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`, its files in the plugin cache):
+    the source is that repository. When a clone of it is
     on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
     the skill there, run its tests, publish a new version with the repository's own flow (patch for a lesson, minor
     for a new step), commit, tag and push; then bring the projects up to it (`claude plugin update`, or the

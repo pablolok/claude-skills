@@ -97,11 +97,10 @@ conventions document beside the register, which the preamble links; the skill re
 
 ## Installing
 
-- **Claude Code plugin** (no Python, works in cloud sessions): see the repository README —
-  `claude plugin marketplace add pablolok/claude-skills`, then `claude plugin install backlog@pablolok-skills`.
-- **skill-manager** (`python install.py`): copies the skill into `.claude/skills/backlog/`.
+As a Claude Code plugin (works in cloud sessions too): see the repository README —
+`claude plugin marketplace add pablolok/claude-skills`, then `claude plugin install backlog@pablolok-skills`.
 
-Either way the gates live in the skill, not in the project. For CI, git hooks and package scripts, copy
+The gates live in the skill, not in the project. For CI, git hooks and package scripts, copy
 `bootstrap/backlog-gate.mjs` into the project (e.g. into its `scripts` folder) and commit it: it is the one place
 the project pins the skill's version (`VERSION`), and on first use it clones this repository's tag `backlog@<version>`
 into `CLAUDE_SKILLS_CACHE` (default `~/.cache/claude-skills`), then reuses it offline.

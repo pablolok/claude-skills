@@ -44,7 +44,7 @@ class TestPreImplementationReviewSkill(unittest.TestCase):
 
     def test_readme_places_the_review_at_the_start_of_each_task(self) -> None:
         content = " ".join(_read(SOURCE / "README.md").split())
-        self.assertIn("beginning of each task workflow", content)
+        self.assertIn("at the start of each task", content)
         self.assertIn("before coding starts", content)
 
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.1] - 2026-10-07
+- the installer hooks are gone: it installs as a plugin
+
+
 ## [1.1.0] - 2026-10-07
 - Design first: responsibilities, pattern and owner per responsibility, derivability measured, hard fails, file placement, per-task review; the developer's working version merged with the published styling and colour rules
 

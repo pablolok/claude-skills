@@ -1,5 +1,5 @@
 {
   "name": "pre-implementation-review",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Before writing code, decide the right design \u2014 responsibilities, the pattern for each, ownership and seams, what is stored only if it can't be derived; reuse and low duplication follow from it."
 }

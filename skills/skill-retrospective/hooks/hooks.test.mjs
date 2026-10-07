@@ -2,9 +2,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   archiveDirs, archivedFolders, retroText, stopReason, ARCHIVE_ENV, DEFAULT_ARCHIVE_DIRS, DEFAULT_COMMITS,
@@ -73,12 +73,13 @@ test("the skill log keeps each name once and drops plugin prefixes", () => {
   assert.equal(isNew("", ""), false);
 });
 
-test("⭐ without CLAUDE_PROJECT_DIR the project is four folders above the hooks — NOT the shell's folder", () => {
+test("⭐ the project is CLAUDE_PROJECT_DIR alone — NOT the shell's folder, NOT the hooks' folder", () => {
   const before = process.cwd();
   try {
     process.chdir(tmpdir());
-    assert.equal(resolve(projectRoot({})), resolve(HOOKS, "..", "..", "..", ".."));
     assert.equal(projectRoot({ CLAUDE_PROJECT_DIR: "/x" }), "/x");
+    assert.equal(projectRoot({}), undefined);
+    assert.equal(projectRoot({ CLAUDE_PROJECT_DIR: "" }), undefined);
   } finally {
     process.chdir(before);
   }
@@ -156,4 +157,24 @@ test("end to end: an archive under SKILL_RETRO_ARCHIVE_DIRS holds the stop, the 
 test("outside a git repository the stop hook stays silent (fail-open)", () => {
   const root = mkdtempSync(join(tmpdir(), "retro-nogit-"));
   assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root), "");
+});
+
+test("⭐ without CLAUDE_PROJECT_DIR both hooks exit 0 and write no state anywhere", () => {
+  // The hooks run from the plugin cache: copied four folders deep, where an old fallback would take the project.
+  const sandbox = mkdtempSync(join(tmpdir(), "retro-noproject-"));
+  const hooks = join(sandbox, "cache", "a", "b", "c", "hooks");
+  cpSync(HOOKS, hooks, { recursive: true });
+  const cwd = join(sandbox, "shell");
+  mkdirSync(cwd);
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key !== "CLAUDE_PROJECT_DIR"));
+  const payloads = { "log-skill-use.mjs": { tool_input: { skill: "backlog" } }, "retrospective-hint.mjs": { hook_event_name: "Stop" } };
+  for (const [hook, payload] of Object.entries(payloads)) {
+    const stdout = execFileSync("node", [join(hooks, hook)], { input: JSON.stringify(payload), env, cwd, encoding: "utf8" });
+    assert.equal(stdout, "", hook);
+  }
+  for (const place of [join(sandbox, "cache"), cwd]) {
+    assert.equal(existsSync(join(place, ".claude")), false, `state written under ${place}`);
+  }
+  assert.equal(projectRoot({}), undefined);
+  assert.equal(stateDir({}), null);
 });

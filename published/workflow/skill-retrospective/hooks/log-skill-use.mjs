@@ -4,7 +4,7 @@
  * closes, the skills that served it are the ones to rewrite with what it taught.
  *
  * Appends the skill's name to .claude/.state/skills-used.txt once (the retrospective empties the file).
- * Fail-open: any error exits 0.
+ * Fail-open: any error exits 0; without CLAUDE_PROJECT_DIR (no project) it does nothing.
  */
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -24,8 +24,9 @@ export function isNew(text, name) {
 
 function main(input, env) {
   const name = skillName(JSON.parse(input || "{}")?.tool_input);
-  if (!name) return;
-  const file = join(stateDir(env), USED);
+  const dir = name ? stateDir(env) : null;
+  if (!dir) return;
+  const file = join(dir, USED);
   if (isNew(existsSync(file) ? readFileSync(file, "utf8") : "", name)) appendFileSync(file, name + "\n");
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.1] - 2026-10-07
+- the installer hooks are gone: it installs as a plugin; the hooks take the project from CLAUDE_PROJECT_DIR alone and, without it, do nothing
+
+
 ## [1.3.0] - 2026-10-07
 - Edit a skill at its source: project, skill repository (with a local clone: publish, tag, push; without: an issue on the repository) or user-level
 

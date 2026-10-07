@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2026-10-07
+- the README and the bootstrap no longer name the retired installer: the skill installs as a plugin
+
+
 ## [1.1.3] - 2026-10-07
 - The preamble may link a conventions document beside the register when the rules outgrow it: the skill reads it too
 
