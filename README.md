@@ -27,8 +27,9 @@ claude plugin update backlog@pablolok-skills           # later, for a new versio
 
 Inside a session the same goes through `/plugin`. For **Claude Code on the web / cloud sessions**, add the
 repository as a plugin marketplace in claude.ai's settings (*Plugins & skills*): the account's plugins are synced
-into every session. A team project can also declare it in its committed `.claude/settings.json`, so whoever opens
-the project is offered the plugins:
+into every session. A team project can also declare it in its committed `.claude/settings.json`: whoever opens the
+project in an interactive session is offered the plugins when they trust the folder (a headless `claude -p` run
+installs nothing from it):
 
 ```json
 {
