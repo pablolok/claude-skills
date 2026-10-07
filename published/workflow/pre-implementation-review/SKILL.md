@@ -110,6 +110,9 @@ Three rules that make it bite:
 - **It applies HARDEST while fixing a defect in such a mechanism** — the blindest moment, because
   repairing feels like progress. If the fix is "recompute the stored copy on a trigger / a button / a
   save hook", STOP: that is the mechanism defending itself. Ask whether the copy should exist.
+- **It runs backwards too: ask it of what the code OVERWRITES** (an upserted row, a last-wins retry, a refreshed cache).
+  If the replaced value is the only record of *why* something happened, every pass destroys evidence: keep the
+  exception (what was discarded, with its duration and reason), not the whole history.
 - **Measured example**: a table storing a schedule's history held 276 rows, none carrying a user decision, none the
   matching rule would not rebuild from the ledger — around it had grown a write path, a known defect, a panel and a
   repair button. **One query months earlier would have said it should be a query.**
@@ -167,6 +170,11 @@ These are not soft smells to mention — if the change would introduce one, the 
   silently (a `.001`, a `(1)`), the next steps found the old outputs by name and shipped them.
   A **fallback** runs on the original input too, never on the failed attempt's output: a repair applied to what the
   stuck first try left produced a broken shape that passed its own count.
+  A retry or fallback that **did not measure** never replaces an outcome that did (the verdict is the last attempt that
+  produced an answer, the others are kept beside it), and a retry the remaining budget cannot finish is not started.
+- **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
+  that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
+  skipped — and when two stories fit, take the measurement that tells them apart before either is written down.
 - **A step that deletes or rewrites by a rule is bounded to where the rule is meant, and its output looked at.**
   A cleanup that removes whatever a test touches (near a moving part, matching a filter) finds far more than the
   case it was written for when the inputs change: unbounded, one removed half of an unrelated part and left its end
