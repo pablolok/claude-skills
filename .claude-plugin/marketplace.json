@@ -43,8 +43,8 @@
     {
       "name": "mermaid-diagrams",
       "source": "./published/workflow/mermaid-diagrams",
-      "description": "Diagrammi mermaid nei documenti markdown di QUALSIASI progetto, in modo che RENDANO davvero nella preview di VSCode e su GitHub. Usala prima di aggiungere o modificare un diagramma in docs/ — livelli, architettura, UML, sequence. Porta la regola su quando pre-renderizzare in SVG, i due script (validatore e renderer), il meccanismo per cui la preview lascia riquadri vuoti senza dare errore, e i vicoli ciechi già verificati da non ripercorrere. LIVING DOC — ogni scoperta nuova si aggiunge qui.",
-      "version": "1.0.0",
+      "description": "Mermaid diagrams in the markdown docs of ANY project, so that they really RENDER in the VS Code preview and on GitHub. Use it before adding or changing a diagram in docs/ — layers, architecture, UML, sequence. Carries the rule for when to pre-render to SVG, the validator and the renderer behind one stable project command, the mechanism by which the preview leaves empty boxes with no error, and the dead ends already ruled out.",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -112,8 +112,8 @@
     {
       "name": "typescript-react-standards",
       "source": "./published/workflow/typescript-react-standards",
-      "description": "Pablo's TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code for this user. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and coverage bar. The server-state/data-layer stack (TanStack Query, Supabase, pure libs in src/lib) is project-specific and opt-in, NOT a universal rule.",
-      "version": "1.0.1",
+      "description": "The TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and quality gates.",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -134,8 +134,8 @@
     {
       "name": "writing-architecture-docs",
       "source": "./published/workflow/writing-architecture-docs",
-      "description": "Usala quando un lavoro va progettato prima di essere scritto — una feature grossa, un rifacimento, un difetto che attraversa piu' livelli, un lavoro in piu' fasi — o quando la domanda e' «com'e' fatto oggi», «che forma deve avere», «perche' cosi' e non altrimenti». Vale per qualsiasi progetto e qualsiasi linguaggio. La meccanica dei diagrammi NON e' qui: sta nella skill mermaid-diagrams.",
-      "version": "1.0.0",
+      "description": "Use when a piece of work must be designed before it is written — a large feature, a rework, a defect that crosses several layers, a multi-phase job — or when the question is \"how is it built today\", \"what shape must it take\", \"why this and not something else\". Any project, any language. The diagram mechanics are NOT here: they are in the mermaid-diagrams skill.",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [

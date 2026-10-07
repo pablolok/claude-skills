@@ -1,9 +1,9 @@
 ---
 name: typescript-react-standards
-description: Pablo's TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code for this user. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and coverage bar. The server-state/data-layer stack (TanStack Query, Supabase, pure libs in src/lib) is project-specific and opt-in, NOT a universal rule.
+description: The TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and quality gates.
 ---
 
-# TypeScript / React Standards (Pablo) — TS/React layer
+# TypeScript / React Standards — TS/React layer
 
 **The universal core lives in the `clean-code-standards` skill and applies
 in full to every TypeScript/React task.** This skill adds only what is TS/React-specific. When
@@ -49,11 +49,11 @@ nothing more):
 - **View-model / "controller"** — a **custom hook** (`useX`): owns the view state (`useState`/`useEffect`)
   and the actions the view calls, and delegates to the domain layer. This is where a fat component's
   logic belongs.
-- **Domain** — **pure functions / domain services** in `src/lib/` (collaborators injected): rules and
-  orchestration, no React, no JSX.
-- **Data** — a two-sublayer STACK, not one thing: a **cache/resource hook** (TanStack Query
+- **Domain** — **pure functions / domain services** in a domain module (e.g. `src/lib/`; collaborators injected):
+  rules and orchestration, no React, no JSX.
+- **Data** — a two-sublayer STACK, not one thing: a **cache/resource hook** (e.g. TanStack Query's
   `useQuery`/`useMutation` — the React-idiomatic piece) sitting **over** a raw data-access module
-  (a per-table repository / api client — the only place the DB/HTTP call lives). The hook's `queryFn`
+  (a per-table repository / api client — the only place the DB/HTTP call lives). The hook's query function
   calls the raw module; the hook owns caching + invalidation, the module owns the query. They stack,
   they don't compete. "Repository" is a DDD import, not React vocabulary — legitimate for a single
   per-entity call site + testability, but the React layer on top of it is the query hook.
@@ -61,7 +61,7 @@ nothing more):
 The numbered rules below are the specifics of that separation.
 
 8. **No business logic in components.** Domain rules and orchestration live in **pure functions**
-   (`src/lib/`) or **custom hooks**, never inside JSX or event handlers. A component that computes
+   (a domain module) or **custom hooks**, never inside JSX or event handlers. A component that computes
    domain logic is a god object — components orchestrate and render, they delegate the thinking.
 9. **Custom hooks are the reuse seam** (core rule #7 + Tell-Don't-Ask). Duplicated data-fetching,
    derivation, or side-effect logic across components → extract a `useX` hook, don't copy-paste.
@@ -87,20 +87,6 @@ The numbered rules below are the specifics of that separation.
     `any`-cast to dodge a diagnostic. Fix the underlying type/lint issue. The one allowed exception is
     a justified, **commented**, locally-scoped `// @ts-expect-error <reason>` at a real external
     boundary.
-
-## Project-specific (opt-in — NOT a universal rule)
-
-These fit this repo (Vite + React 18 + Supabase + TanStack Query). Apply only where the project
-already uses this stack:
-
-- **Logic in `src/lib/`, not in components/pages.** Business logic, React Query hooks, and pure
-  functions live in `src/lib/`; components/pages consume them.
-- **Server state via TanStack Query** (`useQuery`/`useMutation`, then `invalidateQueries` with the
-  right key) — don't hand-roll fetch/caching. Local/UI state via React state or context.
-- **In double-entry-darling only — money as rationals** (`amount_num/amount_den`), never floats;
-  transaction splits sum to zero (`splitsBalanced()`). Domain invariant — see that repo's AGENTS.md.
-- **Colocated tests**; `@` → `src/`. `integrations/supabase/types.ts` is generated — don't hand-edit.
-- **Edge functions are Deno** (`supabase/functions/`) — no Node.js APIs there.
 
 ## When reviewing / refactoring
 

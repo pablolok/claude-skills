@@ -2,7 +2,7 @@
   "name": "mermaid-diagrams-skill",
   "private": true,
   "type": "module",
-  "description": "Dipendenze della skill mermaid-diagrams. Stanno qui perche' la skill vive fuori dai progetti (plugin, o il clone in cache del launcher bootstrap/mermaid.mjs, che le installa da solo la prima volta): senza questa copia gli script funzionerebbero solo dentro un progetto che ha gia' mermaid, il che e' esattamente cio' che la skill non dovrebbe richiedere. Gli script provano comunque PRIMA il progetto in cui li lanci: questa e' la rete, non la regola.",
+  "description": "The mermaid-diagrams skill's dependencies. They are here because the skill lives outside the projects (a plugin, or the cached clone of the bootstrap/mermaid.mjs launcher, which installs them itself the first time): without this copy the scripts would work only inside a project that already has mermaid, which is exactly what the skill should not require. The scripts still try the project you run them in FIRST: this is the safety net, not the rule.",
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.16.0",
     "jsdom": "^20.0.3",

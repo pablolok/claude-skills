@@ -1,84 +1,83 @@
 #!/usr/bin/env node
 /**
- * Variante WSL di `render-svg.mjs`.
+ * The WSL variant of `render-svg.mjs`.
  *
- * ═══ PERCHÉ ESISTE (2026-08-30) ═══
+ * ═══ WHY IT EXISTS ═══
  *
- * Sotto WSL lo script normale NON funziona, e fallisce in un modo che sembra un problema di mermaid
- * mentre è di sistema: il Chromium che puppeteer scarica per Linux parte e muore subito con
+ * Under WSL the normal script does NOT work, and it fails in a way that looks like a mermaid problem while it is a
+ * system one: the Chromium that puppeteer downloads for Linux starts and dies at once with
  *
  *     error while loading shared libraries: libnspr4.so: cannot open shared object file
  *
- * cioè mancano le librerie di sistema che un Chrome installato porterebbe con sé. Sistemarlo vuole
- * `sudo apt install` — un permesso che una sessione non ha e non deve prendersi da sola.
+ * that is, the system libraries an installed Chrome would bring along are missing. Fixing that takes
+ * `sudo apt install` — a permission a session does not have and must not take on its own.
  *
- * La via che funziona è girare intorno al problema invece di risolverlo: WSL può eseguire un `.exe`,
- * e la copia Windows della skill ha già `mmdc.exe` e punta al Chrome VERO installato su Windows. I
- * percorsi si traducono con `wslpath -w`, e `\\wsl.localhost\...` è leggibile da Windows, quindi il
- * repo può restare dov'è.
+ * The way that works goes around the problem instead of solving it: WSL can run an `.exe`, and the skill's Windows
+ * copy already has `mmdc.exe` and points at the REAL Chrome installed on Windows. Paths are translated with
+ * `wslpath -w`, and `\\wsl.localhost\...` is readable from Windows, so the repository can stay where it is.
  *
- * Verificato il 2026-08-30 su VetrinaKarate: SVG da 34 KB, nessun `foreignObject`, viewBox 1334x1186.
+ * Verified on a real project: a 34 KB SVG, no `foreignObject`, viewBox 1334x1186.
  *
- * ⚠️ Serve la copia Windows della skill con le sue dipendenze installate. Se un giorno le librerie
- * Linux ci sono, `render-svg.mjs` torna a essere la strada giusta e questo file va tolto.
+ * ⚠️ It needs the skill's Windows copy with its dependencies installed. If one day the Linux libraries are there,
+ * `render-svg.mjs` is the right road again and this file goes.
  */
 import { execFileSync } from "node:child_process";
 import { readdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * La copia Windows della skill. Non e' cablata su un utente: si cerca sotto /mnt/c/Users, cosi' il
- * file vale su qualsiasi macchina. `MERMAID_WIN_SKILL` la forza, se sta altrove.
+ * The skill's Windows copy. It is not wired to one user: it is looked for under /mnt/c/Users, so the file works on
+ * any machine. `MERMAID_WIN_SKILL` forces it when it lives elsewhere.
  */
-function trovaSkillWindows() {
-  // Un override esplicito e' comunque controllato: un percorso sbagliato deve dare il messaggio
-  // utile qui, non un ENOENT per ogni diagramma piu' avanti.
+function findWindowsSkill() {
+  // An explicit override is checked all the same: a wrong path must give the useful message here, not an ENOENT for
+  // every diagram further on.
   if (process.env.MERMAID_WIN_SKILL) {
     const p = process.env.MERMAID_WIN_SKILL;
     return existsSync(`${p}/node_modules/.bin/mmdc.exe`) ? p : null;
   }
   const base = "/mnt/c/Users";
-  let utenti = [];
+  let users = [];
   try {
-    utenti = readdirSync(base, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+    users = readdirSync(base, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
   } catch {
     return null;
   }
-  // Due posti: la vecchia copia a livello utente, e i cloni che il launcher `scripts/mermaid.mjs`
-  // tiene in cache (e dove installa le deps) — la versione piu' alta per prima.
-  const candidati = (u) => {
+  // Two places: the old user-level copy, and the clones the `scripts/mermaid.mjs` launcher keeps in its cache (where
+  // it installs the dependencies) — the highest version first.
+  const candidates = (u) => {
     const cache = `${base}/${u}/.cache/claude-skills`;
-    let cloni = [];
+    let clones = [];
     try {
-      cloni = readdirSync(cache).filter((n) => n.startsWith("mermaid-diagrams@"))
+      clones = readdirSync(cache).filter((n) => n.startsWith("mermaid-diagrams@"))
         .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
     } catch {
-      // nessuna cache per questo utente
+      // no cache in this Windows account
     }
     return [`${base}/${u}/.claude/skills/mermaid-diagrams`,
-            ...cloni.map((n) => `${cache}/${n}/published/workflow/mermaid-diagrams`)];
+            ...clones.map((n) => `${cache}/${n}/published/workflow/mermaid-diagrams`)];
   };
-  for (const u of utenti) {
-    const p = candidati(u).find((c) => existsSync(`${c}/node_modules/.bin/mmdc.exe`));
+  for (const u of users) {
+    const p = candidates(u).find((c) => existsSync(`${c}/node_modules/.bin/mmdc.exe`));
     if (p) return p;
   }
   return null;
 }
 
-const WIN_SKILL = trovaSkillWindows();
+const WIN_SKILL = findWindowsSkill();
 const MMDC = WIN_SKILL ? `${WIN_SKILL}/node_modules/.bin/mmdc.exe` : null;
 
 const dir = process.argv[2];
 if (!dir) {
-  console.error("uso: node render-svg-wsl.mjs <cartella-con-i-mmd>");
+  console.error("usage: node render-svg-wsl.mjs <folder-with-the-mmd-files>");
   process.exit(2);
 }
 if (!MMDC) {
   console.error(
-    "Copia Windows della skill con le deps non trovata sotto /mnt/c/Users/*/.cache/claude-skills\n" +
-    "(ne' nella vecchia /mnt/c/Users/*/.claude/skills/mermaid-diagrams). Lancia una volta da Windows\n" +
-    "`node scripts/mermaid.mjs check <un file.md>`, che la clona e le installa, oppure indica il percorso con\n" +
-    "MERMAID_WIN_SKILL=<cartella della skill con node_modules>"
+    "No Windows copy of the skill with its dependencies under /mnt/c/Users/*/.cache/claude-skills\n" +
+    "(nor in the old /mnt/c/Users/*/.claude/skills/mermaid-diagrams). Run once from Windows\n" +
+    "`node scripts/mermaid.mjs check <a file.md>`, which clones it and installs them, or give the path with\n" +
+    "MERMAID_WIN_SKILL=<the skill's folder with node_modules>"
   );
   process.exit(2);
 }
@@ -86,7 +85,7 @@ if (!MMDC) {
 const win = (p) => execFileSync("wslpath", ["-w", p], { encoding: "utf8" }).trim();
 const mmds = readdirSync(dir).filter((f) => f.endsWith(".mmd"));
 if (mmds.length === 0) {
-  console.error(`nessun .mmd in ${dir}`);
+  console.error(`no .mmd in ${dir}`);
   process.exit(2);
 }
 
@@ -101,23 +100,23 @@ for (const f of mmds) {
       "-c", win(`${WIN_SKILL}/.mermaid-config.json`),
     ], { stdio: "pipe" });
 
-    // Gli stessi tre controlli dello script originale: un SVG prodotto non è un SVG buono.
+    // The same three checks as the original script: an SVG produced is not a good SVG.
     const svg = readFileSync(out, "utf8");
-    const problemi = [];
-    if (svg.includes("foreignObject")) problemi.push("contiene foreignObject: un <img src=*.svg> lo mostrerebbe vuoto");
+    const problems = [];
+    if (svg.includes("foreignObject")) problems.push("contains foreignObject: an <img src=*.svg> would show it empty");
     const m = svg.match(/viewBox="[-\d.]+ [-\d.]+ ([\d.]+) ([\d.]+)"/);
-    if (!m) problemi.push("viewBox assente o non valido");
+    if (!m) problems.push("viewBox missing or invalid");
     else {
       const [w, h] = [Number(m[1]), Number(m[2])];
       const r = Math.max(w, h) / Math.min(w, h);
-      if (r > 12) problemi.push(`viewBox sproporzionato (${r.toFixed(1)}): il testo non è stato misurato`);
+      if (r > 12) problems.push(`stretched viewBox (${r.toFixed(1)}): the text was not measured`);
     }
-    if (problemi.length) { bad++; console.log(`  ${f.padEnd(38)} FAIL  ${problemi.join(" · ")}`); }
+    if (problems.length) { bad++; console.log(`  ${f.padEnd(38)} FAIL  ${problems.join(" · ")}`); }
     else console.log(`  ${f.padEnd(38)} ok`);
   } catch (e) {
     bad++;
     console.log(`  ${f.padEnd(38)} FAIL  ${String(e.stderr ?? e.message).split("\n")[0]}`);
   }
 }
-console.log(`\n${mmds.length} diagrammi, ${bad} falliti`);
+console.log(`\n${mmds.length} diagrams, ${bad} failed`);
 process.exit(bad ? 1 : 0);

@@ -1,244 +1,221 @@
 ---
 name: writing-architecture-docs
-description: Usala quando un lavoro va progettato prima di essere scritto — una feature grossa, un rifacimento, un difetto che attraversa piu' livelli, un lavoro in piu' fasi — o quando la domanda e' «com'e' fatto oggi», «che forma deve avere», «perche' cosi' e non altrimenti». Vale per qualsiasi progetto e qualsiasi linguaggio. La meccanica dei diagrammi NON e' qui: sta nella skill mermaid-diagrams.
+description: Use when a piece of work must be designed before it is written — a large feature, a rework, a defect that crosses several layers, a multi-phase job — or when the question is "how is it built today", "what shape must it take", "why this and not something else". Any project, any language. The diagram mechanics are NOT here: they are in the mermaid-diagrams skill.
 ---
 
-# Documenti di architettura
+# Architecture documents
 
-Un documento di architettura risponde a tre domande, in quest'ordine: **com'e' fatto oggi**, **che
-forma deve avere**, **perche' quella e non un'altra**. Senza la terza non e' un progetto, e' una
-descrizione — e una descrizione non fa prendere nessuna decisione a nessuno.
+An architecture document answers three questions, in this order: **how it is built today**, **what shape it must
+take**, **why that one and not another**. Without the third it is not a design, it is a description — and a
+description makes nobody take a decision.
 
-Il file sta accanto allo spec del lavoro:
+The file sits next to the work's spec:
 
 ```
-<docs>/<nome-del-lavoro>/
-  spec.md          la segnalazione, i requisiti, le prove puntuali
-  architecture.md  questo
-  diagrams/        NN-nome.mmd + NN-nome.svg
+<docs>/<work-name>/
+  spec.md          the report, the requirements, the point evidence
+  architecture.md  this
+  diagrams/        NN-name.mmd + NN-name.svg
 ```
 
-## ⚠️ Due documenti, due posti, due vite
+## ⚠️ Two documents, two places, two lives
 
-La prima domanda — **com'e' fatto oggi** — non ha la stessa vita delle altre due, e tenerla nello
-stesso file le fa marcire insieme. Quando l'area descritta e' anche **descritta stabilmente altrove**
-(un documento vivo sotto `docs/architecture/`, quello che risponde a «come funziona X»), i due si
-dividono cosi':
+The first question — **how it is built today** — does not live as long as the other two, and keeping them in one
+file makes them rot together. When the area is also **described stably elsewhere** (a living document under
+`docs/architecture/`, the one that answers "how does X work"), the two split like this:
 
-| | dove | cosa contiene | quando cambia | quando muore |
+| | where | what it holds | when it changes | when it dies |
 |---|---|---|---|---|
-| **il codice com'e' ORA** | `docs/architecture/<nome>.md` | la forma attuale, i difetti **misurati** con la prova a `file:riga`, le invarianti, e **la mappa `difetto / chi lo chiude / stato`** | **quando cambia il codice** che descrive | mai — sopravvive alle entry che lo citano |
-| **l'architettura che si sta MODIFICANDO** | il documento che il lavoro ha gia' — `spec.md`/`plan.md`/`report.md` — con `diagrams/` accanto | la forma target col diagramma, le fasi, quali difetti tocca, il criterio di accettazione | quando cambia il piano | con il lavoro: finisce in `archive/` |
+| **the code as it is NOW** | `docs/architecture/<name>.md` | the current shape, the **measured** defects with their evidence at `file:line`, the invariants, and **the map `defect / closed by / state`** | **when the code it describes changes** | never — it outlives the entries that cite it |
+| **the architecture being CHANGED** | the document the work already has — `spec.md`/`plan.md`/`report.md` — with `diagrams/` beside it | the target shape with its diagram, the phases, which defects it touches, the acceptance criterion | when the plan changes | with the work: it goes to `archive/` |
 
-⚠️ **La divisione e' fra i due POSTI, non dentro la cartella del lavoro.** Li' si accorpa: un
-`architecture.md` accanto a un `plan.md` che ha gia' «Il disegno» e «Accettazione» duplica invece di
-dividere. Un nome di file nuovo va aggiunto solo quando risponde a una domanda che gli altri non
-coprono.
+⚠️ **The split is between the two PLACES, not inside the work's folder.** There, merge: an `architecture.md` next to
+a `plan.md` that already has "The design" and "Acceptance" duplicates instead of splitting. A new file name is added
+only when it answers a question the others do not.
 
-E la **mappa dei difetti sta nel documento stabile**, non in quello del lavoro: la cartella di
-un'entry finisce in `archive/` quando l'entry chiude, e si porterebbe via l'unico posto dove e'
-scritto **quali difetti non li sta chiudendo nessuno** — proprio quelli che nessun lavoro aperto puo'
-custodire. Nel documento del lavoro resta una riga: quali difetti tocca *questo*.
+**The defect map lives in the stable document**, not in the work's: an entry's folder goes to `archive/` when the
+entry closes, and would take with it the only place that says **which defects nobody is closing** — exactly the ones
+no open work can keep. The work's document keeps one line: which defects *this* work touches.
 
-Il motivo e' che il primo file **sopravvive** al lavoro e il secondo no. Un documento di architettura
-stabile che porta dentro di se' le fasi di un'entry chiusa mesi fa e' un documento che nessuno si
-fida piu' di leggere; e un criterio di accettazione parcheggiato in un file che va in `archive/`
-sparisce proprio quando servirebbe verificarlo.
+The reason is that the first file **outlives** the work and the second does not. A stable architecture document that
+carries the phases of an entry closed months ago is one nobody trusts any more; and an acceptance criterion parked in
+a file headed for `archive/` vanishes exactly when it is needed to verify the work.
 
-Ne segue la regola piu' utile delle due: **il criterio di accettazione si scrive nel documento della
-migrazione, e punta a quello di architettura.** Non «a lavoro finito il codice fara' X» — che nessuno
-puo' controllare — ma *«aggiornare `architecture/<nome>.md` deve produrre queste trasformazioni: la
-tabella a due colonne diventa a una, il difetto D3 passa al passato, il titolo del documento non
-regge piu'»*. **Se l'aggiornamento non le produce, il lavoro non e' finito**, comunque appaia il
-codice. Funziona solo perche' il bersaglio e' un file **che qualcun altro mantiene**: e' la ragione
-per cui i due stanno separati, non una conseguenza.
+From this follows the more useful rule of the two: **the acceptance criterion is written in the migration's document,
+and points at the architecture document.** Not "when done, the code will do X" — which nobody can check — but
+*"updating `architecture/<name>.md` must produce these transformations: the two-column table becomes one column,
+defect D3 leaves the open defects, the document's title no longer holds"*. **If the update does not produce them, the
+work is not done**, however the code looks. It works only because the target is a file **someone else maintains**:
+that is the reason the two are kept apart, not a consequence of it.
 
-Se l'area **non** ha un documento stabile, le tre domande restano in un file solo — la divisione
-serve quando c'e' qualcosa da dividere, non per simmetria.
+If the area has **no** stable document, the three questions stay in one file — the split is for when there is
+something to split, not for symmetry.
 
-## Quando serve, e quando no
+## When it is needed, and when not
 
-| serve | non serve |
+| needed | not needed |
 |---|---|
-| il lavoro tocca piu' livelli, o li ridisegna | la modifica ha un'implementazione ovvia |
-| il difetto e' **strutturale** (torna da solo se lo tappi) | e' un bug puntuale: basta lo spec |
-| esiste un'alternativa vera da scartare | c'e' una sola strada |
-| il lavoro esce in piu' fasi | e' un commit |
+| the work touches several layers, or redraws them | the change has an obvious implementation |
+| the defect is **structural** (it comes back if you patch it) | it is a point bug: the spec is enough |
+| there is a real alternative to reject | there is only one road |
+| the work ships in several phases | it is one commit |
 
-Il confine con lo spec e' netto: **lo spec porta i fatti, l'architettura porta la forma.** Segnalazione,
-requisiti e prove puntuali stanno li'; qui si linkano, non si ripetono.
+The line with the spec is sharp: **the spec carries the facts, the architecture carries the shape.** The report, the
+requirements and the point evidence live there; here they are linked, not repeated.
 
-## ⚠️ La coda di un documento VIVO: quattro sezioni, e sono sempre quelle
+## ⚠️ The tail of a LIVING document: four sections, always the same
 
-Vale per i documenti stabili sotto `docs/architecture/`, ed e' la parte che si dimentica per prima —
-perche' e' l'unica che non parla del codice ma di **chi lo tiene**. In coda, in quest'ordine:
+For the stable documents under `docs/architecture/`, and the part forgotten first — because it is the only one that
+speaks not about the code but about **who keeps it**. At the end, in this order:
 
-| sezione | cosa contiene | cosa chiede al lettore |
+| section | what it holds | what it asks the reader |
 |---|---|---|
-| **I difetti aperti** | voci numerate `D<n>`, ognuna con la prova a `file:riga` | *«questo va fatto»* |
-| **I limiti dichiarati, con quanto costano** | conseguenze **misurate e accettate** del disegno, che nessuno chiudera' | *«questo e' il prezzo, ed ecco quanto»* |
-| **Chi possiede ciascun difetto** | `D<n> / chi lo chiude / stato` | e' l'unico posto dove si vede **cosa non sta chiudendo nessuno** |
-| **Chi ci ha lavorato** | `[[BKLG-NNN]] / cosa ha lasciato nel codice` | il racconto sta qui, **una riga per entry** |
+| **Open defects** | numbered items `D<n>`, each with its evidence at `file:line` | *"this must be done"* |
+| **Declared limits, and what they cost** | **measured and accepted** consequences of the design, which nobody will close | *"this is the price, and here is how much"* |
+| **Defect owners** | `D<n> / closed by / state` | the only place that shows **what nobody is closing** |
+| **Who worked on it** | `[[BKLG-NNN]] / what it left in the code` | the story lives here, **one line per entry** |
 
-Le prime due sotto un titolo solo fanno leggere l'area come **mezza rotta**: un difetto da chiudere e
-un limite accettato non chiedono la stessa cosa. E un limite **non si cancella** quando si decide di
-non chiuderlo — sparirebbe la misura che regge la decisione, e fra tre mesi qualcuno ripropone il
-rimedio gia' scartato.
+(These are the section names the `backlog` skill's gates read by default; a project writing in another language
+declares its own names to them.)
 
-Un numero **esce** quando cambia il **CODICE**, e **passa** fra le prime due quando cambia la sua
-*natura*, non il suo peso. **I numeri non si riciclano mai**: il documento dice quali sono usciti e
-verso quale entry.
+The first two under one heading make the area read as **half broken**: a defect to close and an accepted limit do not
+ask the same thing. And a limit **is not deleted** when it is decided not to close it — the measurement behind the
+decision would vanish, and in three months someone proposes again the remedy already rejected.
 
-⚠️ **Una sezione «I difetti usciti» NON esiste**, ed e' la forma in cui il racconto rientra dalla
-finestra: una voce chiusa si legge come stato attuale. Cio' che una entry ha chiuso e' **una riga in
-«Chi ci ha lavorato»**. Misurato l'11/08 su `manga-bento-import.md`: aveva una tabella di difetti
-chiusi e **nessuna** sezione «Chi ci ha lavorato» — esattamente lo scambio. Il modello da copiare e'
-`remote-catalog-search.md`.
+A number **leaves** when the **CODE** changes, and **moves** between the first two when its *nature* changes, not its
+weight (rule 3: numbers are never recycled).
 
-L'esemplare vale anche per la sezione **vuota**: *«Nessuno»* sotto «I difetti aperti» e'
-un'informazione — dice che su quest'area non c'e' lavoro in sospeso, non che nessuno ha guardato.
+⚠️ **There is no "Closed defects" section**: it is how the story climbs back in through the window — a closed item
+reads as current state. What an entry closed is **one row in "Who worked on it"** (rule 4). Measured on a real
+document: a table of closed defects and **no** "Who worked on it" section — exactly that swap.
 
-## Lo scheletro
+The same holds for the **empty** section: *"None"* under "Open defects" is information — it says there is no pending
+work on the area, not that nobody looked.
 
-Cinque sezioni. Ognuna esiste per una domanda; se una domanda non ha risposta, la sezione va tolta,
-non riempita.
+## The skeleton
 
-| # | sezione | deve contenere |
+Five sections. Each exists for a question; if a question has no answer, the section is removed, not filled.
+
+| # | section | must contain |
 |---|---|---|
-| 1 | **Com'e' fatto oggi** | il diagramma dei livelli attuali, i **difetti strutturali numerati** (D1…Dn), e **il conto** |
-| 2 | **La decisione di fondo** | le opzioni reali messe una accanto all'altra, quelle scartate **con il loro scarto**, e la scelta |
-| 3 | **L'architettura target** | il diagramma della forma nuova, come si parlano i livelli (elenco numerato), i componenti in UML, il percorso critico |
-| 4 | **Decisioni di progetto** | la tabella `# / decisione / scelta / perche'`, **cosa NON cambia**, **il rischio principale** |
-| 5 | **Fasi** | tabella `fase / cosa consegna`, e quale fase da' per prima all'utente la cosa che ha visto |
+| 1 | **How it is built today** | the diagram of the current layers, the **numbered structural defects** (D1…Dn), and **the count** |
+| 2 | **The founding decision** | the real options side by side, the rejected ones **with their cost**, and the choice |
+| 3 | **The target architecture** | the diagram of the new shape, how the layers talk (a numbered list), the components in UML, the critical path |
+| 4 | **Design decisions** | the table `# / decision / choice / why`, **what does NOT change**, **the main risk** |
+| 5 | **Phases** | the table `phase / what it delivers`, and which phase first gives the user back what they reported |
 
-Quando c'e' la divisione in due file, la sezione 1 **non si duplica**: i difetti numerati vivono nel
-documento stabile (sono proprieta' misurate del codice di oggi, e si chiudono quando il codice
-cambia), e il documento della migrazione ci si riferisce con una tabella **`difetto / chi lo chiude /
-stato`**. Quella tabella e' anche il posto dove si vede *cosa manca*: i difetti senza un lavoro che
-li chiuda vanno marcati, non lasciati impliciti.
+When there are two files, section 1 **is not duplicated**: the numbered defects live in the stable document (they are
+measured properties of today's code, and close when the code changes), and the migration's document refers to them
+with a **`defect / closed by / state`** table. That table is also where *what is missing* shows: defects with no work
+to close them are marked, not left implicit.
 
-## Le nove regole che fanno la differenza
+## The nine rules that make the difference
 
-Lo scheletro e' la parte facile. Quello che separa un documento utile da un tema in bella copia:
+The skeleton is the easy part. What separates a useful document from a neat essay:
 
-1. **Ogni difetto e' strutturale, numerato e provato.** Una riga in grassetto che dice il difetto,
-   poi la prova a `file:riga`. `D3 — Il trasporto e' scritto dentro il caso d'uso, 19 volte.` I numeri
-   servono perche' il resto del documento ci si riferisca: «D4 sparisce» e' una frase che si puo'
-   verificare. Un difetto senza prova e' un'opinione; un difetto che non torna da solo e' un bug, e i
-   bug stanno nello spec.
+1. **Every defect is structural, numbered and proven.** A bold line stating the defect, then its evidence at
+   `file:line`. `D3 — The transport is written inside the use case, 19 times.` The numbers exist so the rest of the
+   document can refer to them: "D4 disappears" is a sentence that can be checked. A defect without evidence is an
+   opinion; a defect that does not come back on its own is a bug, and bugs belong in the spec.
 
-2. **Il conto si misura, non si stima.** Una tabella di numeri — quante chiamate, quante coperte,
-   quante dimenticate — ottenuti con un comando, non a occhio. **E si controlla il denominatore**:
-   contare «i domini con un gesto in coda» lascia fuori le letture che nessuno scrive, e il buco si
-   scopre alla fine, quando il lavoro sembrava finito.
+2. **The count is measured, not estimated.** A table of numbers — how many calls, how many covered, how many
+   forgotten — obtained with a command, not by eye. **And check the denominator**: counting "the domains with a
+   queued action" leaves out the reads nobody writes, and the hole shows at the end, when the work looked finished.
 
-3. **Un difetto CHIUSO esce dal documento** (direzione dell'utente, 2026-08-07). La sezione dei
-   difetti tiene solo quelli **aperti**: un documento di architettura descrive com'e' fatto il codice
-   *adesso*, e una voce chiusa non lo descrive piu' — la si legge come stato attuale, ed e' il modo in
-   cui un documento diventa falso senza che nessuna riga sia sbagliata. Misurato su
-   `title-match-gate.md`: quattro difetti chiusi su sette occupavano **287 righe** di prosa al passato,
-   piu' della meta' della sezione, e chi la apriva doveva capire da solo quali fossero ancora veri.
-   **Dove va la storia**: nell'**entry** che ha chiuso il difetto — regola 4, che dice dove va TUTTO
-   il passato di un documento.
-   ⚠️ **I numeri non si riciclano mai**, e il documento dice quali sono usciti e verso quale entry: le
-   entry chiuse e i commit che citano `D2` continuano a esistere, e un `D2` nuovo li farebbe mentire.
+3. **A CLOSED defect leaves the document.** The defects section holds only the **open** ones: an architecture document
+   describes how the code is *now*, and a closed item no longer does — it reads as current state, which is how a
+   document becomes false without any line being wrong. Measured on one document: four closed defects out of seven
+   took **287 lines** of past-tense prose, more than half the section, and the reader had to work out which were
+   still true. **Where the story goes**: into the **entry** that closed the defect (rule 4).
+   ⚠️ **Numbers are never recycled**, and the document says which have left and toward which entry: the closed
+   entries and the commits that cite `D2` still exist, and a new `D2` would make them lie.
 
-4. **Il documento porta il PRESENTE e un elenco di link; il passato sta nelle entry**
-   (direzione dell'utente, 2026-08-09):
+4. **The document carries the PRESENT and a list of links; the past lives in the entries.** An architecture file holds
+   what is there now, not the problems there were and how they were solved — the linked backlog entries are for that.
+   Once a problem is solved, what remains is the clean design of what exists, then the plain list of who worked on it.
 
-   > *«i file di architettura devono contenere informazione sull'attuale, non spiegazioni dei problemi
-   > che ci sono stati e delle risoluzioni — per quello ci sono i backlog collegati. Una volta risolti
-   > deve restare il disegno pulito di cosa c'e', poi la lista semplice di chi ci ha lavorato.»*
+   An **open** defect stays in the document: it is a property of the code of now, and that section is the only place
+   that shows what nobody is closing. All the rest of the past — what was broken, how it was fixed, what was believed
+   before — **does not describe the code of now**, so it does not belong here. It belongs in the entry, which is made
+   for that and survives in `archive/`.
 
-   Un difetto **aperto** sta nel documento: e' una proprieta' del codice di adesso, e quella sezione e'
-   l'unico posto dove si vede cosa non sta chiudendo nessuno. Tutto il resto del passato — cosa era
-   rotto, com'e' stato aggiustato, cosa si credeva prima — **non descrive il codice di adesso**, quindi
-   non sta qui. Sta nell'entry, che e' fatta per quello e che sopravvive in `archive/`.
-
-   Ne segue la forma di chiusura, ed e' quella che di solito non si fa: quando un lavoro chiude un
-   difetto il documento **non guadagna** un paragrafo che racconta la chiusura. Ne **perde** uno — la
-   voce del difetto — e guadagna **una riga in una lista**:
+   Hence the closing move, the one usually skipped: when a piece of work closes a defect the document **does not
+   gain** a paragraph telling the closure. It **loses** one — the defect's item — and gains **one line in a list**:
 
    ```markdown
-   ## Chi ci ha lavorato
+   ## Who worked on it
    | | |
    |---|---|
-   | [[BKLG-406]] | ogni creazione chiede l'identita' ai cataloghi |
-   | [[BKLG-413]] | l'import MangaBento passa dalla stessa ricerca |
+   | [[BKLG-012]] | every import asks the catalogue for the record's identity |
+   | [[BKLG-019]] | the CSV import goes through the same lookup |
    ```
 
-   Una riga per entry, senza racconto: chi vuole sapere *cosa* e' successo apre l'entry, che ha il
-   piano, le misure e il diagramma della migrazione. Duplicarlo qui produce due versioni della stessa
-   storia, e quella nel documento invecchia per prima perche' nessuno la rilegge.
+   One line per entry, no story: whoever wants to know *what* happened opens the entry, which has the plan, the
+   measurements and the migration's diagram. Duplicating it here makes two versions of the same story, and the one in
+   the document ages first because nobody rereads it.
 
-   ⚠️ **I blocchi `> Corretto/Aggiornato il <data>` sono TRANSITORI, non un archivio.** Servono finche'
-   una frase falsa e' ancora in circolazione e qualcuno potrebbe ricordarsela; poi la frase si riscrive
-   giusta e il blocco esce, perche' un lettore nuovo non ha niente da disimparare. Misurato il 09/08:
-   `title-match-gate.md` ne aveva **21** e `external-identity.md` **9** — a quel punto non sono piu'
-   correzioni, sono un secondo documento al passato incastrato dentro il primo. La tracciabilita' che
-   difendevano non si perde: sta in `git log`, nell'entry linkata e nella riga della lista.
+   ⚠️ **`> Corrected/Updated on <date>` blocks are TRANSIENT, not an archive.** They serve while a false sentence is
+   still in circulation and someone might remember it; then the sentence is rewritten right and the block goes,
+   because a new reader has nothing to unlearn. Measured: two documents carried **21** and **9** of them — at that
+   point they are no longer corrections, they are a second past-tense document wedged inside the first. The
+   traceability they defended is not lost: it is in `git log`, in the linked entry and in the list's row.
 
-   Il test, su qualunque paragrafo: **descrive come e' fatto il codice adesso?** Se e' al passato, o
-   nomina un'entry chiusa per spiegare *perche'* qualcosa e' cambiato, va nell'entry.
+   The test, on any paragraph: **does it describe how the code is now?** If it is in the past tense, or names a closed
+   entry to explain *why* something changed, it goes into the entry.
 
-5. **Almeno un'alternativa scartata, con il prezzo scritto.** «Abbiamo scelto X» non e' una decisione
-   finche' non c'e' scritto cosa costava Y. Lo scarto e' concreto: uno store da possedere, le regole di
-   sync da tenere allineate con la sicurezza, una dipendenza in piu'. Se nessuna alternativa aveva un
-   prezzo, non serviva un documento.
+5. **At least one rejected alternative, with its price written down.** "We chose X" is not a decision until it says
+   what Y would have cost. The cost is concrete: a store to own, sync rules to keep aligned with security, one more
+   dependency. If no alternative had a price, no document was needed.
 
-6. **Le decisioni stanno in tabella, una riga l'una, con il perche' accanto.** Non in prosa sparsa: si
-   devono poter rileggere fra sei mesi in venti secondi, ed e' l'unico posto dove un rischio accettato
-   («last-write-wins, un utente su due dispositivi») diventa esplicito invece che implicito.
+6. **Decisions live in a table, one row each, with the why beside it.** Not in scattered prose: they must be
+   rereadable in twenty seconds six months from now, and it is the only place where an accepted risk
+   ("last-write-wins, one user on two devices") becomes explicit instead of implicit.
 
-7. **«Cosa NON cambia» e «il rischio principale» non sono opzionali.** Il primo delimita il lavoro —
-   e' cio' che dice al lettore dove smettere di preoccuparsi. Il secondo nomina **l'invariante che
-   questo lavoro non ha il diritto di rompere**, e va scritto prima di iniziare, non dopo averlo rotto.
+7. **"What does NOT change" and "the main risk" are not optional.** The first bounds the work — it tells the reader
+   where to stop worrying. The second names **the invariant this work has no right to break**, and it is written before
+   starting, not after breaking it.
 
-8. **Le fasi dicono cosa consegnano, non cosa toccano.** «F4 — outbox + registry: i 19 rami spariscono
-   e i 40 dimenticati si coprono da soli», non «F4 — modifiche a transactions.ts». E si dichiara quale
-   fase restituisce per prima all'utente la cosa che ha segnalato: il resto e' lavoro strutturale, e va
-   detto che lo e'.
+8. **Phases say what they deliver, not what they touch.** "F4 — outbox + registry: the 19 branches disappear and the
+   40 forgotten ones are covered by themselves", not "F4 — changes to transactions.ts". And say which phase first
+   gives the user back the thing they reported: the rest is structural work, and it must be said that it is.
 
-9. **Il diagramma e' parte del documento, non un'illustrazione: si aggiorna nello STESSO passaggio
-   della prosa.** Questa e' la regola piu' facile da saltare, perche' la prosa la stai gia' scrivendo e
-   il `.mmd` e' un altro file — e il costo del salto e' asimmetrico: **il diagramma e' quello che si
-   guarda per primo**, quindi un paragrafo giusto sopra un'immagine vecchia si legge come un'immagine
-   giusta e un paragrafo confuso. Un blocco `> Aggiornato il <data>` non ripara niente se il disegno
-   sopra dice ancora la cosa vecchia.
+9. **The diagram is part of the document, not an illustration: it is updated in the SAME pass as the prose.** This is
+   the rule easiest to skip, because the prose is already being written and the `.mmd` is another file — and the cost
+   of skipping is lopsided: **the diagram is what gets looked at first**, so a right paragraph over an old picture
+   reads as a right picture and a confusing paragraph. A `> Updated on <date>` block repairs nothing if the drawing
+   above still says the old thing.
 
-   Misurato il 2026-08-06, due volte nella stessa sessione: aggiornata la prosa del cancello 1 mentre i
-   suoi due diagrammi dicevano ancora «confronta due stringhe»; poi, correggendo il cancello 2, lasciato
-   il suo nodo con la sola dicitura «fail-open». Nessuno dei due errori e' visibile rileggendo il testo.
+   Measured twice in one session: the prose of a first gate updated while its two diagrams still said "compares two
+   strings"; then, fixing a second gate, its node left with only the label "fail-open". Neither mistake is visible
+   rereading the text.
 
-   Tre mosse, in quest'ordine, ogni volta che una modifica tocca una sezione che ha un diagramma:
-   - **grep del `.mmd` per i nomi che stai cambiando** (una funzione rinominata, un campo nuovo, un
-     ramo che sparisce). E' il controllo che costa dieci secondi e trova tutto.
-   - **rigenera e guarda le dimensioni**: un rapporto assurdo o un file che non cambia dimensione
-     dicono che il render non ha preso ciò che credevi.
-   - **chiedi se il cambiamento ha aperto una sezione senza diagramma.** Se una sezione ha appena
-     guadagnato una decisione vera e la sua gemella un disegno ce l'ha, la mancanza e' un buco, non una
-     scelta — nello stesso giorno il cancello 2 si e' rivelato senza diagramma mentre il cancello 1 ne
-     aveva uno dal primo giorno.
+   Three moves, in this order, every time a change touches a section that has a diagram:
+   - **grep the `.mmd` for the names you are changing** (a renamed function, a new field, a branch that disappears).
+     It is the ten-second check that finds everything.
+   - **regenerate and look at the sizes**: an absurd ratio, or a file whose size does not change, says the render did
+     not take what you thought.
+   - **ask whether the change opened a section without a diagram.** If a section has just gained a real decision and
+     its twin has a drawing, the missing one is a hole, not a choice — the same day, the second gate turned out to have
+     no diagram while the first had had one from day one.
 
-## I diagrammi: uno per domanda
+## Diagrams: one per question
 
-| domanda della sezione | tipo | come |
+| the section's question | type | how |
 |---|---|---|
-| com'e' fatto oggi / la forma target | `flowchart TD` | un `subgraph` per livello, le frecce dicono chi chiama chi |
-| quali opzioni avevo | `flowchart LR` | un ramo per opzione, `classDef` per marcare scelta e scartata |
-| di che pezzi e' fatto | `classDiagram` | `<<interface>>` sui contratti, le relazioni fra le classi |
-| come si svolge il percorso critico | `sequenceDiagram` | `alt`/`else` per i due mondi (con rete / senza) |
+| how it is built today / the target shape | `flowchart TD` | one `subgraph` per layer, the arrows say who calls whom |
+| which options there were | `flowchart LR` | one branch per option, a `classDef` to mark the chosen and the rejected |
+| which pieces it is made of | `classDiagram` | `<<interface>>` on the contracts, the relations between the classes |
+| how the critical path runs | `sequenceDiagram` | `alt`/`else` for the two worlds (online / offline) |
 
-Un diagramma per domanda: due diagrammi che dicono la stessa cosa vogliono dire che la domanda era una
-sola. **Il diagramma porta la struttura, la prosa porta i numeri** — un'etichetta che vuole una frase
-e' prosa travestita.
+One diagram per question: two diagrams that say the same thing mean the question was one. **The diagram carries the
+structure, the prose carries the numbers** — a label that wants a sentence is prose in disguise.
 
-L'opzione scelta e quella scartata si leggono a colpo d'occhio:
+The chosen and the rejected option read at a glance:
 
 ```mermaid
 flowchart LR
-    L1["L1 — nel caso d'uso<br/>(oggi)"] --> L1N["59 posti devono ricordarsene.<br/>40 non l'hanno fatto."]
-    L2["L2 — nel trasporto<br/>(proposto)"] --> L2N["Il caso d'uso dichiara un comando.<br/>Un solo esecutore decide quando."]
+    L1["L1 — in the use case<br/>(today)"] --> L1N["59 places must remember it.<br/>40 did not."]
+    L2["L2 — in the transport<br/>(proposed)"] --> L2N["The use case declares a command.<br/>A single executor decides when."]
 
     classDef bad fill:#5c1a1a,stroke:#ff8a80,color:#ffffff
     classDef good fill:#14532d,stroke:#69f0ae,color:#ffffff
@@ -246,45 +223,36 @@ flowchart LR
     class L1 bad
 ```
 
-**Da tre diagrammi in su i blocchi live non si vedono** — la preview di VSCode annulla il render in
-corso e lascia riquadri vuoti, senza dare errore. Sopra quella soglia i sorgenti stanno in
-`diagrams/*.mmd` e il documento incorpora gli SVG. Procedura, validatore e renderer: skill
-**mermaid-diagrams**. Il documento apre con la nota che spiega perche':
+**From three diagrams up, live blocks do not show** — the VS Code preview cancels the render in progress and leaves
+empty boxes, with no error. Above that threshold the sources live in `diagrams/*.mmd` and the document embeds the
+SVGs. Procedure, validator and renderer: the **mermaid-diagrams** skill. The document opens with the note that says
+why:
 
 ```markdown
-> I diagrammi sono **SVG pre-renderizzati** dai sorgenti in `diagrams/*.mmd`, non blocchi mermaid
-> live: la preview di VSCode annulla il render in corso a ogni aggiornamento. Dettagli nella skill
-> `mermaid-diagrams`.
+> The diagrams are **SVGs pre-rendered** from the sources in `diagrams/*.mmd`, not live mermaid blocks: the VS Code
+> preview cancels the render in progress on every update. Details in the `mermaid-diagrams` skill.
 ```
 
-e sotto ogni immagine va la riga che rende il `.mmd` la fonte di verita':
+and under each image goes the line that makes the `.mmd` the source of truth:
 
 ```markdown
-![Descrizione](./diagrams/01-nome.svg)
+![What it shows](./diagrams/01-name.svg)
 
-<sub>Sorgente: [`diagrams/01-nome.mmd`](./diagrams/01-nome.mmd). Rigenera con `node scripts/mermaid.mjs render <cartella-dei-diagrammi>` — vedi la skill `mermaid-diagrams`.</sub>
+<sub>Source: [`diagrams/01-name.mmd`](./diagrams/01-name.mmd). Regenerate with `node scripts/mermaid.mjs render <the-diagrams-folder>` — see the `mermaid-diagrams` skill.</sub>
 ```
 
-## Errori comuni
+## Common mistakes
 
-| errore | come si riconosce | cosa fare |
+| mistake | how to spot it | what to do |
 |---|---|---|
-| descrive invece di decidere | nessuna opzione scartata, nessuno scarto | sezione 2, o il documento non serviva |
-| numeri a occhio | «circa», «la maggior parte» | misurali, e controlla il denominatore |
-| ripete lo spec | mezza pagina di segnalazione | linka lo spec |
-| difetti come elenco di bug | «manca un `await` in X» | e' un bug: spec o backlog, non qui |
-| il diagramma spiega | etichette lunghe una frase | la frase va nella prosa, il diagramma resta struttura |
-| diagramma decorativo | non risponde a nessuna domanda della tabella | toglilo |
-| il racconto della risoluzione resta nel documento | paragrafi al passato: «era rotto», «prima faceva», «chiuso da [[BKLG-…]] perche'…» | il presente si riscrive giusto; il racconto va nell'entry, e qui resta **una riga** in «Chi ci ha lavorato» (regola 4) |
-| blocchi datati che si accumulano | piu' di due o tre `> Corretto/Aggiornato il …` nello stesso file | sono transitori: assorbili nel testo al presente e toglili |
-| la cornice racconta il LAVORO, non il codice | titoli come «il caso che ha aperto tutto questo», «cosa NON cambia», «asse A: APERTO» | il contenuto spesso va benissimo dov'e': cambia la **cornice**. Un caso misurato e' un **esempio svolto della regola** («il cancello all'opera, con i numeri»), non l'origine di un'entry; le invarianti sono **proprieta' che il codice tiene**, non promesse; uno stato e' «divergono», non «APERTO» |
-| fasi che elencano i file | «F2 — modifiche a network.ts» | scrivi cosa consegna |
-| **prosa aggiornata sopra un diagramma vecchio** | il paragrafo dice una cosa, l'immagine sopra ne dice un'altra | rigenera il `.mmd` **nello stesso passaggio**, mai «poi» — vedi la regola 9 |
-
-## L'esemplare
-
-Il documento da cui viene questa skill:
-`double-entry-darling/docs/implementations/features/offline-first/architecture.md` (BKLG-044) — cinque
-sezioni, cinque diagrammi pre-renderizzati, quattro difetti numerati, la correzione della F1 lasciata
-dov'era, sette decisioni in tabella. LIVING DOC: quando un documento di architettura si rivela
-sbagliato in un modo nuovo, la regola che sarebbe servita si aggiunge qui.
+| it describes instead of deciding | no rejected option, no cost | section 2, or the document was not needed |
+| numbers by eye | "about", "most of" | measure them, and check the denominator |
+| it repeats the spec | half a page of the report | link the spec |
+| defects as a bug list | "an `await` is missing in X" | it is a bug: spec or backlog, not here |
+| the diagram explains | labels a sentence long | the sentence goes in the prose, the diagram stays structure |
+| a decorative diagram | it answers no question of the table | remove it |
+| the story of the fix stays in the document | past-tense paragraphs: "it was broken", "before it did", "closed by [[BKLG-…]] because…" | rewrite the present right; the story goes into the entry, and here stays **one line** in "Who worked on it" (rule 4) |
+| dated blocks piling up | more than two or three `> Corrected/Updated on …` in one file | they are transient: absorb them into the present-tense text and remove them |
+| the frame tells the WORK, not the code | headings like "the case that started all this", "what does NOT change" (in a stable document), "axis A: OPEN" | the content is often fine where it is: change the **frame**. A measured case is a **worked example of the rule** ("the gate at work, with the numbers"), not the origin of an entry; invariants are **properties the code keeps**, not promises; a state is "they diverge", not "OPEN" |
+| phases that list files | "F2 — changes to network.ts" | write what it delivers |
+| **updated prose over an old diagram** | the paragraph says one thing, the picture above it another | regenerate the `.mmd` **in the same pass**, never "later" — rule 9 |

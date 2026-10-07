@@ -2,7 +2,7 @@
 /**
  * Renders every `<dir>/*.mmd` to a sibling `.svg`, using mermaid-cli driving the REAL Chrome.
  *
- *   node scripts/mermaid.mjs render docs/qualcosa/diagrams      (the project's copy of bootstrap/mermaid.mjs)
+ *   node scripts/mermaid.mjs render docs/something/diagrams     (the project's copy of bootstrap/mermaid.mjs)
  *
  * ## Why a real browser, and not jsdom
  *
@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 
 const dir = process.argv[2];
 if (!dir) {
-  console.error("uso: node render-svg.mjs <dir-con-i-mmd>");
+  console.error("usage: node render-svg.mjs <folder-with-the-mmd-files>");
   process.exit(2);
 }
 
@@ -65,7 +65,7 @@ const [renderer, rendererArgs] = installedMmdc ? [shellArg(installedMmdc), []] :
 
 const sources = readdirSync(dir).filter((file) => file.endsWith(".mmd"));
 if (sources.length === 0) {
-  console.error(`nessun .mmd in ${dir}`);
+  console.error(`no .mmd in ${dir}`);
   process.exit(2);
 }
 
@@ -86,11 +86,11 @@ for (const source of sources) {
     const viewBox = svg.match(/viewBox="([^"]*)"/)?.[1] ?? "";
     const [, , width, height] = viewBox.split(/\s+/).map(Number);
     if (svg.includes("foreignObject")) {
-      throw new Error("contiene foreignObject: in un <img> le etichette sarebbero vuote");
+      throw new Error("contains foreignObject: inside an <img> the labels would be empty");
     }
-    if (!(width > 0 && height > 0)) throw new Error(`viewBox non valido: "${viewBox}"`);
+    if (!(width > 0 && height > 0)) throw new Error(`invalid viewBox: "${viewBox}"`);
     // A stretched viewBox is the signature of a renderer that could not measure text.
-    if (width / height > 12) throw new Error(`viewBox sproporzionato (${viewBox}) — layout non misurato`);
+    if (width / height > 12) throw new Error(`stretched viewBox (${viewBox}) — layout not measured`);
     console.log(`  ${name}.svg  ${Math.round(width)}x${Math.round(height)}  ${svg.length} bytes`);
   } catch (error) {
     failures++;

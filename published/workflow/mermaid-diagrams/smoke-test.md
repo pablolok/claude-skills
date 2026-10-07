@@ -1,16 +1,16 @@
-# Mermaid — scala di prova per la preview
+# Mermaid — a test ladder for the preview
 
-Apri questo file in VSCode e fai `Ctrl+Shift+V`. **Non modificare nulla mentre guardi**: una
-scrittura sul file fa ripartire il refresh e interrompe il render.
+Open this file in VS Code and press `Ctrl+Shift+V`. **Do not change anything while you look**: a write to the file
+restarts the refresh and interrupts the render.
 
-Guarda fin dove arriva la scala e riferisci il numero dell'ultimo che si vede. Ognuno aggiunge una
-sola cosa rispetto al precedente, così il primo che sparisce nomina il colpevole.
+See how far up the ladder it gets and report the number of the last one that shows. Each one adds a single thing to
+the one before, so the first that vanishes names the culprit.
 
-Se **il n.1 non si vede**, non è il contenuto: è l'estensione. Vedi «Se salta anche il n.1» in fondo.
+If **number 1 does not show**, it is not the content: it is the extension. See "If even number 1 fails" at the end.
 
 ---
 
-## 1. Minimo assoluto — tre nodi, niente altro
+## 1. The bare minimum — three nodes, nothing else
 
 ```mermaid
 flowchart TD
@@ -18,86 +18,86 @@ flowchart TD
     B --> C
 ```
 
-## 2. Aggiunge: etichette quotate e `<br/>`
+## 2. Adds: quoted labels and `<br/>`
 
 ```mermaid
 flowchart TD
-    A["Prima riga<br/>seconda riga"] --> B["Etichetta con spazi"]
-    B --> C["Punteggiatura: virgole, punti."]
+    A["First line<br/>second line"] --> B["Label with spaces"]
+    B --> C["Punctuation: commas, full stops."]
 ```
 
-## 3. Aggiunge: subgraph e forme
+## 3. Adds: subgraph and shapes
 
 ```mermaid
 flowchart TD
-    subgraph S["Un gruppo"]
-        A["Nodo"] --> DB[("Un cilindro")]
+    subgraph S["A group"]
+        A["Node"] --> DB[("A cylinder")]
     end
-    DB --> R(("Un cerchio"))
+    DB --> R(("A circle"))
 ```
 
-## 4. Aggiunge: classDef, class ed etichette sugli archi
+## 4. Adds: classDef, class and edge labels
 
 ```mermaid
 flowchart TD
-    A["Partenza"] -->|"etichetta sull'arco"| B["Arrivo"]
-    A -.->|"tratteggiato"| C["Altro"]
+    A["Start"] -->|"the edge's label"| B["End"]
+    A -.->|"dashed"| C["Other"]
 
     classDef bad fill:#5c1a1a,stroke:#ff8a80,color:#ffffff
     class C bad
 ```
 
-## 5. Aggiunge: classDiagram, con annotazioni
+## 5. Adds: classDiagram, with annotations
 
 ```mermaid
 classDiagram
-    class Comando {
+    class Command {
         <<value object>>
         +string id
-        +esegui() Promise
+        +run() Promise
     }
-    class Gestore {
+    class Handler {
         <<interface>>
-        +esegui(comando)
+        +run(command)
     }
-    Gestore <|.. Comando
+    Handler <|.. Command
 ```
 
-## 6. Aggiunge: sequenceDiagram, con alt/else
+## 6. Adds: sequenceDiagram, with alt/else
 
 ```mermaid
 sequenceDiagram
-    actor U as Utente
+    actor U as User
     participant A as App
     participant S as Server
-    U->>A: salva
-    A->>S: invia
-    alt c'è rete
+    U->>A: save
+    A->>S: send
+    alt there's a network
         S-->>A: ok
-    else niente rete
-        A-->>A: in coda
+    else no network
+        A-->>A: queued
     end
 ```
 
 ---
 
-## Come leggere il risultato
+## How to read the result
 
-| ultimo visibile | cosa dice |
+| last one visible | what it says |
 |---|---|
-| nessuno | non è il contenuto: l'estensione non renderizza affatto |
-| 1–3 | rompe qualcosa fra `classDef`/`class` e le etichette sugli archi |
-| 4 | rompono i tipi di diagramma diversi dal flowchart |
-| 5 | rompe il `sequenceDiagram` |
-| tutti e 6 | la preview funziona: il problema è specifico del documento grande — prova `markdown-mermaid.maxTextSize` e il numero di diagrammi per file |
+| none | it is not the content: the extension does not render at all |
+| 1–3 | something breaks between `classDef`/`class` and the edge labels |
+| 4 | the diagram types other than flowchart break |
+| 5 | the `sequenceDiagram` breaks |
+| all 6 | the preview works: the problem is specific to the large document — try `markdown-mermaid.maxTextSize` and the number of diagrams per file |
 
-## Se salta anche il n.1
+## If even number 1 fails
 
-Non c'è niente da correggere nei documenti. In ordine:
+There is nothing to fix in the documents. In order:
 
-1. **Non stavi scrivendo il file mentre guardavi?** È la causa più frequente in assoluto.
-2. `Ctrl+Shift+P` → *Developer: Reload Window*, poi riapri la preview.
-3. `Ctrl+Shift+P` → *Developer: Open Webview Developer Tools* con la preview aperta, e leggi la
-   console: è l'unico posto dove l'errore vero compare. Riportalo.
-4. Reinstalla `bierner.markdown-mermaid`; se serve, torna a una 1.31.x — le funzioni interattive
-   (pan/zoom, resize) sono arrivate nella 1.32.
+1. **Were you writing the file while you looked?** It is by far the most frequent cause.
+2. `Ctrl+Shift+P` → *Developer: Reload Window*, then reopen the preview.
+3. `Ctrl+Shift+P` → *Developer: Open Webview Developer Tools* with the preview open, and read the console: it is the
+   only place where the real error shows. Report it.
+4. Reinstall `bierner.markdown-mermaid`; if needed, go back to a 1.31.x — the interactive features (pan/zoom, resize)
+   arrived in 1.32.

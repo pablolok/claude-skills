@@ -6,7 +6,7 @@
  *
  * Why this exists: a broken diagram renders as an EMPTY BOX in the VSCode preview — no error, no
  * red text, nothing. Without this you are reduced to guessing which construct broke it, and every
- * guess costs a round-trip through the user's eyes. Run it before claiming a diagram works.
+ * guess costs a round-trip through someone's eyes. Run it before claiming a diagram works.
  *
  * Two passes per diagram, because they fail differently:
  *   - `parse`  — syntax. Catches the entity / inline-HTML / comma-in-generics breakers.
@@ -32,7 +32,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const files = process.argv.slice(2);
 if (files.length === 0) {
-  console.error("uso: node check-mermaid.mjs <file.md> [file.md ...]");
+  console.error("usage: node check-mermaid.mjs <file.md> [file.md ...]");
   process.exit(2);
 }
 
@@ -50,10 +50,10 @@ async function fromProject(name) {
     }
   }
   console.error(
-    `"${name}" non risolto da nessuna di queste radici:\n` +
+    `"${name}" resolved from none of these roots:\n` +
       resolutionRoots.map((root) => `  - ${root}`).join("\n") +
-      `\nInstallalo nel progetto (bun add -d mermaid jsdom) oppure, una volta sola e per sempre,` +
-      `\nnella skill stessa: cd ${skillDir} && bun install`,
+      `\nInstall it in the project (bun add -d mermaid jsdom) or, once and for good,` +
+      `\nin the skill itself: cd ${skillDir} && bun install`,
   );
   process.exit(2);
 }

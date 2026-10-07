@@ -1,5 +1,5 @@
 {
   "name": "mermaid-diagrams",
-  "version": "1.0.0",
-  "description": "Diagrammi mermaid nei documenti markdown di QUALSIASI progetto, in modo che RENDANO davvero nella preview di VSCode e su GitHub. Usala prima di aggiungere o modificare un diagramma in docs/ \u2014 livelli, architettura, UML, sequence. Porta la regola su quando pre-renderizzare in SVG, i due script (validatore e renderer), il meccanismo per cui la preview lascia riquadri vuoti senza dare errore, e i vicoli ciechi gi\u00e0 verificati da non ripercorrere. LIVING DOC \u2014 ogni scoperta nuova si aggiunge qui."
+  "version": "1.1.0",
+  "description": "Mermaid diagrams in the markdown docs of ANY project, so that they really RENDER in the VS Code preview and on GitHub. Use it before adding or changing a diagram in docs/ \u2014 layers, architecture, UML, sequence. Carries the rule for when to pre-render to SVG, the validator and the renderer behind one stable project command, the mechanism by which the preview leaves empty boxes with no error, and the dead ends already ruled out."
 }

@@ -2,7 +2,7 @@
 
 How to write the design document of a piece of work that has to be designed before it is written — a large
 feature, a rework, a structural defect across layers, a multi-phase job — and the stable "how it is now" document
-of an area. The skill text is in Italian and is a living doc.
+of an area.
 
 ## What It Holds
 

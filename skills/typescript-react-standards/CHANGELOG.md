@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - 2026-10-07
+- The project-specific section (Vite + Supabase + TanStack Query, money as rationals, Deno edge functions) is removed: those projects keep it themselves; no person in the description or title; the domain layer is 'a domain module (e.g. src/lib/)', not a fixed path
+
+
 ## [1.0.1] - 2026-10-07
 - the description fits claude.ai's 500-character limit (it was 593: the marketplace synced the plugin without it)
 

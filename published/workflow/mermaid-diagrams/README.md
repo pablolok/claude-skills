@@ -2,8 +2,7 @@
 
 Mermaid diagrams in a project's markdown docs that really render — in the VS Code preview and on GitHub. A broken
 diagram fails silently there (an empty box, no error), so the skill carries the rule for when to pre-render to SVG,
-a validator and a renderer, the race that blanks the preview, and the dead ends already ruled out. The skill text is
-in Italian and is a living doc: every new finding goes into it.
+a validator and a renderer, the race that blanks the preview, and the dead ends already ruled out.
 
 ## How It Works
 
@@ -44,8 +43,8 @@ the project nor from the clone, the launcher installs the skill's `package.json`
 
 ## The Chrome Path
 
-`.mermaid-puppeteer.json` names the developer's Chrome (`C:/Program Files/Google/Chrome/Application/chrome.exe`) and
-is only the skill's default. A project — or a machine whose Chrome lives elsewhere — puts its own
+`.mermaid-puppeteer.json` names a default Windows Chrome (`C:/Program Files/Google/Chrome/Application/chrome.exe`)
+and is only the skill's default. A project — or a machine whose Chrome lives elsewhere — puts its own
 `.mermaid-puppeteer.json` (or `.mermaid-config.json`) in its root: the renderer uses that one. Never edit the copy
 in the plugin; the next update overwrites it.
 

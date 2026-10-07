@@ -6,9 +6,7 @@ full to every TS/React task, and this skill adds only what is TS/React-specific.
 ## What It Adds
 
 - TypeScript conventions and React conventions for the core's rules
-- the TS/React quality gates and the coverage bar
-- the server-state and data-layer stack (TanStack Query, Supabase, pure libraries in `src/lib`) as an opt-in,
-  project-specific rule — never a universal one
+- the TS/React quality gates
 - what to look for when reviewing or refactoring TS/React
 
 ## Where It Sits
