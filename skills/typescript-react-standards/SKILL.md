@@ -1,6 +1,6 @@
 ---
 name: typescript-react-standards
-description: Pablo's TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static/module-level business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the TS/React idioms, tooling, and coverage bar. The server-state/data-layer stack (TanStack Query, Supabase, pure libs in src/lib) is project-specific and opt-in, NOT a universal rule.
+description: Pablo's TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code for this user. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and coverage bar. The server-state/data-layer stack (TanStack Query, Supabase, pure libs in src/lib) is project-specific and opt-in, NOT a universal rule.
 ---
 
 # TypeScript / React Standards (Pablo) — TS/React layer

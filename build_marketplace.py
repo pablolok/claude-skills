@@ -33,6 +33,9 @@ MARKETPLACE_NAME = "pablolok-skills"
 OWNER = {"name": "pablolok"}
 DESCRIPTION = "pablolok's Claude Code skills — one plugin per skill."
 
+#: The longest plugin description claude.ai accepts: a longer one is synced without it, with a warning.
+MAX_DESCRIPTION = 500
+
 #: The plugin-entry fields a skill may declare for itself; their paths are relative to the skill's folder.
 ENTRY_FIELDS = ("hooks", "commands", "agents")
 
@@ -54,6 +57,10 @@ def plugin_entry(repo: pathlib.Path, name: str, category: str) -> typing.Dict[st
     if not (folder / "SKILL.md").is_file():
         raise MarketplaceError(f"{name}: no published skill at {folder.relative_to(repo).as_posix()}")
     metadata = _read_json(folder / "metadata.json")
+    if len(metadata["description"]) > MAX_DESCRIPTION:
+        raise MarketplaceError(
+            f"{name}: description is {len(metadata['description'])} characters, the limit is {MAX_DESCRIPTION}"
+        )
     entry: typing.Dict[str, typing.Any] = {
         "name": name,
         "source": f"./{PUBLISHED}/{category}/{name}",

@@ -64,6 +64,24 @@ class TestBuild(unittest.TestCase):
         with self.assertRaisesRegex(build_marketplace.MarketplaceError, "unknown field"):
             build_marketplace.build(self.root)
 
+    def test_a_description_over_the_limit_fails(self) -> None:
+        _skill(self.root, "workflow", "alpha")
+        metadata = self.root / "published" / "workflow" / "alpha" / "metadata.json"
+        long_text = "x" * (build_marketplace.MAX_DESCRIPTION + 1)
+        metadata.write_text(json.dumps({"name": "alpha", "version": "1.2.3", "description": long_text}), encoding="utf-8")
+        self._config({"alpha": {"category": "workflow"}})
+        with self.assertRaisesRegex(build_marketplace.MarketplaceError, "description"):
+            build_marketplace.build(self.root)
+
+    def test_a_description_at_the_limit_passes(self) -> None:
+        _skill(self.root, "workflow", "alpha")
+        metadata = self.root / "published" / "workflow" / "alpha" / "metadata.json"
+        at_limit = "x" * build_marketplace.MAX_DESCRIPTION
+        metadata.write_text(json.dumps({"name": "alpha", "version": "1.2.3", "description": at_limit}), encoding="utf-8")
+        self._config({"alpha": {"category": "workflow"}})
+        [plugin] = build_marketplace.build(self.root)["plugins"]
+        self.assertEqual(plugin["description"], at_limit)
+
     def test_a_configured_skill_that_is_not_published_fails(self) -> None:
         self._config({"ghost": {"category": "workflow"}})
         with self.assertRaisesRegex(build_marketplace.MarketplaceError, "no published skill"):
