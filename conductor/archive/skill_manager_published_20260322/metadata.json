@@ -1,8 +1,0 @@
-{
-  "track_id": "skill_manager_published_20260322",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-03-22T20:45:00Z",
-  "updated_at": "2026-03-22T20:45:00Z",
-  "description": "i have a problem when i need specific skills in a new project is hard to add them, i need to past the folder path and ask for junction, this project should have many skills that can be chosen i would like to make it easier to add specific skills to a project, what could be the solution? also i need a publish folder that is the one used to place the skills on the project i want them, cause like this it could be hard to change them, a published folder would be better when i want the skills to be ufficial and i can change them or create new ones on this repository without harming other projects that are using them"
-}

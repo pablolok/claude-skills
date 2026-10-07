@@ -1,5 +1,0 @@
-{
-  "name": "compliance-audit-verification-gates",
-  "version": "1.1.4",
-  "description": "A generic compliance audit that verifies required automated verification gates passed before manual verification."
-}

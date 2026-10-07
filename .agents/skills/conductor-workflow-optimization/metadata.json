@@ -1,5 +1,0 @@
-{
-  "name": "conductor-workflow-optimization",
-  "version": "1.0.0",
-  "description": "Detect and remediate Gemini Conductor workflow drift caused by stale tool names, invalid plan-mode transitions, unexpected tool calls, and CLI/workflow mismatches."
-}

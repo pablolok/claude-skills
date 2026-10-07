@@ -1,70 +1,50 @@
 # CLAUDE.md
 
-This repository is skill-driven. When a task matches an installed repo-local skill, use that skill instead of handling the workflow manually.
+This repository is the source of the developer's Claude Code skills and the plugin marketplace `pablolok-skills`
+that ships them: every published skill is a plugin of its own.
 
-## Mandatory Routing
+## Layout
 
-- If the user asks to `publish`, `sync`, `republish`, or otherwise update `published/`, use `skill-publisher`.
-- Do not edit `published/` manually to satisfy a publish request. Publish from `skills/` through the publisher flow.
-- If a task involves skill installation, updates, or managed `.gitignore` behavior, use `skill-manager`.
-- If a task involves changelog normalization or version-entry cleanup, use `changelog-manager` before publishing when needed.
+- `skills/<skill>/` is the source of each skill: `SKILL.md`, `README.md`, `metadata.json` (name, version,
+  description), `CHANGELOG.md`, and whatever the skill runs (scripts, hooks). Edit skills here.
+- `published/<category>/<skill>/` is the published copy, the folder each plugin installs. It is written only by the
+  publish flow, never by hand.
+- `install.config.json` lists the published skills and their category (`workflow` for all of them today).
+- `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by
+  `build_marketplace.py` — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its
+  own `plugin-entry.json`; one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
+- `skills/skill-publisher/` is this repository's own skill (the publish flow). It is not published.
+- `tests/` holds one test file per skill plus the marketplace and policy tests.
 
-## Gitignore Guardrail
+## Installing a skill
 
-- Never rewrite the full project `.gitignore` when working on `skill-manager`.
-- Only add or replace the lines inside the `# >>> skill-manager managed workspace files >>>` and `# <<< skill-manager managed workspace files <<<` markers.
-- Preserve all `.gitignore` content outside that managed block exactly as-is.
-- If the current edit path would replace, truncate, regenerate, or otherwise rewrite the full `.gitignore`, stop and fix the implementation instead of touching the file.
-- Before any commit or push involving installer or `skill-manager` changes, re-read `.gitignore` from disk and verify that non-`skill-manager` baseline content is still present.
+```bash
+claude plugin marketplace add pablolok/claude-skills
+claude plugin install <skill>@pablolok-skills [--scope user|project]
+claude plugin update <skill>@pablolok-skills
+```
 
-## Usable Repo Skills
+A plugin skill is named `<plugin>:<skill>` inside a session (e.g. `backlog:backlog`).
 
-These repo-local skills are expected to be usable when their task type matches:
+## Publishing
 
-- `changelog-manager`
-- `compliance-audit-angular`
-- `compliance-audit-avalonia`
-- `compliance-audit-csharp`
-- `compliance-audit-orchestrator`
-- `compliance-audit-scripts`
-- `compliance-audit-verification-gates`
-- `conductor-workflow-optimization`
-- `pre-implementation-review`
-- `review-optimization`
-- `skill-manager`
-- `skill-publisher`
-- `skill-retrospective`
-- `subagent-balancer`
-- `subagent-balancer-api`
-- `subagent-balancer-orchestrator`
+For a request to `publish`, `sync` or `republish` a skill, follow `skills/skill-publisher/SKILL.md`; never edit
+`published/` or the marketplace by hand.
 
-## Claude Skills
+1. `python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|major>` — bumps
+   `metadata.json`, adds the summary to `CHANGELOG.md`, copies the skill to `published/`, regenerates the marketplace.
+2. `python -m unittest discover -s tests -p "test_*.py"`
+3. `claude plugin validate .` (and `python build_marketplace.py --check`)
+4. Commit (`feat(<skill>): <version> — <what changed>`, or `fix(...)`, `docs(...)`, `chore(...)`).
+5. `python tag_published.py` tags `<skill>@<version>` for every published version not yet tagged (`--push` pushes
+   the tags) — projects that run a skill's scripts from CI or git hooks pin it by that tag.
 
-- Every skill is a normal Claude Code skill installed to `.claude/skills/<name>/` as a full copy.
-- Use `install.config.json` as the source of truth for installer-facing skill metadata (category only).
-- Treat `.claude/skills/` entries created by `skill-manager` as managed installation artifacts, not as repo-owned source files.
-- Do not rely on versioning generated installation files to prove coverage. Coverage must be verified by testing the installer flow that generates them.
-- When adding a new skill, register it in `install.config.json` and update installer behavior and tests together.
-
-## Documentation Sync
-
-- `AGENTS.md` and `CLAUDE.md` are policy mirrors and must stay byte-for-byte identical.
-- When updating one of these files, apply the same change to the other in the same task.
-- Do not simplify by overwriting one file with an older copy if that would drop an existing rule. Merge forward and preserve all constraints already documented.
-
-## Publish Expectations
-
-- Treat `skills/` as the source of truth.
-- Keep `skills/<skill>/metadata.json`, `CHANGELOG.md`, `README.md`, and `SKILL.md` aligned before publishing.
-- Let the publish flow update metadata/changelog versions and copy to `published/`.
-- Every published skill is also a Claude Code plugin: `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by `build_marketplace.py` (the publish flow runs it) — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its own `plugin-entry.json`; one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
+A new skill is registered in `install.config.json` and gets its test file in the same change. A skill's text never
+links to another skill's folder (`../other/SKILL.md`): a plugin holds one skill alone, so it names the other skill.
 
 ## Skill Retrospective On This Repo
 
-- This repository runs `skill-retrospective` on its own work: install it here like the other repo skills (`python install.py`, or `/skill-manager:install`), which wires its two hooks into `.claude/settings.local.json`.
-- A lesson about a skill is written in `skills/<skill>/` and published with `skill-publisher` — never in an installed copy under `.claude/skills/`, which the next update overwrites.
-
-## Audit Expectations
-
-- If a task changes code and a compliance audit skill applies, route through the matching specialized audit or the orchestrator.
-- Do not update audit rules inside `published/` directly; change the source skill and publish it.
+- This repository runs `skill-retrospective` on its own work: install the plugin at user scope
+  (`claude plugin install skill-retrospective@pablolok-skills --scope user`); its two hooks come with it.
+- A lesson about a skill is written in `skills/<skill>/` and published with the flow above — never in an installed
+  copy (the plugin cache), which the next update overwrites.

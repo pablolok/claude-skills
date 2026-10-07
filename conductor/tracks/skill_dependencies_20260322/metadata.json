@@ -1,8 +1,0 @@
-{
-  "track_id": "skill_dependencies_20260322",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-03-22T20:30:00Z",
-  "updated_at": "2026-03-22T20:30:00Z",
-  "description": "add the skill dependency when installing skills, for example audit-c# and audit-scripts are dependant on the orchestrator to work"
-}

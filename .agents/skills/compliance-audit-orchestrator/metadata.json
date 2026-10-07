@@ -1,5 +1,0 @@
-{
-  "name": "compliance-audit-orchestrator",
-  "version": "1.4.0",
-  "description": "Use when finalizing an implementation phase in a Conductor track to invoke the generic verification-gate audit first, then determine and invoke the correct specialized compliance audit (C#, Scripts, Angular, or Avalonia UI) based on the files modified."
-}

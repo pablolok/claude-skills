@@ -1,4 +1,5 @@
-"""Tests for the backlog skill: a real install, its gates run on a project that has it, and its Node suite."""
+"""Tests for the backlog skill: the published plugin carries its scripts, its gates run from that copy on a project
+that has it, and its Node suite."""
 
 from __future__ import annotations
 
@@ -7,15 +8,12 @@ import os
 import pathlib
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = REPO / "skills" / "backlog"
-sys.path.insert(0, str(REPO))
-
-from install import SkillInstaller  # noqa: E402  pylint: disable=wrong-import-position
+PUBLISHED = REPO / "published" / "workflow" / "backlog"
 
 REGISTER = """# Backlog
 
@@ -42,31 +40,27 @@ def _write(root: str, rel: str, text: str) -> None:
         handle.write(text)
 
 
-class TestInstall(unittest.TestCase):
-    def test_install_copies_the_skill_and_its_scripts(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            published = os.path.join(tmp, "published")
-            shutil.copytree(SOURCE, os.path.join(published, "workflow", "backlog"))
-            project = os.path.join(tmp, "project")
-            os.makedirs(project)
-            installer = SkillInstaller(published, lambda _config: {})
-            self.assertTrue(installer.install_skill("workflow/backlog", project))
-            installed = os.path.join(project, ".claude", "skills", "backlog")
-            for rel in ("SKILL.md", "scripts/check-doc-refs.mjs", "scripts/backlog-github-sync.mjs", "scripts/project.mjs"):
-                self.assertTrue(os.path.isfile(os.path.join(installed, rel)), rel)
-            self.assertTrue(installer.uninstall_skill("backlog", project))
-            self.assertFalse(os.path.exists(installed))
+class TestPublishedPlugin(unittest.TestCase):
+    """The plugin installs the published folder: it carries the skill and every script the source has."""
+
+    def test_the_published_copy_carries_the_skill_and_its_scripts(self) -> None:
+        for rel in ("SKILL.md", "scripts/check-doc-refs.mjs", "scripts/backlog-github-sync.mjs", "scripts/project.mjs",
+                    "bootstrap/backlog-gate.mjs"):
+            self.assertTrue((PUBLISHED / rel).is_file(), rel)
+        source_scripts = sorted(path.name for path in (SOURCE / "scripts").glob("*.mjs"))
+        published_scripts = sorted(path.name for path in (PUBLISHED / "scripts").glob("*.mjs"))
+        self.assertEqual(published_scripts, source_scripts, "publish the skill: python automate_publish.py backlog ...")
 
 
 @unittest.skipUnless(shutil.which("node") and shutil.which("git"), "node and git are needed")
 class TestGatesOnAProject(unittest.TestCase):
-    """The gates run from the installed copy, on the project — and the skill's own docs never turn them red."""
+    """The gates run from the published copy, on the project — and the skill's own docs never turn them red."""
 
     def setUp(self) -> None:
         self.tmp = tempfile.mkdtemp()
         self.project = os.path.join(self.tmp, "project")
-        # Installed WITHOUT the managed .gitignore, so the gate also reads the skill's own SKILL.md and README.
-        shutil.copytree(SOURCE, os.path.join(self.project, ".claude", "skills", "backlog"))
+        # Committed inside the project (not git-ignored), so the gate also reads the skill's own SKILL.md and README.
+        shutil.copytree(PUBLISHED, os.path.join(self.project, ".claude", "skills", "backlog"))
         _write(self.project, "docs/implementations/BACKLOG.md", REGISTER)
         _write(self.project, "docs/implementations/bugs/checkout-retry/plan.md", "# plan\n")
         subprocess.run(["git", "init", "-q"], cwd=self.project, check=True)

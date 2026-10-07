@@ -1,5 +1,0 @@
-{
-  "name": "pre-implementation-review",
-  "version": "1.0.1",
-  "description": "Review planned work before implementation to identify reuse opportunities, existing abstractions, duplication risks, and the right reusable boundary."
-}

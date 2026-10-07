@@ -31,7 +31,7 @@ PLUGIN_ENTRY = "plugin-entry.json"
 
 MARKETPLACE_NAME = "pablolok-skills"
 OWNER = {"name": "pablolok"}
-DESCRIPTION = "pablolok's Claude Code skills — one plugin per skill, the same skills skill-manager installs."
+DESCRIPTION = "pablolok's Claude Code skills — one plugin per skill."
 
 #: The plugin-entry fields a skill may declare for itself; their paths are relative to the skill's folder.
 ENTRY_FIELDS = ("hooks", "commands", "agents")

@@ -1,5 +1,0 @@
-{
-  "name": "compliance-audit-scripts",
-  "version": "1.3.4",
-  "description": "A specialized compliance audit for automation and scripting (PowerShell, Python, Bash). Enforces best practices for cross-platform safety, idempotency, and TDD in script files."
-}

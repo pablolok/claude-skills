@@ -1,5 +1,0 @@
-{
-  "name": "subagent-balancer",
-  "version": "1.6.3",
-  "description": "Quota-aware routing for Claude Code and Claude subscription subagent delegation with fallback-to-local execution."
-}

@@ -1,5 +1,0 @@
-{
-  "name": "review-optimization",
-  "version": "1.1.2",
-  "description": "Use after a phase completion but before final user verification to analyze execution history, audit skill efficiency, and suggest workflow optimizations."
-}

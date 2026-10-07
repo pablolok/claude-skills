@@ -1,5 +1,0 @@
-{
-  "name": "subagent-balancer-orchestrator",
-  "version": "1.0.2",
-  "description": "Routes Claude delegation to the correct balancing policy for CLI quota preservation versus API cost preservation."
-}

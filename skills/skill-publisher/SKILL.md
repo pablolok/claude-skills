@@ -16,16 +16,16 @@ python automate_publish.py <skill-name> <category> "<summary>" --bump <patch|min
 ```
 
 ### 1. Categories
-Map the skill to its category in `published/`:
-- `audit/`: Compliance, linting, review tools.
-- `workflow/`: Project management, Conductor integrations.
-- `utility/`: General tools, managers.
+The category is the skill's folder under `published/` and its `category` in `install.config.json`; the two must
+agree. Every published skill is in `workflow/` today. A new skill is registered in `install.config.json` before its
+first publish (the marketplace is built from that list).
 
 ### 2. Validation Checklist (Manual)
 Before running the script, ensure:
-- [ ] `SKILL.md`: Correct frontmatter (name, description).
-- [ ] `README.md`: Present and accurate.
-- [ ] Tests: All tests in `tests/skills/` must pass.
+- [ ] `SKILL.md`: Correct frontmatter (name, description); no relative link to another skill's folder (a plugin
+      holds one skill alone: name the other skill instead).
+- [ ] `README.md`, `metadata.json` and `CHANGELOG.md`: present and accurate.
+- [ ] Tests: the skill's tests in `tests/` pass.
 
 ### 3. Automated Actions
 The `automate_publish.py` script will:

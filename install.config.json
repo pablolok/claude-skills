@@ -1,49 +1,6 @@
 {
   "schemaVersion": 2,
   "skills": {
-    "compliance-audit-angular": {
-      "category": "audit"
-    },
-    "compliance-audit-frontend-styling": {
-      "category": "audit"
-    },
-    "compliance-audit-avalonia": {
-      "category": "audit"
-    },
-    "compliance-audit-csharp": {
-      "category": "audit"
-    },
-    "compliance-audit-orchestrator": {
-      "category": "audit"
-    },
-    "compliance-audit-scripts": {
-      "category": "audit"
-    },
-    "compliance-audit-verification-gates": {
-      "category": "audit"
-    },
-    "review-optimization": {
-      "category": "audit"
-    },
-    "skill-manager": {
-      "category": "utility",
-      "plugin": false
-    },
-    "subagent-balancer": {
-      "category": "utility"
-    },
-    "subagent-balancer-api": {
-      "category": "utility"
-    },
-    "subagent-balancer-orchestrator": {
-      "category": "utility"
-    },
-    "conductor": {
-      "category": "workflow"
-    },
-    "conductor-workflow-optimization": {
-      "category": "workflow"
-    },
     "pre-implementation-review": {
       "category": "workflow"
     },

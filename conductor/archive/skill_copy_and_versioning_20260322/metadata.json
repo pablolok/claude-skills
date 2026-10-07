@@ -1,8 +1,0 @@
-{
-  "track_id": "skill_copy_and_versioning_20260322",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-03-22T20:45:00Z",
-  "updated_at": "2026-03-22T20:45:00Z",
-  "description": "Replace junctions with file copying for skill installation, implement version tracking, and add update notifications."
-}
