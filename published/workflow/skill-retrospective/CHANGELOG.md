@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.1] - 2026-10-07
+- The source rule names managed copies: a folder under .claude/skills that .claude/claude-skills.json lists is installed from the skill repository, like a plugin; never edited in place (its check fails), fixed at the source, then synced by the project.
+
+
 ## [1.5.0] - 2026-10-07
 - The Stop hook's archive trigger reads the project's backlog docsDir (.claude/backlog.json, archive = <docsDir>/archive) when SKILL_RETRO_ARCHIVE_DIRS is not set; the default stays docs/implementations/archive.
 

@@ -1,8 +1,8 @@
 # Claude Code Skills
 
 pablolok's skills for Claude Code. The repository is a Claude Code plugin marketplace, `pablolok-skills`: every
-skill is a plugin of its own, so a project installs any of them with Claude Code alone — no clone, no Python, in a
-cloud session too.
+skill is a plugin of its own, so a person installs any of them with Claude Code alone — no clone, no Python. A shared
+or cloud project keeps managed copies instead (see below).
 
 ## Skills
 
@@ -18,6 +18,31 @@ cloud session too.
 | **[Verification Gates](./skills/verification-gates/)** | Before handing work back: the required gates (tests, builds, compilers, linters, static analysis) are green on real evidence and nothing was silently removed. |
 | **[Writing Architecture Docs](./skills/writing-architecture-docs/)** | The design doc of a piece of work and the stable "how it is now" doc of an area: three questions, the skeleton, nine rules, one diagram per question. |
 | **[Mermaid Diagrams](./skills/mermaid-diagrams/)** | Mermaid diagrams that really render in the VS Code preview and on GitHub: when to pre-render to SVG, a validator and a renderer behind one stable project command (`node scripts/mermaid.mjs check` / `render`), the dead ends. |
+
+## Two ways to use the skills
+
+| | Plugins | Managed copies |
+| :--- | :--- | :--- |
+| For | one person, on their machines | a project shared by several people, or used in cloud sessions |
+| Version | follows the marketplace (auto-updating) | pinned per skill, moved by a command, the diff reviewed in the project's history |
+| Lives in | the plugin cache, per machine | the project's `.claude/skills/<skill>/`, committed; works offline |
+| Start | `claude plugin install <skill>@pablolok-skills` ([Install](#install)) | copy [`bootstrap/claude-skills.mjs`](./bootstrap/claude-skills.mjs) to the project's `scripts/claude-skills.mjs`, then `node scripts/claude-skills.mjs sync <skill>@<version>` |
+
+Plugins declared in a repository's `.claude/settings.json` are **not installed in Claude Code cloud sessions**: they
+need the folder's trust dialog, which a cloud session never shows. They also float: a project cannot pin each
+plugin's version. A managed copy is each skill copied byte for byte from its published tag `<skill>@<version>`,
+listed in `.claude/claude-skills.json` (names only; the version is the copy's `metadata.json`) and never edited in
+place:
+
+```bash
+node scripts/claude-skills.mjs sync backlog@1.3.0 review-backlog   # no version: the latest tag; prints the diff
+node scripts/claude-skills.mjs check    # CI or a hook: exit 1 on a hand edit or a skill's hooks not wired
+node scripts/claude-skills.mjs list
+```
+
+`check` prints the settings snippet for a skill whose hooks (its `plugin-entry.json`) are missing from the project's
+`.claude/settings.json`, and reports newer published versions as info. A lesson about a managed skill still goes to
+this repository (or an issue on it); the project takes it with a sync. Both ways coexist.
 
 ## Install
 

@@ -14,6 +14,9 @@ that ships them: every published skill is a plugin of its own.
   `build_marketplace.py` — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its
   own `plugin-entry.json`; one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
 - `skills/skill-publisher/` is this repository's own skill (the publish flow). It is not published.
+- `bootstrap/claude-skills.mjs` is the managed-copies tool a shared or cloud project copies as
+  `scripts/claude-skills.mjs` (`sync`, `check`, `list`; see the README). Its pure decisions are tested in
+  `bootstrap/claude-skills.test.mjs`, the commands end to end in `tests/test_claude_skills_tool.py`.
 - `tests/` holds one test file per skill plus the marketplace and policy tests.
 
 ## Installing a skill

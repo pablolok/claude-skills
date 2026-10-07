@@ -67,22 +67,8 @@ const GH = process.platform === "win32" ? "gh.exe" : "gh";
  */
 export const labelName = (config, canonical) => config?.github?.labels?.[canonical] ?? canonical;
 
-/** The single always-present label + the label namespaces we own. */
+/** The single always-present label. */
 export const BACKLOG_LABEL = "backlog";
-
-/** Priority → label. Finite domain, so a typed map, not magic strings inline. */
-export const PRIORITY_LABELS = /** @type {const} */ ({
-  high: "priority:high",
-  medium: "priority:medium",
-  low: "priority:low",
-});
-
-/** Status → label. */
-export const STATUS_LABELS = /** @type {const} */ ({
-  open: "status:open",
-  "in-progress": "status:in-progress",
-  blocked: "status:blocked",
-});
 
 /** Doc-folder prefix → type label. */
 export const TYPE_LABELS = /** @type {const} */ ({
@@ -138,17 +124,6 @@ export function knownBklgIds(backlogMd, historyMd) {
  */
 export function issueTitleFor(entry) {
   return `${entry.idStr} — ${entry.title}`;
-}
-
-/**
- * The leading keyword of a field value, lower-cased — Status/Priority may carry
- * a parenthetical note (e.g. `in-progress (2026-07-06 — baseline green …)`), so
- * we key off the first `word` token only.
- * @param {string} value
- * @returns {string}
- */
-export function leadingKeyword(value) {
-  return (/^[\p{L}\p{N}-]+/iu.exec((value || "").trim().toLowerCase())?.[0]) || "";
 }
 
 /**

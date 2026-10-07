@@ -71,9 +71,18 @@ python tag_published.py --push
 - **claude.ai**: the marketplace syncs from GitHub on its own; to force it, *Customize → Plugins → Add → Manage
   marketplaces → ⋮ → Check for updates*. A warning there (a description too long) means the plugin was synced
   without that part: fix it here and publish again.
-- **Projects**: a project declares the plugins it needs in its `.claude/settings.json` (`extraKnownMarketplaces` +
-  `enabledPlugins`), so a clone or a cloud session gets them. A project with a copied launcher pins a version: copy
-  the new `bootstrap/<name>.mjs` over `scripts/<name>.mjs` when it should move to it, run it once, commit there.
+- **Projects on plugins**: a project declares the plugins it needs in its `.claude/settings.json`
+  (`extraKnownMarketplaces` + `enabledPlugins`); whoever trusts the folder in an interactive session is offered them.
+  A cloud session never shows that trust dialog, so it installs none of them, and a plugin floats with the
+  marketplace. A project with a copied launcher pins a version: copy the new `bootstrap/<name>.mjs` over
+  `scripts/<name>.mjs` when it should move to it, run it once, commit there.
+- **Projects on managed copies** (shared or cloud projects): the project keeps this repository's
+  `bootstrap/claude-skills.mjs` as `scripts/claude-skills.mjs`, and each skill byte for byte in
+  `.claude/skills/<skill>/` from its tag, listed in `.claude/claude-skills.json`. To move it to the new version, run
+  `node scripts/claude-skills.mjs sync <skill>@<version>` there and commit the diff it prints (the copy and the
+  list). Its CI or a hook may run `node scripts/claude-skills.mjs check`: it fails on a hand-edited copy or on a
+  skill's hooks not wired in the project's settings (it prints the snippet), and reports newer versions as info.
+  The tag must be pushed before a project can sync it.
 
 ## Environment
 

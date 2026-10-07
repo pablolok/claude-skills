@@ -11,7 +11,6 @@ import {
   formatBklgId,
   issueTitleFor,
   labelsFor,
-  leadingKeyword,
   typeLabelFromDoc,
   issueBodyFor,
   labelDelta,
@@ -119,14 +118,6 @@ test("issueTitleFor is 'BKLG-NNN — title'", () => {
 test("labelsFor maps status/priority/type from fields", () => {
   const labels = labelsFor({ Status: "open", Priority: "medium", Doc: "[x](features/y/spec.md)" });
   assert.deepEqual(labels.sort(), ["backlog", "feature", "priority:medium", "status:open"].sort());
-});
-
-test("leadingKeyword strips parenthetical annotations", () => {
-  assert.equal(leadingKeyword("in-progress (2026-07-06 — baseline green)"), "in-progress");
-  assert.equal(leadingKeyword("blocked — waiting on the boss rig"), "blocked");
-  assert.equal(leadingKeyword("open"), "open");
-  assert.equal(leadingKeyword("  Medium  "), "medium");
-  assert.equal(leadingKeyword(""), "");
 });
 
 test("labelsFor reads status even with a parenthetical annotation", () => {

@@ -40,9 +40,13 @@ For every skill, open the whole file and edit it as its owner would:
   referenced file or a script. The `description` stays an accurate trigger.
 - **Edit a skill at its source** — an installed copy is overwritten at the next update. Find where each skill comes
   from before touching it:
-  - **the project's own** (committed under its `.claude/skills/`): edit it there, in the project's commit;
-  - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`, its files in the plugin cache):
-    the source is the repository the plugin comes from. When a clone of it is on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
+  - **the project's own** (committed under its `.claude/skills/` and not listed in `.claude/claude-skills.json`): edit
+    it there, in the project's commit;
+  - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`, its files in the plugin cache), or
+    a managed copy (a folder under `.claude/skills/` that `.claude/claude-skills.json` lists, copied from the
+    repository's tag): the source is the repository it comes from. Never edit a managed copy: its `check` fails on
+    any hand edit; fix the source as below (a lesson is a patch), then the project runs its sync to the new
+    version and commits the diff. When a clone of it is on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
     the skill there, run its tests, publish a new version with the repository's own flow (patch for a lesson, minor
     for a new step), commit, tag and push; then bring the projects up to it (`claude plugin update`, or the
     version a project pins). Without a clone — a cloud session, a collaborator's machine — never edit the installed
