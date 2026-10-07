@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 /** The skill and the version this project uses: change it here to upgrade. */
 const SKILL = "backlog";
-const VERSION = "1.1.2";
+const VERSION = "1.1.3";
 const REPO_URL = "https://github.com/pablolok/claude-skills.git";
 const PUBLISHED_PATH = "published/workflow/backlog";
 

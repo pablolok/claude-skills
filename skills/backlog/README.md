@@ -92,7 +92,8 @@ heading; the history keeps one-liners (`- **BKLG-NNN** …`, optionally with a p
 whole card with its heading.
 
 What a project adds to the **procedure** (extra entry fields, its pending ledgers, how it verifies, whether the
-GitHub mirror is on) goes in the preamble of its `BACKLOG.md` — the skill reads it first.
+GitHub mirror is on) goes in the preamble of its `BACKLOG.md` — the skill reads it first. Long rules go in a
+conventions document beside the register, which the preamble links; the skill reads it too.
 
 ## Installing
 

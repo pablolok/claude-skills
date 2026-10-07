@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3] - 2026-10-07
+- The preamble may link a conventions document beside the register when the rules outgrow it: the skill reads it too
+
+
 ## [1.1.2] - 2026-10-07
 - The 1.1.1 changelog line quoted an entry id outside backticks, which check-doc-refs reports in a project that keeps the skill's files in git: quoted as code
 

@@ -18,7 +18,8 @@ on false premises, the very defect this review exists to remove.
 > you want we can stop here".
 
 The register's format and the project's conventions (its extra fields, its pending ledgers, how it verifies, its
-roadmap) are the `backlog` skill's and the preamble of the project's `BACKLOG.md`: read both first.
+roadmap) are the `backlog` skill's and the preamble of the project's `BACKLOG.md`, with the conventions document it
+links when it has one: read them first.
 
 ---
 

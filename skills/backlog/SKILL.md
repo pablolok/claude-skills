@@ -22,7 +22,9 @@ What differs between projects is written **in the project**, never in this skill
   project's extra entry fields (what shipping needs: a deploy, a migration, assets, a manual step), its pending
   ledger(s), how it verifies work (build, tests, probes), its roadmap if entries point at one, and whether the
   GitHub mirror is on. Follow it; it wins over the defaults below. A project with no preamble uses the defaults —
-  propose one the first time a project-specific need shows up.
+  propose one the first time a project-specific need shows up. When the rules outgrow a few lines, the preamble
+  keeps a short summary and links a conventions document beside the register: read it too, before the first change
+  to the register.
 - **.claude/backlog.json** — the values the gates read (folders, extra file kinds, exceptions). Optional; see
   the skill's README.
 
