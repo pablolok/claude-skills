@@ -6,22 +6,41 @@ is a managed, gitignored installation, so its wiring is local to the machine too
 
 Both operations are idempotent: an entry is recognised by the hook script it runs, so reinstalling or updating the
 skill never duplicates it, and removing it leaves every other hook in place.
+
+The hooks themselves are listed once, in ``plugin-entry.json`` (what the Claude Code plugin installs): this module
+reads their events, matchers and scripts from there, so the two ways of installing the skill cannot drift apart.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any, Dict, List, Tuple
 
 SETTINGS = os.path.join(".claude", "settings.local.json")
 HOOKS_DIR = "$CLAUDE_PROJECT_DIR/.claude/skills/skill-retrospective/hooks"
+PLUGIN_ENTRY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plugin-entry.json")
+_SCRIPT = re.compile(r"/hooks/([\w.-]+\.mjs)")
 
-#: (event, matcher or None, hook script) — the two hooks the skill needs.
-HOOKS: List[Tuple[str, Any, str]] = [
-    ("PostToolUse", "Skill", "log-skill-use.mjs"),
-    ("Stop", None, "retrospective-hint.mjs"),
-]
+
+def _declared_hooks(path: str = PLUGIN_ENTRY) -> List[Tuple[str, Any, str]]:
+    """(event, matcher or None, hook script) for every hook the plugin entry declares."""
+    with open(path, "r", encoding="utf-8") as handle:
+        declared = json.load(handle)["hooks"]
+    found = []
+    for event, entries in declared.items():
+        for entry in entries:
+            for hook in entry["hooks"]:
+                script = _SCRIPT.search(hook["command"])
+                if not script:
+                    raise ValueError(f"{path}: {event} hook runs no hooks/*.mjs script: {hook['command']}")
+                found.append((event, entry.get("matcher"), script.group(1)))
+    return found
+
+
+#: (event, matcher or None, hook script) — the hooks the skill needs.
+HOOKS: List[Tuple[str, Any, str]] = _declared_hooks()
 
 
 def command_for(script: str) -> str:

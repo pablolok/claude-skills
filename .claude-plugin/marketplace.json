@@ -1,0 +1,215 @@
+{
+  "name": "pablolok-skills",
+  "owner": {
+    "name": "pablolok"
+  },
+  "metadata": {
+    "description": "pablolok's Claude Code skills — one plugin per skill, the same skills skill-manager installs."
+  },
+  "plugins": [
+    {
+      "name": "backlog",
+      "source": "./published/workflow/backlog",
+      "description": "Track a project's work in BACKLOG.md with doc folders archived on close; ships the doc gates and a two-way GitHub Issues mirror.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-angular",
+      "source": "./published/audit/compliance-audit-angular",
+      "description": "A specialized compliance audit for Angular applications and Angular TypeScript UI code.",
+      "version": "1.0.7",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-avalonia",
+      "source": "./published/audit/compliance-audit-avalonia",
+      "description": "A specialized compliance audit for Avalonia UI applications and Avalonia .NET desktop code.",
+      "version": "1.0.4",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-csharp",
+      "source": "./published/audit/compliance-audit-csharp",
+      "description": "A specialized compliance audit for C# and .NET projects. Enforces architectural patterns like TDD, Dependency Injection, and the Repository Pattern for .cs files.",
+      "version": "1.3.7",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-frontend-styling",
+      "source": "./published/audit/compliance-audit-frontend-styling",
+      "description": "A specialized compliance audit for cross-framework frontend styling systems. Enforces reusable styling primitives, design tokens, selector discipline, and accessibility-aware CSS/SCSS practices across Angular, React, Vue, Svelte, and other web UI stacks.",
+      "version": "1.0.5",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-orchestrator",
+      "source": "./published/audit/compliance-audit-orchestrator",
+      "description": "Use when finalizing an implementation phase in a Conductor track to invoke the generic verification-gate audit first, then determine and invoke the correct specialized compliance audit (C#, Scripts, Angular, Avalonia UI, or Frontend Styling) based on the files modified.",
+      "version": "1.4.3",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-scripts",
+      "source": "./published/audit/compliance-audit-scripts",
+      "description": "A specialized compliance audit for automation and scripting (PowerShell, Python, Bash). Enforces best practices for cross-platform safety, idempotency, and TDD in script files.",
+      "version": "1.3.4",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "compliance-audit-verification-gates",
+      "source": "./published/audit/compliance-audit-verification-gates",
+      "description": "A generic compliance audit that verifies required automated verification gates passed before manual verification.",
+      "version": "1.1.4",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "conductor",
+      "source": "./published/workflow/conductor",
+      "description": "Context-Driven Development for Claude Code. Installs the /conductor:* slash commands and scaffolds the conductor/ workspace (product, tech-stack, workflow, tracks) so a project is managed through spec-first tracks, phase checkpoints, and git-notes audit trails.",
+      "version": "1.1.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ],
+      "commands": [
+        "./commands"
+      ]
+    },
+    {
+      "name": "conductor-workflow-optimization",
+      "source": "./published/workflow/conductor-workflow-optimization",
+      "description": "Detect and remediate Claude Code Conductor workflow drift caused by stale tool names, invalid plan-mode transitions, unexpected tool calls, and CLI/workflow mismatches.",
+      "version": "1.0.1",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "pre-implementation-review",
+      "source": "./published/workflow/pre-implementation-review",
+      "description": "Review planned work before implementation to identify reuse opportunities, existing abstractions, duplication risks, and the right reusable boundary.",
+      "version": "1.0.6",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "review-optimization",
+      "source": "./published/audit/review-optimization",
+      "description": "Use after a phase completion but before final user verification to analyze execution history, audit skill efficiency, and suggest workflow optimizations.",
+      "version": "1.1.2",
+      "category": "audit",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "skill-retrospective",
+      "source": "./published/workflow/skill-retrospective",
+      "description": "When a piece of work closes, rewrite the skills it used in place with what it taught; two hooks log the skills used and ask for the retrospective.",
+      "version": "1.2.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ],
+      "hooks": {
+        "PostToolUse": [
+          {
+            "matcher": "Skill",
+            "hooks": [
+              {
+                "type": "command",
+                "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/log-skill-use.mjs\"",
+                "timeout": 10
+              }
+            ]
+          }
+        ],
+        "Stop": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/retrospective-hint.mjs\"",
+                "timeout": 10
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "subagent-balancer",
+      "source": "./published/utility/subagent-balancer",
+      "description": "Quota-aware routing for Claude Code and Claude subscription subagent delegation with fallback-to-local execution.",
+      "version": "1.6.3",
+      "category": "utility",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "subagent-balancer-api",
+      "source": "./published/utility/subagent-balancer-api",
+      "description": "Price-aware routing for Anthropic API (Claude API) model selection with cost-quality tradeoff guidance.",
+      "version": "1.1.2",
+      "category": "utility",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "subagent-balancer-orchestrator",
+      "source": "./published/utility/subagent-balancer-orchestrator",
+      "description": "Routes Claude delegation to the correct balancing policy for CLI quota preservation versus API cost preservation.",
+      "version": "1.0.2",
+      "category": "utility",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    }
+  ]
+}

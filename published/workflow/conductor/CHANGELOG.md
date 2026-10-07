@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - 2026-10-07
+- Installable as a Claude Code plugin: plugin-entry.json gives the plugin its /conductor:* commands
+
+
 ## [1.0.1] - 2026-07-01
 - Publish Claude Code migration (retarget from Gemini CLI distribution)
 

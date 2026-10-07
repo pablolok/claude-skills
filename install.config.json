@@ -26,7 +26,8 @@
       "category": "audit"
     },
     "skill-manager": {
-      "category": "utility"
+      "category": "utility",
+      "plugin": false
     },
     "subagent-balancer": {
       "category": "utility"
@@ -47,6 +48,9 @@
       "category": "workflow"
     },
     "skill-retrospective": {
+      "category": "workflow"
+    },
+    "backlog": {
       "category": "workflow"
     }
   }

@@ -57,6 +57,7 @@ These repo-local skills are expected to be usable when their task type matches:
 - Treat `skills/` as the source of truth.
 - Keep `skills/<skill>/metadata.json`, `CHANGELOG.md`, `README.md`, and `SKILL.md` aligned before publishing.
 - Let the publish flow update metadata/changelog versions and copy to `published/`.
+- Every published skill is also a Claude Code plugin: `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by `build_marketplace.py` (the publish flow runs it) — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its own `plugin-entry.json`; one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
 
 ## Skill Retrospective On This Repo
 

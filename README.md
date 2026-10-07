@@ -12,6 +12,45 @@ For most users, we recommend installing the **Compliance Audit Orchestrator**. I
 | **[Pre-Implementation Review](./skills/pre-implementation-review/)** | Reuse-first planning skill that checks for existing abstractions and duplication risk before implementation starts. |
 | **[Conductor](./skills/conductor/)** | Context-Driven Development workflow. Provides the `/conductor:*` commands for planning, tracking, and executing implementation phases. |
 | **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. Installs two hooks (Node) that log the skills used and ask for the retrospective after an archived backlog entry or 8 commits. |
+| **[Backlog](./skills/backlog/)** | The project's work tracked in `BACKLOG.md`, one doc folder per substantial piece of work archived on close, with the doc gates and a two-way GitHub Issues mirror (Node scripts inside the skill; project values in `.claude/backlog.json`). |
+
+## 🔌 Install as Claude Code plugins (no Python, works in cloud sessions)
+
+The repository is a Claude Code plugin marketplace: every published skill is a plugin of its own, so nothing is
+cloned and no Python runs.
+
+```bash
+claude plugin marketplace add pablolok/claude-skills   # once per machine
+claude plugin install backlog@pablolok-skills          # any skill, by name
+claude plugin update backlog@pablolok-skills           # later, for a new version
+```
+
+Inside a session the same goes through `/plugin`. For **Claude Code on the web / cloud sessions**, add the
+repository as a plugin marketplace in claude.ai's settings (*Plugins & skills*): the account's plugins are synced
+into every session. A team project can also declare it in its committed `.claude/settings.json`, so whoever opens
+the project is offered the plugins:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "pablolok-skills": { "source": { "source": "github", "repo": "pablolok/claude-skills" } }
+  },
+  "enabledPlugins": { "backlog@pablolok-skills": true }
+}
+```
+
+What the plugin route does differently from `install.py`:
+
+- A plugin skill is named `<plugin>:<skill>` (e.g. `backlog:backlog`); commands keep their names (`/conductor:setup`).
+- Hooks and commands come with the plugin (`skill-retrospective`'s two hooks, `conductor`'s commands), declared by
+  each skill in its own `plugin-entry.json`.
+- Project scaffolding done by a `post_install.py` does **not** run: `conductor`'s workspace templates, and the step
+  that `pre-implementation-review`, `review-optimization` and `conductor-workflow-optimization` add to
+  `conductor/workflow.md`. Use `install.py` for those, or add the step by hand.
+- `skill-manager` is not offered as a plugin: it is the Python installer itself.
+
+The marketplace (`.claude-plugin/marketplace.json`) is generated from the published skills by
+`python build_marketplace.py`, which every `automate_publish.py` run calls — never edited by hand.
 
 ## Specialized Skills
 

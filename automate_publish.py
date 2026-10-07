@@ -10,6 +10,8 @@ import pathlib
 import shutil
 import sys
 
+import build_marketplace
+
 
 def update_json_file(path: pathlib.Path, updates: dict) -> None:
     """Update a JSON file with the given dictionary."""
@@ -100,6 +102,8 @@ def main() -> None:
     
     args = parser.parse_args()
     publish_skill(args.skill_name, args.category, args.summary, args.bump)
+    # The plugin marketplace is derived from published/: every publish refreshes it.
+    sys.exit(build_marketplace.main([]))
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 {
   "name": "conductor",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Context-Driven Development for Claude Code. Installs the /conductor:* slash commands and scaffolds the conductor/ workspace (product, tech-stack, workflow, tracks) so a project is managed through spec-first tracks, phase checkpoints, and git-notes audit trails."
 }
