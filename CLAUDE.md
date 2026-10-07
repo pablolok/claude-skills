@@ -37,7 +37,7 @@ For a request to `publish`, `sync` or `republish` a skill, follow `skills/skill-
 3. `claude plugin validate .` (and `python build_marketplace.py --check`)
 4. Commit (`feat(<skill>): <version> — <what changed>`, or `fix(...)`, `docs(...)`, `chore(...)`).
 5. `python tag_published.py` tags `<skill>@<version>` for every published version not yet tagged (`--push` pushes
-   the tags) — projects that run a skill's scripts from CI or git hooks pin it by that tag.
+   every published version's tag that origin lacks, including ones an earlier run created without it) — projects that run a skill's scripts from CI or git hooks pin it by that tag.
 
 A new skill is registered in `install.config.json` and gets its test file in the same change. A skill's text never
 links to another skill's folder (`../other/SKILL.md`): a plugin holds one skill alone, so it names the other skill.

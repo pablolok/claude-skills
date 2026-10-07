@@ -60,7 +60,7 @@ python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|ma
 python -m unittest discover -s tests -p "test_*.py"
 claude plugin validate .
 git commit ...
-python tag_published.py          # tags <skill>@<version>; --push pushes the tags
+python tag_published.py          # tags <skill>@<version>; --push pushes every tag origin lacks
 ```
 
 Projects that run a skill's scripts outside Claude Code (CI, git hooks) pin the skill by its `<skill>@<version>`

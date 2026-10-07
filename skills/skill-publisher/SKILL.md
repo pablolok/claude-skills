@@ -38,4 +38,4 @@ The `automate_publish.py` script will:
 1. Run the whole suite (`python -m unittest discover -s tests -p "test_*.py"`) and `claude plugin validate .`.
 2. Commit with a clear message: `feat(published): sync skill '<skill-name>' to version <new-version>`.
 3. Tag and push: `python tag_published.py --push` creates `<skill>@<version>` for every published version not yet
-   tagged — projects that run a skill's scripts from CI or git hooks pin it by that tag. Then push the commit.
+   tagged and pushes every one origin lacks — projects that run a skill's scripts from CI or git hooks pin it by that tag. Then push the commit.
