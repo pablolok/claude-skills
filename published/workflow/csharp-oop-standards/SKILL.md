@@ -1,9 +1,9 @@
 ---
 name: csharp-oop-standards
-description: Pablo's C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C# for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence stack (repository/UnitOfWork/EF) is project-specific and opt-in, NOT a universal rule.
+description: The C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C#. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence conventions (repository/UnitOfWork/EF Core) apply only to a project that uses EF Core.
 ---
 
-# C# / OOP Standards (Pablo) — C# layer
+# C# / OOP Standards — C# layer
 
 **The universal core lives in the `clean-code-standards` skill and applies
 in full to every C# task.** This skill adds only what is C#/.NET-specific. When writing C#, apply
@@ -49,13 +49,12 @@ reuse audit, fail-fast inputs, no warning suppression); the items below make it 
     documents a justified exception. (Generated EF migration files under `Migrations/` are the one
     allowed local exception, to accommodate model evolution.)
 
-## Project-specific (opt-in — NOT a universal rule)
+## When the project uses EF Core (opt-in — NOT a universal rule)
 
-The persistence conventions below were created for one specific project (an EF-backed app). Apply
-them **only when the project already uses EF / that architecture** — do not impose them on a project
-that has no EF (e.g. a plugin with no DbContext). When they don't apply, the transactional DB seam
-still follows the core rules: a dedicated gateway class owns connection/transaction, callers own
-their SQL.
+Apply these persistence conventions **only when the project already uses EF Core and this
+architecture** — never impose them on a project that has no EF (e.g. a plugin with no DbContext).
+Without them, the transactional DB seam still follows the core rules: a dedicated gateway class owns
+the connection and the transaction, callers own their SQL.
 
 - **UnitOfWork & DbContextFactory.** Don't inject `UnitOfWork`/`DbContext` as scoped deps into
   long-lived/singleton services. Use `IUnitOfWorkFactory` / `IDbContextFactory` to create

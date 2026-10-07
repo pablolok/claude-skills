@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.2] - 2026-10-07
+- The description is one line, the metadata's too; the README names the backlog skill instead of linking into its folder
+
+
 ## [1.0.1] - 2026-10-07
 - Reads the conventions document the register's preamble links, with the preamble
 

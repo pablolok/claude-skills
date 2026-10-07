@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Manage a project's tracked work in BACKLOG.md (default folder docs/implementations) — add/list/process/done deferred fixes, features and ideas, AND the entry-point when STARTING substantial work that warrants a design doc (a spec/plan/report — multi-step feature, planned bugfix, analysis, diagnostic): open a BKLG entry first, even if the user never said "backlog", so the doc folder is tracked and later archived. Ships the gates that keep the docs honest and a GitHub Issues mirror. Trigger on "/backlog", "add to backlog/todo", "metti nel backlog", "segnalo per dopo", "fix this later", "what's in the backlog", "cosa c'è nel backlog", "process BKLG-NNN", "close BKLG-NNN", revisiting a temporary patch — OR before creating any features/bugs/diagnostic/analysis doc folder.
+description: Manage a project's tracked work in BACKLOG.md — add, list, process and close fixes, features and ideas; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates and a GitHub Issues mirror. Trigger on "/backlog", "add to backlog", "metti nel backlog", "fix this later", "what's in the backlog", "close BKLG-NNN", or before creating a features/bugs/diagnostic/analysis folder.
 ---
 
 # Backlog

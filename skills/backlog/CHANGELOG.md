@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5] - 2026-10-07
+- The description fits 500 characters and is the metadata's too (it was 777 against a different 128-character summary); bootstrap VERSION 1.1.5
+
+
 ## [1.1.4] - 2026-10-07
 - the README and the bootstrap no longer name the retired installer: the skill installs as a plugin
 

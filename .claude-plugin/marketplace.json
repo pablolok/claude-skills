@@ -10,8 +10,8 @@
     {
       "name": "backlog",
       "source": "./published/workflow/backlog",
-      "description": "Track a project's work in BACKLOG.md with doc folders archived on close; ships the doc gates and a two-way GitHub Issues mirror.",
-      "version": "1.1.4",
+      "description": "Manage a project's tracked work in BACKLOG.md — add, list, process and close fixes, features and ideas; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates and a GitHub Issues mirror. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"fix this later\", \"what's in the backlog\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
+      "version": "1.1.5",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -21,8 +21,8 @@
     {
       "name": "clean-code-standards",
       "source": "./published/workflow/clean-code-standards",
-      "description": "Pablo's language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language for this user — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.",
-      "version": "1.0.0",
+      "description": "A language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.",
+      "version": "1.0.1",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -32,8 +32,8 @@
     {
       "name": "csharp-oop-standards",
       "source": "./published/workflow/csharp-oop-standards",
-      "description": "Pablo's C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C# for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence stack (repository/UnitOfWork/EF) is project-specific and opt-in, NOT a universal rule.",
-      "version": "1.0.0",
+      "description": "The C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C#. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence conventions (repository/UnitOfWork/EF Core) apply only to a project that uses EF Core.",
+      "version": "1.0.1",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -54,8 +54,8 @@
     {
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
-      "description": "Before writing code, decide the right design — responsibilities, the pattern for each, ownership and seams, what is stored only if it can't be derived; reuse and low duplication follow from it.",
-      "version": "1.1.1",
+      "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
+      "version": "1.1.2",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -65,8 +65,8 @@
     {
       "name": "review-backlog",
       "source": "./published/workflow/review-backlog",
-      "description": "Periodic review of the backlog: run the document gates, clean up what has rotted, close with ONE proposal of what to do next.",
-      "version": "1.0.1",
+      "description": "Periodic review of a project's backlog (the backlog skill's BACKLOG.md) — run the document gates, clean up what has rotted, and close with ONE proposal of what to do next. Use when the user says \"review the backlog\", \"what's next\", \"review del backlog\", \"cosa facciamo adesso\", \"controlla che i documenti siano a posto\", or at the start of a session with no work in progress. Read-only until the cleanup, and the cleanup touches ONLY documents.",
+      "version": "1.0.2",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -76,8 +76,8 @@
     {
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
-      "description": "When a piece of work closes, rewrite the skills it used in place with what it taught; two hooks log the skills used and ask for the retrospective.",
-      "version": "1.3.1",
+      "description": "Use when a piece of work closes — a backlog entry archived, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method — or when a hook asks for it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
+      "version": "1.3.2",
       "category": "workflow",
       "strict": false,
       "skills": [

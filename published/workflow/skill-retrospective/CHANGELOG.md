@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.2] - 2026-10-07
+- No person in it: the dated quotes became the rules they set; a shared skill (plugin or user-level) stays generic, no rule owned by someone; the human is 'the user'; the metadata description is the frontmatter's
+
+
 ## [1.3.1] - 2026-10-07
 - the installer hooks are gone: it installs as a plugin; the hooks take the project from CLAUDE_PROJECT_DIR alone and, without it, do nothing
 

@@ -10,16 +10,13 @@ correct responsibilities, the design pattern that expresses each, the ownership 
 seams — *during planning*, before code exists. When the design is right, **reusability, testability,
 and low duplication follow as consequences.** Chasing reuse directly produces the opposite: premature
 or wrong abstractions (a forced "generic" thing that fits nobody). Same judgment as the
-`clean-code-standards` skill — one responsibility per module, the right
-pattern for the problem — but *ahead* of writing.
+`clean-code-standards` skill — one responsibility per module, the right pattern for the problem — but
+*ahead* of writing.
 
-## Reuse is a consequence, not the driver
-
-Do NOT start from "what can I reuse?". Start from "what are the responsibilities here, and what is the
+Do NOT start from "what can I reuse?"; start from "what are the responsibilities here, and what is the
 correct shape for each?". A well-placed responsibility is *naturally* reused because it has one clear
-job and a clean interface — reuse emerges. Ask "what already implements this responsibility?" only
-AFTER you know what the responsibility is. The order matters: design → then discover existing
-implementations of that design (reuse/extend) → then, only if none, build it.
+job and a clean interface. The order matters: design → then discover existing implementations of that
+design (reuse/extend) → then, only if none, build it.
 
 ## Required outcome
 
@@ -142,8 +139,6 @@ These are not soft smells to mention — if the change would introduce one, the 
 
 ## Decision rules
 
-- **Design first, reuse second.** Assign responsibilities and pick the pattern for each *before*
-  asking what to reuse. Reuse/testability/low-duplication are the payoff of that, not the target.
 - **Before rebuilding or replacing something, find who uses it and look at it there.** Search for every reader of
   it; nothing reads it → remove it, don't rebuild it. Something does → inspect it in that context first: a defect
   that only shows where it is used (wrong orientation, an overlap) belongs in the rebuild's scope.

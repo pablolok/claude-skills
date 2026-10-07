@@ -1,5 +1,5 @@
 {
   "name": "clean-code-standards",
-  "version": "1.0.0",
-  "description": "Pablo's language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language for this user \u2014 enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it."
+  "version": "1.0.1",
+  "description": "A language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language \u2014 enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it."
 }

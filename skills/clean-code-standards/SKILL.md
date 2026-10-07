@@ -1,13 +1,13 @@
 ---
 name: clean-code-standards
-description: Pablo's language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language for this user — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.
+description: A language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.
 ---
 
-# Clean-Code Standards (Pablo) — language-agnostic core
+# Clean-Code Standards — language-agnostic core
 
-How this user wants code written, in **every** language. The non-negotiable core is that design
-stays clean regardless of stack: even on a language that isn't his usual one, he wants to open the
-code and see the same discipline. Applies to production code, refactors, and reviews.
+How code is written, in **every** language. The non-negotiable core is that design stays clean
+regardless of stack: code in a language that is not the project's usual one shows the same
+discipline when opened. Applies to production code, refactors, and reviews.
 
 Per-language skills (`csharp-oop-standards`, `typescript-react-standards`, and any future language
 layer) assume everything here and add only their own idioms, syntax, and tooling. When a language layer exists, apply it **on top

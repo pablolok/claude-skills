@@ -1,11 +1,6 @@
 ---
 name: review-backlog
-description: |
-  Periodic review of a project's backlog (the `backlog` skill's BACKLOG.md): run the document gates, clean up what
-  has rotted, and close with ONE proposal of what to do next. Use when the user says "review del backlog",
-  "pulizia e proposta", "cosa c'è da fare", "cosa facciamo adesso", "controlla che i documenti siano a posto",
-  "what's next", "review the backlog", or at the start of a session with no work already in progress. Read-only
-  until the cleanup, and the cleanup touches ONLY documents.
+description: Periodic review of a project's backlog (the backlog skill's BACKLOG.md) — run the document gates, clean up what has rotted, and close with ONE proposal of what to do next. Use when the user says "review the backlog", "what's next", "review del backlog", "cosa facciamo adesso", "controlla che i documenti siano a posto", or at the start of a session with no work in progress. Read-only until the cleanup, and the cleanup touches ONLY documents.
 ---
 
 # Backlog review — gates, cleanup, proposal

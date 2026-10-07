@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.2] - 2026-10-07
+- The metadata description is the frontmatter's; the README names no person; the reuse-follows-design point said once instead of three times
+
+
 ## [1.1.1] - 2026-10-07
 - the installer hooks are gone: it installs as a plugin
 

@@ -7,7 +7,7 @@ and this skill adds only what is C#-specific.
 
 - C# conventions and idioms for the core's rules
 - the C# quality gates and the coverage bar
-- the persistence stack (repository, UnitOfWork, EF) as an opt-in, project-specific rule — never a universal one
+- the persistence conventions (repository, UnitOfWork, EF Core) for a project that uses EF Core — never a universal rule
 - what to look for when reviewing or refactoring C#
 
 ## Where It Sits

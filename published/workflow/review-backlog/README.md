@@ -5,7 +5,7 @@ broken, **the cleanup** repairs what has rotted (stale Status, dead waits, dupli
 home, ledgers turned graveyards), and **one proposal** says what to do next — the work, why now, what it costs, and
 two or three alternatives in a line each.
 
-It works on the register the [`backlog`](../backlog/) skill keeps, and runs that skill's gates: install both.
+It works on the register the `backlog` skill keeps, and runs that skill's gates: install both.
 Read-only until the cleanup, and the cleanup touches only documents.
 
 ## What gets installed

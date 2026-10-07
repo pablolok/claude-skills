@@ -1,5 +1,5 @@
 {
   "name": "csharp-oop-standards",
-  "version": "1.0.0",
-  "description": "Pablo's C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C# for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence stack (repository/UnitOfWork/EF) is project-specific and opt-in, NOT a universal rule."
+  "version": "1.0.1",
+  "description": "The C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C#. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence conventions (repository/UnitOfWork/EF Core) apply only to a project that uses EF Core."
 }

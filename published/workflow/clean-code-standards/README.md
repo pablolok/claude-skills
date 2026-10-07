@@ -1,6 +1,6 @@
 # Clean-Code Standards
 
-The developer's language-agnostic quality bar for writing, refactoring and reviewing code in any language. It is
+A language-agnostic quality bar for writing, refactoring and reviewing code in any language. It is
 the core that the per-language layers (`csharp-oop-standards`, `typescript-react-standards`) build on.
 
 ## What It Enforces
