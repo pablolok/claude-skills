@@ -12,6 +12,10 @@ cloud session too.
 | **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. Two hooks (Node) log the skills used and ask for the retrospective after an archived backlog entry or 8 commits. |
 | **[Backlog](./skills/backlog/)** | The project's work tracked in `BACKLOG.md`, one doc folder per substantial piece of work archived on close, with the doc gates and a two-way GitHub Issues mirror (Node scripts inside the skill; project values in `.claude/backlog.json`). |
 | **[Review Backlog](./skills/review-backlog/)** | The periodic review of the backlog: run the gates, clean up what has rotted, close with ONE proposal of what to do next. Pairs with Backlog. |
+| **[Clean-Code Standards](./skills/clean-code-standards/)** | The language-agnostic quality bar: single responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, centralized literals, a reuse audit, fail-fast, no warning suppression. |
+| **[C# / OOP Standards](./skills/csharp-oop-standards/)** | The C#/.NET layer on top of Clean-Code Standards: idioms, tooling and the coverage bar; the persistence stack is opt-in per project. |
+| **[TypeScript / React Standards](./skills/typescript-react-standards/)** | The TypeScript, React and Node/Deno layer on top of Clean-Code Standards: idioms, tooling and the coverage bar; the data-layer stack is opt-in per project. |
+| **[Verification Gates](./skills/verification-gates/)** | Before handing work back: the required gates (tests, builds, compilers, linters, static analysis) are green on real evidence and nothing was silently removed. |
 
 ## Install
 

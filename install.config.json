@@ -12,6 +12,18 @@
     },
     "review-backlog": {
       "category": "workflow"
+    },
+    "clean-code-standards": {
+      "category": "workflow"
+    },
+    "csharp-oop-standards": {
+      "category": "workflow"
+    },
+    "typescript-react-standards": {
+      "category": "workflow"
+    },
+    "verification-gates": {
+      "category": "workflow"
     }
   }
 }

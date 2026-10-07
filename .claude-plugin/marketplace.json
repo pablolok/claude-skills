@@ -19,6 +19,28 @@
       ]
     },
     {
+      "name": "clean-code-standards",
+      "source": "./published/workflow/clean-code-standards",
+      "description": "Pablo's language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language for this user — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "csharp-oop-standards",
+      "source": "./published/workflow/csharp-oop-standards",
+      "description": "Pablo's C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C# for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence stack (repository/UnitOfWork/EF) is project-specific and opt-in, NOT a universal rule.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Before writing code, decide the right design — responsibilities, the pattern for each, ownership and seams, what is stored only if it can't be derived; reuse and low duplication follow from it.",
@@ -75,6 +97,28 @@
           }
         ]
       }
+    },
+    {
+      "name": "typescript-react-standards",
+      "source": "./published/workflow/typescript-react-standards",
+      "description": "Pablo's TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code for this user. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static/module-level business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the TS/React idioms, tooling, and coverage bar. The server-state/data-layer stack (TanStack Query, Supabase, pure libs in src/lib) is project-specific and opt-in, NOT a universal rule.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "verification-gates",
+      "source": "./published/workflow/verification-gates",
+      "description": "Use before declaring code work done / handing it back — verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
     }
   ]
 }
