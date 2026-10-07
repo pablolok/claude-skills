@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.4] - 2026-10-07
+- Dispatches the C# audit by its installed name, compliance-audit-csharp (the retired compliance-audit-c# name matched no installed skill, so the C# audit never ran); a plugin-installed skill (<name>:<name>) counts as present
+
+
 ## [1.4.3] - 2026-07-01
 - Publish Claude Code migration (retarget from Gemini CLI distribution)
 

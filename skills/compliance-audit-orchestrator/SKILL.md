@@ -33,9 +33,9 @@ When you invoke this skill, you MUST:
     *   prefer a local audit first
     *   only delegate when the audit is clearly too broad or risky to keep local
     *   if delegation is still needed, use one bounded generalist review subagent and avoid chaining
-5.  **Determine and Dispatch:**
+5.  **Determine and Dispatch:** a skill is present under its name (`compliance-audit-csharp`) or, when installed as a Claude Code plugin, as `<name>:<name>` (`compliance-audit-csharp:compliance-audit-csharp`) — either counts.
     *   **Verification Gates Audit:** If any code files were modified, verify the presence of `compliance-audit-verification-gates`. If present, invoke it first to confirm required automated verification is complete and warning-free before manual verification can proceed.
-    *   **C# Audit:** If any **C# files** (`.cs`, `.csproj`, `.sln`) were modified, verify the presence of `compliance-audit-c#`. If present, invoke it.
+    *   **C# Audit:** If any **C# files** (`.cs`, `.csproj`, `.sln`) were modified, verify the presence of `compliance-audit-csharp`. If present, invoke it.
     *   **Scripts Audit:** If any **Script files** (`.ps1`, `.py`, `.sh`, `.bat`, `.js` for Node.js scripts) were modified, verify the presence of `compliance-audit-scripts`. If present, invoke it.
     *   **Angular Audit:** If Angular indicators are present (for example `angular.json`, `@angular/` imports, Angular component/template/style conventions, or Angular workspace structure) and Angular UI files (`.ts`, `.html`, `.scss`, `.css`) were modified, verify the presence of `compliance-audit-angular`. If present, invoke it.
     *   **Avalonia Audit:** If Avalonia indicators are present (for example `Avalonia` package references, `App.axaml`, `Styles.axaml`, `FluentTheme`, `.axaml` files, or Avalonia resource dictionaries) and Avalonia UI files (`.axaml`, `.xaml`, related `.cs`, `.csproj`, and UI asset files) were modified, verify the presence of `compliance-audit-avalonia`. If present, invoke it.

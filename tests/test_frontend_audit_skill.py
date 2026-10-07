@@ -68,7 +68,7 @@ class TestFrontendAuditSkills(unittest.TestCase):
     def test_frontend_audits_prefer_enums_over_numeric_codes(self) -> None:
         angular_path = os.path.join("skills", "compliance-audit-angular", "SKILL.md")
         avalonia_path = os.path.join("skills", "compliance-audit-avalonia", "SKILL.md")
-        csharp_path = os.path.join("skills", "compliance-audit-c#", "SKILL.md")
+        csharp_path = os.path.join("skills", "compliance-audit-csharp", "SKILL.md")
 
         with open(angular_path, "r", encoding="utf-8") as handle:
             angular_content = handle.read()
@@ -87,7 +87,7 @@ class TestFrontendAuditSkills(unittest.TestCase):
     def test_audit_skills_discourage_semantic_hardcoded_strings(self) -> None:
         angular_path = os.path.join("skills", "compliance-audit-angular", "SKILL.md")
         avalonia_path = os.path.join("skills", "compliance-audit-avalonia", "SKILL.md")
-        csharp_path = os.path.join("skills", "compliance-audit-c#", "SKILL.md")
+        csharp_path = os.path.join("skills", "compliance-audit-csharp", "SKILL.md")
         scripts_path = os.path.join("skills", "compliance-audit-scripts", "SKILL.md")
         styling_path = os.path.join("skills", "compliance-audit-frontend-styling", "SKILL.md")
 
@@ -109,7 +109,7 @@ class TestFrontendAuditSkills(unittest.TestCase):
         self.assertIn("generic reusable control API", avalonia_content)
 
     def test_csharp_audit_requires_reusable_abstractions(self) -> None:
-        csharp_path = os.path.join("skills", "compliance-audit-c#", "SKILL.md")
+        csharp_path = os.path.join("skills", "compliance-audit-csharp", "SKILL.md")
 
         with open(csharp_path, "r", encoding="utf-8") as handle:
             csharp_content = handle.read()
@@ -119,7 +119,7 @@ class TestFrontendAuditSkills(unittest.TestCase):
         self.assertIn("generic reusable abstraction", csharp_content)
 
     def test_csharp_audit_blocks_warning_suppression_shortcuts(self) -> None:
-        csharp_path = os.path.join("skills", "compliance-audit-c#", "SKILL.md")
+        csharp_path = os.path.join("skills", "compliance-audit-csharp", "SKILL.md")
 
         with open(csharp_path, "r", encoding="utf-8") as handle:
             csharp_content = handle.read()

@@ -40,4 +40,4 @@ The **[Compliance Audit Orchestrator](../compliance-audit-orchestrator/)** is th
 
 ### Manual Usage
 To trigger this specific audit manually:
-> "Use the compliance-audit-c# skill."
+> "Use the compliance-audit-csharp skill."

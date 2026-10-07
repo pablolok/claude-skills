@@ -12,7 +12,7 @@ This skill is designed to solve the problem of selecting between multiple specia
 2.  **Skill Presence Verification:** Before triggering any audit, the orchestrator MUST verify that the required skill is "installed" and available for use in the current environment (e.g., in the project's local `skills/` directory or the user's global `.claude/skills/` directory).
 3.  **Smart Delegation:**
     *   **Verification Gates:** Triggers `compliance-audit-verification-gates` first for code changes so required tests, builds, and static checks are green and warning-free before manual verification.
-    *   **C# Files:** Triggers the `compliance-audit-c#` skill if it's available.
+    *   **C# Files:** Triggers the `compliance-audit-csharp` skill if it's available.
     *   **Script Files:** Triggers the `compliance-audit-scripts` skill if it's available.
     *   **Angular Files:** Triggers the `compliance-audit-angular` skill when Angular indicators are present and Angular UI files were changed.
     *   **Avalonia UI Files:** Triggers the `compliance-audit-avalonia` skill when Avalonia markers are present and Avalonia UI files were changed.

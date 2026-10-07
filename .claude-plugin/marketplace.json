@@ -44,7 +44,7 @@
       "name": "compliance-audit-csharp",
       "source": "./published/audit/compliance-audit-csharp",
       "description": "A specialized compliance audit for C# and .NET projects. Enforces architectural patterns like TDD, Dependency Injection, and the Repository Pattern for .cs files.",
-      "version": "1.3.7",
+      "version": "1.3.8",
       "category": "audit",
       "strict": false,
       "skills": [
@@ -66,7 +66,7 @@
       "name": "compliance-audit-orchestrator",
       "source": "./published/audit/compliance-audit-orchestrator",
       "description": "Use when finalizing an implementation phase in a Conductor track to invoke the generic verification-gate audit first, then determine and invoke the correct specialized compliance audit (C#, Scripts, Angular, Avalonia UI, or Frontend Styling) based on the files modified.",
-      "version": "1.4.3",
+      "version": "1.4.4",
       "category": "audit",
       "strict": false,
       "skills": [
