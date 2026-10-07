@@ -29,6 +29,14 @@ HOOKS = {
 }
 
 
+LAUNCHER = "plain-run.mjs"
+
+
+def _launcher(version: str) -> str:
+    """A skill's launcher as published in its bootstrap/ folder: it pins the skill's version in its VERSION line."""
+    return f'#!/usr/bin/env node\nconst SKILL = "plain";\nconst VERSION = "{version}";\nconsole.log(SKILL, VERSION);\n'
+
+
 def _git(cwd: pathlib.Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout
 
@@ -68,12 +76,14 @@ class TestClaudeSkillsTool(unittest.TestCase):
         _git(src, "remote", "add", "origin", str(self.origin))
         plain = src / "published" / "workflow" / "plain"
         hooked = src / "published" / "workflow" / "hooked"
-        self._skill(plain, "plain", "1.0.0", {"SKILL.md": "plain one\n", "OLD.md": "old\n", "lib/a.mjs": "a\n"})
+        self._skill(plain, "plain", "1.0.0", {"SKILL.md": "plain one\n", "OLD.md": "old\n", "lib/a.mjs": "a\n",
+                                              f"bootstrap/{LAUNCHER}": _launcher("1.0.0")})
         self._skill(hooked, "hooked", "1.0.0", {"SKILL.md": "hooked\n", "hooks/h.mjs": "h\n", "hooks/stop.mjs": "s\n",
                                                 "plugin-entry.json": json.dumps(HOOKS, indent=2) + "\n"})
         self._commit_and_tag(src, ["plain@1.0.0", "hooked@1.0.0", "plainer@9.0.0"])
         (plain / "OLD.md").unlink()
-        self._skill(plain, "plain", "1.1.0", {"SKILL.md": "plain two\n", "NEW.md": "new\n"})
+        self._skill(plain, "plain", "1.1.0", {"SKILL.md": "plain two\n", "NEW.md": "new\n",
+                                              f"bootstrap/{LAUNCHER}": _launcher("1.1.0")})
         self._commit_and_tag(src, ["plain@1.1.0"])
         _git(src, "push", "-q", "origin", "HEAD:refs/heads/main", "--tags")
 
@@ -111,6 +121,9 @@ class TestClaudeSkillsTool(unittest.TestCase):
 
     def _wire(self, settings_file: str, events: dict) -> None:
         _write(self.project / ".claude" / settings_file, json.dumps({"hooks": events}, indent=2) + "\n")
+
+    def _project_launcher(self) -> pathlib.Path:
+        return self.project / "scripts" / LAUNCHER
 
     # ---- sync ----------------------------------------------------------------------------------------------------
 
@@ -161,6 +174,22 @@ class TestClaudeSkillsTool(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(self._copy("plain").exists())
         self.assertEqual(self._config()["skills"], [])
+
+    def test_sync_updates_the_project_launcher_and_reports_its_versions(self) -> None:
+        _write(self._project_launcher(), _launcher("1.0.0"))
+        self._ok("sync", "plain@1.0.0")
+        out = self._ok("sync", "plain")
+        self.assertIn(f"launcher scripts/{LAUNCHER} 1.0.0 -> 1.1.0", out)
+        self.assertEqual(self._project_launcher().read_text(encoding="utf-8"), _launcher("1.1.0"))
+        self._ok("check")
+
+    def test_sync_does_not_create_a_missing_launcher_but_offers_it(self) -> None:
+        out = self._ok("sync", "plain@1.1.0")
+        self.assertFalse(self._project_launcher().exists())
+        self.assertIn(f"bootstrap/{LAUNCHER}", out)
+        self.assertIn(f"scripts/{LAUNCHER}", out)
+        self.assertNotIn("launcher scripts/", out)
+        out.encode("ascii")
 
     # ---- check ---------------------------------------------------------------------------------------------------
 
@@ -242,6 +271,33 @@ class TestClaudeSkillsTool(unittest.TestCase):
     def test_check_with_nothing_managed_is_green(self) -> None:
         (self.project / ".claude" / "claude-skills.json").unlink()
         self.assertIn("no managed skills", self._ok("check"))
+
+    def test_check_passes_when_the_launcher_matches_line_endings_aside(self) -> None:
+        _write(self._project_launcher(), _launcher("1.1.0"))
+        self._ok("sync", "plain@1.1.0")
+        self._ok("check")
+        self._project_launcher().write_bytes(_launcher("1.1.0").replace("\n", "\r\n").encode("utf-8"))
+        self._ok("check")
+
+    def test_check_fails_on_a_launcher_pinned_to_another_version(self) -> None:
+        _write(self._project_launcher(), _launcher("1.1.0"))
+        self._ok("sync", "plain@1.1.0")
+        _write(self._project_launcher(), _launcher("1.0.0"))
+        result = self._run("check")
+        self.assertEqual(result.returncode, 1)
+        error = next(line for line in result.stdout.splitlines() if line.startswith("ERROR") and LAUNCHER in line)
+        self.assertIn("VERSION 1.0.0", error)
+        self.assertIn("plain 1.1.0", error)
+        self.assertIn("node scripts/claude-skills.mjs sync plain@1.1.0", error)
+
+    def test_check_fails_on_a_hand_edited_launcher(self) -> None:
+        _write(self._project_launcher(), _launcher("1.1.0"))
+        self._ok("sync", "plain@1.1.0")
+        _write(self._project_launcher(), _launcher("1.1.0") + "// edited here\n")
+        result = self._run("check")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(f"scripts/{LAUNCHER} differs", result.stdout)
+        self.assertIn("sync plain@1.1.0", result.stdout)
 
 
 @unittest.skipUnless(shutil.which("node"), "node is not installed")

@@ -79,9 +79,11 @@ python tag_published.py --push
 - **Projects on managed copies** (shared or cloud projects): the project keeps this repository's
   `bootstrap/claude-skills.mjs` as `scripts/claude-skills.mjs`, and each skill byte for byte in
   `.claude/skills/<skill>/` from its tag, listed in `.claude/claude-skills.json`. To move it to the new version, run
-  `node scripts/claude-skills.mjs sync <skill>@<version>` there and commit the diff it prints (the copy and the
-  list). Its CI or a hook may run `node scripts/claude-skills.mjs check`: it fails on a hand-edited copy or on a
-  skill's hooks not wired in the project's settings (it prints the snippet), and reports newer versions as info.
+  `node scripts/claude-skills.mjs sync <skill>@<version>` there and commit the diff it prints (the copy, the list,
+  and the skill's launchers the project keeps in `scripts/`, which sync moves to the same version). Its CI or a hook
+  may run `node scripts/claude-skills.mjs check`: it fails on a hand-edited copy, on a launcher that differs from the
+  published one at the copy's version, or on a skill's hooks not wired in the project's settings (it prints the
+  snippet), and reports newer versions as info.
   The tag must be pushed before a project can sync it.
 
 ## Environment

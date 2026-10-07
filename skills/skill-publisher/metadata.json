@@ -1,5 +1,5 @@
 {
   "name": "skill-publisher",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Use in the claude-skills repository to add, change, publish, tag and roll out a skill of the pablolok-skills plugin marketplace — the whole path from an edit in skills/<skill>/ to the plugin updated on every machine and project that uses it. Trigger on \"publish\", \"sync\", \"republish\", \"new skill\", \"release a skill\", or after a skill-retrospective edited a skill here."
 }

@@ -20,11 +20,14 @@
  *     `<cache>/<skill>@<version>/`, fetched once, then reused offline — the same layout as the skills' launchers
  *     (backlog's `backlog-gate.mjs`, mermaid-diagrams' `mermaid.mjs`), which prefer a same-version
  *     `.claude/skills/<skill>` copy and so run offline on a managed copy.
+ *   - a skill's launchers ship in its `bootstrap/` folder; the project keeps the ones it uses in `scripts/`. A launcher
+ *     prefers the managed copy only at its own `VERSION`, so sync replaces each one the project has with the published
+ *     one (never creating one), and check fails on a launcher that differs — two versions in play otherwise.
  *
  * Same shape and names as those launchers, on purpose: the three are meant to share one implementation.
  */
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,6 +40,12 @@ const SETTINGS_FILES = [".claude/settings.json", ".claude/settings.local.json"];
 const PUBLISHED_DIR = "published";
 const METADATA = "metadata.json";
 const PLUGIN_ENTRY = "plugin-entry.json";
+/** A skill's launchers ship in its `bootstrap/` folder; a project keeps the ones it uses in its `scripts/`. */
+const BOOTSTRAP_DIR = "bootstrap";
+const LAUNCHER_DIR = "scripts";
+/** The line a launcher pins its skill's version with — the same line the skills' tests read. */
+const LAUNCHER_VERSION = /^const VERSION = "([^"]+)";/m;
+const NO_VERSION = "(no VERSION)";
 /** Never copied, never compared: a copy may install its dependencies in place. */
 const IGNORED_DIR = "node_modules";
 const PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}";
@@ -51,10 +60,13 @@ const EXIT = Object.freeze({ ok: 0, failed: 1, usage: 2 });
 const USAGE = `usage: node scripts/claude-skills.mjs <command>
   sync <skill>[@<version>] [...] [--adopt]
         copy each skill's published tag into ${SKILLS_DIR}/<skill>/ and manage it (no version: the latest tag);
+        a launcher the skill ships in ${BOOTSTRAP_DIR}/ that the project has in ${LAUNCHER_DIR}/ (same file name) is
+        replaced by the published one; one the project lacks is only offered, never created.
         --adopt replaces a folder that exists but is not managed
   check
-        every managed copy equals its published tag (line endings and ${IGNORED_DIR} aside) and its plugin hooks
-        are wired in .claude/settings.json; exit 1 otherwise. Newer published versions are reported as info.
+        every managed copy equals its published tag (line endings and ${IGNORED_DIR} aside), the project's launchers
+        in ${LAUNCHER_DIR}/ equal the skill's published ones at the copy's version, and its plugin hooks are wired in
+        .claude/settings.json; exit 1 otherwise. Newer published versions are reported as info.
   list
         the managed skills and their versions`;
 
@@ -124,6 +136,50 @@ export function diffTrees(before, after) {
   const removed = [...before.keys()].filter((p) => !after.has(p));
   const changed = [...after.keys()].filter((p) => before.has(p) && normaliseEol(before.get(p)) !== normaliseEol(after.get(p)));
   return { added: added.sort(), changed: changed.sort(), removed: removed.sort() };
+}
+
+/** The skill version a launcher pins, from its `const VERSION = "x.y.z";` line, or null when it has none. */
+export function launcherVersion(text) {
+  return LAUNCHER_VERSION.exec(text)?.[1] ?? null;
+}
+
+/**
+ * What sync does with a skill's launchers: the project's `scripts/<name>` is replaced when the project has one (matched
+ * by file name), and only offered when it has none — a launcher is never created.
+ * @param {Map<string, string>} published the skill's `bootstrap/` files, name → content
+ * @param {Map<string, string>} project the project's `scripts/` files of those names that exist, name → content
+ * @returns {{replaced: {name: string, from: string|null, to: string|null}[], offered: string[]}}
+ */
+export function launcherUpdates(published, project) {
+  const names = [...published.keys()].sort();
+  return {
+    replaced: names.filter((name) => project.has(name))
+      .map((name) => ({ name, from: launcherVersion(project.get(name)), to: launcherVersion(published.get(name)) })),
+    offered: names.filter((name) => !project.has(name)),
+  };
+}
+
+/**
+ * The project's launchers that differ from the skill's published ones at the managed copy's version (CRLF/LF aside):
+ * one pinned to another version, or one edited by hand. A launcher the project does not have is no problem.
+ * @param {string} skill
+ * @param {string} version the managed copy's version
+ * @param {Map<string, string>} published the skill's `bootstrap/` files at that version, name → content
+ * @param {Map<string, string>} project the project's `scripts/` files of those names that exist, name → content
+ * @returns {string[]}
+ */
+export function launcherProblems(skill, version, published, project) {
+  const fix = `node scripts/claude-skills.mjs sync ${skill}@${version}`;
+  return [...project.keys()].sort()
+    .filter((name) => published.has(name) && normaliseEol(project.get(name)) !== normaliseEol(published.get(name)))
+    .map((name) => {
+      const pinned = launcherVersion(project.get(name));
+      return pinned === version
+        ? `${skill} ${version}: ${LAUNCHER_DIR}/${name} differs from the published bootstrap/${name} at ${skill}@${version} `
+          + `(edited by hand? edit the skill's source, publish, then sync; to restore it: ${fix})`
+        : `${skill} ${version}: ${LAUNCHER_DIR}/${name} pins VERSION ${pinned ?? NO_VERSION}, the copy is ${version}: `
+          + `run ${fix}`;
+    });
 }
 
 /** A hook command as the project would run it: the plugin root becomes the managed copy's folder. */
@@ -260,6 +316,22 @@ function readTree(dir) {
   return tree;
 }
 
+/** A skill's launchers: the files directly in its published `bootstrap/` folder, name → content (bytes as latin1). */
+function publishedLaunchers(folder) {
+  const dir = path.join(folder, BOOTSTRAP_DIR);
+  if (!existsSync(dir)) return new Map();
+  return new Map(readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => [entry.name, readFileSync(path.join(dir, entry.name), "latin1")]));
+}
+
+/** The project's `scripts/<name>` for each of `names` it has, name → content (bytes as latin1). */
+function projectLaunchers(root, names) {
+  return new Map([...names]
+    .filter((name) => existsSync(path.join(root, LAUNCHER_DIR, name)))
+    .map((name) => [name, readFileSync(path.join(root, LAUNCHER_DIR, name), "latin1")]));
+}
+
 /** `.claude/skills/<skill>` — only ever that folder, for a name parseSpec accepted. */
 function copyFolder(root, skill) {
   const skillsDir = path.resolve(root, SKILLS_DIR);
@@ -335,17 +407,40 @@ function sync(ctx, args) {
   }
   if (refused.length > 0) return EXIT.failed;
 
+  let launchersReplaced = 0;
   for (const p of plans) {
     const diff = diffTrees(readTree(p.target), readTree(p.source));
     if (p.unmanaged) ctx.out.line(`${p.skill}: adopting the unmanaged ${SKILLS_DIR}/${p.skill}; the published copy replaces it:`);
     ctx.out.line(`${p.skill}: ${versionOf(p.target) ?? "(new)"} -> ${p.version}`);
     ctx.out.line(isEmptyDiff(diff) ? "  no file changed" : diffLines(diff).join("\n"));
     replaceCopy(p.target, p.source);
+    launchersReplaced += syncLaunchers(ctx, p);
     config.skills.push(p.skill);
   }
   saveConfig(ctx.root, config);
-  ctx.out.line(`managed in ${CONFIG_FILE}: ${[...new Set(config.skills)].sort().join(", ")}. Commit ${SKILLS_DIR} and ${CONFIG_FILE}.`);
+  const launchers = launchersReplaced > 0 ? `, ${CONFIG_FILE} and the launchers in ${LAUNCHER_DIR}` : ` and ${CONFIG_FILE}`;
+  ctx.out.line(`managed in ${CONFIG_FILE}: ${[...new Set(config.skills)].sort().join(", ")}. Commit ${SKILLS_DIR}${launchers}.`);
   return EXIT.ok;
+}
+
+/**
+ * Move the project's launchers of a synced skill to its published ones (the project's `scripts/<name>` of each file in
+ * the skill's `bootstrap/`), so they pin the copy's version; a launcher the project lacks is only offered.
+ * @returns {number} how many launchers were replaced
+ */
+function syncLaunchers(ctx, plan) {
+  const published = publishedLaunchers(plan.source);
+  const { replaced, offered } = launcherUpdates(published, projectLaunchers(ctx.root, published.keys()));
+  for (const { name, from, to } of replaced) {
+    copyFileSync(path.join(plan.source, BOOTSTRAP_DIR, name), path.join(ctx.root, LAUNCHER_DIR, name));
+    ctx.out.line(`  launcher ${LAUNCHER_DIR}/${name} ${from ?? NO_VERSION} -> ${to ?? NO_VERSION}`);
+  }
+  for (const name of offered) {
+    ctx.out.line(`  info  ${plan.skill} offers the launcher ${BOOTSTRAP_DIR}/${name}; to use it, copy `
+      + `${SKILLS_DIR}/${plan.skill}/${BOOTSTRAP_DIR}/${name} to ${LAUNCHER_DIR}/${name} and commit it (sync keeps it at `
+      + "the skill's version from then on)");
+  }
+  return replaced.length;
 }
 
 /** The problems of one managed copy, or [] when it is its published tag with its hooks wired. */
@@ -368,6 +463,8 @@ function checkCopy(ctx, config, settings, skill) {
     problems.push([`${skill} ${metadata.version}: the copy differs from the published ${skill}@${metadata.version} `
       + "(edited by hand? edit the skill's source, publish, then sync):", ...diffLines(diff)].join("\n"));
   }
+  const launchers = publishedLaunchers(source);
+  problems.push(...launcherProblems(skill, metadata.version, launchers, projectLaunchers(ctx.root, launchers.keys())));
   const missing = missingHooks(readJson(path.join(source, PLUGIN_ENTRY)), settings, skill);
   if (Object.keys(missing).length > 0) {
     problems.push(`${skill} ${metadata.version}: hooks not wired in ${SETTINGS_FILES[0]} (or settings.local.json); add under "hooks":\n`

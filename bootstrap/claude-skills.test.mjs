@@ -6,6 +6,9 @@ import {
   compareVersions,
   diffTrees,
   latestVersion,
+  launcherProblems,
+  launcherUpdates,
+  launcherVersion,
   missingHooks,
   parseSpec,
   tagsFromLsRemote,
@@ -89,4 +92,49 @@ test("missingHooks keeps a hook wired under another event, matcher or skill as m
 test("missingHooks of a skill with no plugin entry or no hooks is empty", () => {
   assert.deepEqual(missingHooks(null, [], "x"), {});
   assert.deepEqual(missingHooks({ commands: [] }, [], "x"), {});
+});
+
+const launcher = (version) => `#!/usr/bin/env node\nconst SKILL = "x";\nconst VERSION = "${version}";\nrun();\n`;
+
+test("launcherVersion reads the VERSION line at the start of a line, or null", () => {
+  assert.equal(launcherVersion(launcher("1.3.1")), "1.3.1");
+  assert.equal(launcherVersion(launcher("1.3.1").replace(/\n/g, "\r\n")), "1.3.1");
+  assert.equal(launcherVersion('  const VERSION = "1.0.0";\n'), null);
+  assert.equal(launcherVersion("no pin here\n"), null);
+});
+
+test("launcherUpdates replaces only the launchers the project has, and offers the others", () => {
+  const published = new Map([["a.mjs", launcher("1.1.0")], ["b.mjs", launcher("1.1.0")]]);
+  const project = new Map([["a.mjs", launcher("1.0.0")]]);
+  assert.deepEqual(launcherUpdates(published, project), {
+    replaced: [{ name: "a.mjs", from: "1.0.0", to: "1.1.0" }],
+    offered: ["b.mjs"],
+  });
+});
+
+test("launcherUpdates reports a launcher without a VERSION line as such", () => {
+  const { replaced } = launcherUpdates(new Map([["a.mjs", "no pin\n"]]), new Map([["a.mjs", "no pin either\n"]]));
+  assert.deepEqual(replaced, [{ name: "a.mjs", from: null, to: null }]);
+});
+
+test("launcherProblems is empty for a matching launcher, line endings aside", () => {
+  const published = new Map([["a.mjs", launcher("1.1.0")], ["b.mjs", launcher("1.1.0")]]);
+  const project = new Map([["a.mjs", launcher("1.1.0").replace(/\n/g, "\r\n")]]);
+  assert.deepEqual(launcherProblems("x", "1.1.0", published, project), []);
+});
+
+test("launcherProblems names both versions and the sync that fixes a launcher pinned elsewhere", () => {
+  const problems = launcherProblems("x", "1.1.0", new Map([["a.mjs", launcher("1.1.0")]]), new Map([["a.mjs", launcher("1.0.0")]]));
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /scripts\/a\.mjs/);
+  assert.match(problems[0], /VERSION 1\.0\.0/);
+  assert.match(problems[0], /copy is 1\.1\.0/);
+  assert.match(problems[0], /node scripts\/claude-skills\.mjs sync x@1\.1\.0/);
+});
+
+test("launcherProblems reports a hand edit that keeps the VERSION line", () => {
+  const problems = launcherProblems("x", "1.1.0", new Map([["a.mjs", launcher("1.1.0")]]),
+    new Map([["a.mjs", `${launcher("1.1.0")}// mine\n`]]));
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /scripts\/a\.mjs differs from the published bootstrap\/a\.mjs at x@1\.1\.0/);
 });

@@ -36,12 +36,17 @@ place:
 
 ```bash
 node scripts/claude-skills.mjs sync backlog@1.3.0 review-backlog   # no version: the latest tag; prints the diff
-node scripts/claude-skills.mjs check    # CI or a hook: exit 1 on a hand edit or a skill's hooks not wired
+node scripts/claude-skills.mjs check    # CI or a hook: exit 1 on a hand edit, a stale launcher, hooks not wired
 node scripts/claude-skills.mjs list
 ```
 
-`check` prints the settings snippet for a skill whose hooks (its `plugin-entry.json`) are missing from the project's
-`.claude/settings.json`, and reports newer published versions as info. A lesson about a managed skill still goes to
+A skill's launcher (its `bootstrap/<name>.mjs`, e.g. `backlog-gate.mjs`) pins the skill's version and prefers the
+managed copy only at that same version. So `sync` also replaces the project's `scripts/<name>` with the published one
+when the project has it (by file name), printing `launcher scripts/<name> <old> -> <new>`; it never creates one, and
+says how to add it. `check` fails on a launcher that differs from the published one at the copy's version (another
+`VERSION`, or a hand edit) and names the `sync` that fixes it. It also prints the settings snippet for a skill whose
+hooks (its `plugin-entry.json`) are missing from the project's `.claude/settings.json`, and reports newer published
+versions as info. A lesson about a managed skill still goes to
 this repository (or an issue on it); the project takes it with a sync. Both ways coexist.
 
 ## Install
