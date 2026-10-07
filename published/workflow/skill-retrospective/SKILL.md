@@ -38,9 +38,17 @@ For every skill, open the whole file and edit it as its owner would:
   checklist used at a named step, each line an action.
 - **Keep it lean**: aim at ≤ ~200 lines for a SKILL.md; past that, split by responsibility or move detail into a
   referenced file or a script. The `description` stays an accurate trigger.
-- **Edit a skill at its source.** A skill installed as a copy (by a skill manager, or copied from another
-  repo) is overwritten at the next update: change it where it is published and republish, then update the
-  installed copy. A user-level skill kept in a versioned repo is copied back there and pushed.
+- **Edit a skill at its source** — an installed copy is overwritten at the next update. Find where each skill comes
+  from before touching it:
+  - **the project's own** (committed under its `.claude/skills/`): edit it there, in the project's commit;
+  - **installed from a skill repository** — a plugin (listed as `<plugin>:<skill>`), or a skill manager's copy (its
+    manifest names it, and the folder is usually git-ignored): the source is that repository. When a clone of it is
+    on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
+    the skill there, run its tests, publish a new version with the repository's own flow (patch for a lesson, minor
+    for a new step), commit, tag and push; then bring the projects up to it (`claude plugin update`, or the
+    version a project pins). Without a clone — a cloud session, a collaborator's machine — never edit the installed
+    copy: open an issue on the skill repository with the lesson as the instruction to add, and say so in the report;
+  - **user-level** (`~/.claude/skills`) kept in a versioned repo: edit it, then copy it back there and push.
 - **Scripts follow the skill**: a script the skill no longer calls is deleted; a fix that recurs becomes a script
   option, not a paragraph.
 

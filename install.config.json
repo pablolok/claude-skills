@@ -52,6 +52,9 @@
     },
     "backlog": {
       "category": "workflow"
+    },
+    "review-backlog": {
+      "category": "workflow"
     }
   }
 }

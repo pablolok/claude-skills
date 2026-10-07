@@ -101,7 +101,8 @@ test("· the same entry cited twice counts once", () => {
  */
 test("the modules import without an argv[1] (node -e)", () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const files = ["project", "docIndex", "check-doc-refs", "backlog-anchor", "architecture-shape", "backlog-github-sync"]
+  const files = ["project", "register", "docIndex", "check-doc-refs", "backlog-anchor", "architecture-shape",
+    "backlog-coherence", "closed-defects", "related-docs", "backlog-github-sync"]
     .map((n) => join(here, `${n}.mjs`));
   const code = files.map((f) => `import(${JSON.stringify(pathToFileURL(f).href)})`).join(",");
   const output = execFileSync(process.execPath, ["-e", `Promise.all([${code}]).then(()=>console.log('ok'))`], {

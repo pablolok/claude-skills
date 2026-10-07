@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2026-10-07
+- Edit a skill at its source: project, skill repository (with a local clone: publish, tag, push; without: an issue on the repository) or user-level
+
+
 ## [1.2.0] - 2026-10-07
 - Installable as a Claude Code plugin: its two hooks declared once in plugin-entry.json (the plugin installs them; wiring.py reads them from there for skill-manager installs)
 

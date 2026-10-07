@@ -22,6 +22,40 @@ import {
   withoutOwnerCell,
   withoutShape,
 } from "./architecture-shape.mjs";
+import { parseConfig } from "./project.mjs";
+
+test("the project's words: Italian sections, owner column, 'nessuno' and the retired line", () => {
+  const { words } = parseConfig(JSON.stringify({
+    words: {
+      openDefects: "I difetti aperti", contributions: "Chi ci ha lavorato", ownerColumn: "chi lo chiude",
+      none: ["nessuno", "nessuna"], retired: ["ritirato", "ritirati"],
+    },
+  }));
+  const doc = [
+    "## I difetti aperti", "Ritirati finora: D1", "| # | difetto | chi lo chiude |", "|---|---|---|",
+    "| D2 | x | [[BKLG-040]] |", "| D3 | y | nessuno — forse [[BKLG-041]] |", "",
+    "## Chi ci ha lavorato", "| [[BKLG-039]] | z |",
+  ].join("\n");
+  assert.deepEqual(shapeOf(doc, words), { defects: true, contributions: true });
+  assert.deepEqual([...markersInSection(doc, words.openDefects, words)].sort(), ["D2", "D3"]);
+  assert.deepEqual(defectsWithoutOwner([{ name: "a.md", text: doc }], words), ["a.md#D3"]);
+  assert.deepEqual(withoutOwnerCell([{ name: "a.md", text: doc }], words), []);
+  // Control: with the English defaults the same doc has neither section.
+  assert.deepEqual(shapeOf(doc), { defects: false, contributions: false });
+});
+
+test("· a declared exclusion leaves the set the gates judge", () => {
+  const root = mkdtempSync(join(tmpdir(), "architecture-excl-"));
+  try {
+    for (const p of ["docs/architecture/a.md", "docs/architecture/glossary.md"]) {
+      mkdirSync(dirname(join(root, p)), { recursive: true });
+      writeFileSync(join(root, p), "x");
+    }
+    assert.deepEqual(architectureDocs(root, "docs/architecture", { "docs/architecture/glossary.md": "a glossary" }), ["docs/architecture/a.md"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("the numeric prefix belongs to the index, not the name", () => {
   for (const title of ["Open defects", "5. Open defects", "3.1 Open defects", "open defects"]) {

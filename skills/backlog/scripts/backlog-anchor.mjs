@@ -25,14 +25,9 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createResolver, docIndex } from "./docIndex.mjs";
-import {
-  CONTRIBUTIONS_SECTION,
-  DEFECTS_SECTION,
-  architectureDocs,
-  entryInSection,
-  markersInSection,
-} from "./architecture-shape.mjs";
-import { DEFAULTS, project } from "./project.mjs";
+import { architectureDocs, entryInSection, markersInSection } from "./architecture-shape.mjs";
+import { DEFAULTS, fieldName, project } from "./project.mjs";
+import { closedLines, entryBlock as registerBlock, fieldLine, openIds } from "./register.mjs";
 
 const SEP = "@@COMMIT@@";
 
@@ -78,37 +73,36 @@ export function footprint(id, run = git) {
 }
 
 /**
- * An entry's text, from its heading to the next entry or section. Empty when absent.
- * Both shapes: `## BKLG-NNN — title` (open register) and `- **BKLG-NNN** …` (history one-liner).
+ * An entry's text, from its heading to where it ends — the layout is `register.mjs`'s (both heading levels, history
+ * lines, phases). Empty when absent.
  */
-export function entryBlock(text, id) {
-  const lines = text.split("\n");
-  const start = new RegExp(`^(## ${id}(?![0-9])|- \\*\\*${id}\\*\\*)`);
-  const a = lines.findIndex((r) => start.test(r));
-  if (a < 0) return "";
-  const b = lines.findIndex((r, i) => i > a && /^(## |- \*\*BKLG-)/.test(r));
-  return lines.slice(a, b < 0 ? undefined : b).join("\n");
-}
+export const entryBlock = (text, id) => registerBlock(text, id);
 
-const ARCHITECTURE_FIELD = /^\s*[-*]\s+\*\*Architecture\*\*\s*:/;
 const OTHER_FIELD = /^\s*[-*]\s+\*\*/;
 
-/** Does this block carry an `Architecture` field at all? */
-export const hasArchitectureField = (block) => block.split("\n").some((r) => ARCHITECTURE_FIELD.test(r));
+/** Does this block carry an `Architecture` field (under the project's name for it) at all? */
+export const hasArchitectureField = (block, config = DEFAULTS) => {
+  const field = fieldLine(config, "Architecture");
+  return block.split("\n").some((r) => field.test(r));
+};
 
 /**
  * "I declare none", decided on the field's OPENING only — so `— (none changes; the rule lives in
- * combat.md)` stays a denial and its prose never becomes a declaration.
+ * combat.md)` stays a denial and its prose never becomes a declaration. The words are the project's (`words.none`).
  */
-const DECLARES_NONE = /^\s*(—|-|none|no)(\s|$|\(|\.)/i;
+const declaresNone = (opening, config) => {
+  const words = config.words.none.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  // A bare `—`, `-` or `no` opening the field is a denial in any language the project writes in.
+  return new RegExp(`^\\s*(—|-|no${words ? `|${words}` : ""})(\\s|$|\\(|\\.)`, "i").test(opening);
+};
 
 /**
  * The whole field: the opening line plus its continuation lines (two docs with their prose rarely
  * fit on one line). It ends at a blank line, the next `- **Field**`, or a heading.
  */
-export function fieldBody(lines, index) {
-  const opening = lines[index].replace(ARCHITECTURE_FIELD, "");
-  if (DECLARES_NONE.test(opening)) return { body: opening, declaresNone: true };
+export function fieldBody(lines, index, config = DEFAULTS) {
+  const opening = lines[index].replace(fieldLine(config, "Architecture"), "");
+  if (declaresNone(opening, config)) return { body: opening, declaresNone: true };
   const pieces = [opening];
   for (let j = index + 1; j < lines.length; j++) {
     const r = lines[j];
@@ -140,11 +134,12 @@ export function orphanMarkers(body) {
  * not resolve comes back with `doc: null` so the judgement fails on the typo instead of hiding it.
  * `resolve` is mandatory: a default that always resolves could never report.
  */
-export function declaredDocs(block, resolve) {
+export function declaredDocs(block, resolve, config = DEFAULTS) {
   const lines = block.split("\n");
-  const index = lines.findIndex((r) => ARCHITECTURE_FIELD.test(r));
+  const field = fieldLine(config, "Architecture");
+  const index = lines.findIndex((r) => field.test(r));
   if (index === -1) return null;
-  const { body, declaresNone } = fieldBody(lines, index);
+  const { body, declaresNone } = fieldBody(lines, index, config);
   if (declaresNone) return [];
   // A markdown link names the doc twice (text and target): group by the RESOLVED doc.
   const per = new Map();
@@ -158,11 +153,12 @@ export function declaredDocs(block, resolve) {
 }
 
 /** The orphan markers of an entry's field — see {@link orphanMarkers}. */
-export function entryOrphans(block) {
+export function entryOrphans(block, config = DEFAULTS) {
   const lines = block.split("\n");
-  const index = lines.findIndex((r) => ARCHITECTURE_FIELD.test(r));
+  const field = fieldLine(config, "Architecture");
+  const index = lines.findIndex((r) => field.test(r));
   if (index === -1) return { present: [], orphans: [] };
-  const { body, declaresNone } = fieldBody(lines, index);
+  const { body, declaresNone } = fieldBody(lines, index, config);
   return declaresNone ? { present: [], orphans: [] } : orphanMarkers(body);
 }
 
@@ -207,8 +203,10 @@ export function judgement({ id, closed, declared, derived, citesEntry, entryCont
  * BACKLOG-HISTORY.md), read from the two diffs.
  */
 export function entriesOfCommit(openDiff, closedDiff) {
-  const added = (diff) => [...diff.matchAll(/^\+(?:## |- \*\*)(BKLG-\d+)/gm)].map((m) => m[1]);
-  return { opened: added(openDiff), closed: added(closedDiff) };
+  const added = (diff) => diff.split(/\r?\n/).filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1)).join("\n");
+  // A closed PHASE (`- **BKLG-077 F1**`) does not close its entry.
+  const wholeClosed = closedLines(added(closedDiff)).filter((c) => c.phase === "").map((c) => c.id);
+  return { opened: openIds(added(openDiff)), closed: wholeClosed };
 }
 
 /**
@@ -227,6 +225,43 @@ export function lastOpenBlock(id, run = git, register = `${DEFAULTS.docsDir}/BAC
   }
 }
 
+/**
+ * For EVERY entry at once: the commit that last removed its heading from the register, read from one `git log -p`.
+ * One pickaxe per closed entry cost minutes on a register with hundreds of closed entries; this reads the history
+ * once. The log is newest first, so the first removal seen for an id is its last. Pure over the log text.
+ */
+export function removalCommits(logText) {
+  const removedBy = new Map();
+  let sha = null;
+  for (const line of logText.split(/\r?\n/)) {
+    if (line.startsWith(SEP)) {
+      sha = line.slice(SEP.length).trim();
+      continue;
+    }
+    if (!sha || !line.startsWith("-") || line.startsWith("---")) continue;
+    const id = openIds(line.slice(1))[0];
+    if (id && !removedBy.has(id)) removedBy.set(id, sha);
+  }
+  return removedBy;
+}
+
+/** `lastOpenBlock` for many entries: one history read, then one register read per removing commit. */
+export function lastOpenBlocks(run, register) {
+  let removals = null;
+  const registerAt = new Map();
+  return (id) => {
+    try {
+      removals ??= removalCommits(run(["log", "-p", "-U0", "--no-color", `--format=${SEP}%H`, "--", register]));
+      const sha = removals.get(id);
+      if (!sha) return "";
+      if (!registerAt.has(sha)) registerAt.set(sha, run(["show", `${sha}~1:${register}`]));
+      return entryBlock(registerAt.get(sha), id);
+    } catch {
+      return "";
+    }
+  };
+}
+
 function main() {
   const { root, config, backlog: OPEN, history: CLOSED } = project();
   const git = gitIn(root);
@@ -242,10 +277,11 @@ function main() {
   const closedText = existsSync(path.join(root, CLOSED)) ? readFileSync(path.join(root, CLOSED), "utf8") : "";
   const isClosed = (id) => !entryBlock(openText, id) && Boolean(entryBlock(closedText, id));
   const blockCache = new Map();
+  const beforeClosing = lastOpenBlocks(git, OPEN);
   const block = (id) => {
     if (!blockCache.has(id)) {
       let b = entryBlock(openText, id) || entryBlock(closedText, id);
-      if (isClosed(id) && !hasArchitectureField(b)) b = lastOpenBlock(id, git, OPEN) || b;
+      if (isClosed(id) && !hasArchitectureField(b, config)) b = beforeClosing(id) || b;
       blockCache.set(id, b);
     }
     return blockCache.get(id);
@@ -255,18 +291,21 @@ function main() {
   const archDocs = architectureDocs(root, config.architectureDir);
   const resolveDoc = createResolver(new Set(archDocs));
   const textOf = new Map(archDocs.map((d) => [d, readFileSync(path.join(root, d), "utf8")]));
+  const { contributions: CONTRIBUTIONS_SECTION, openDefects: DEFECTS_SECTION } = config.words;
   const entryContributions = new Map(archDocs.map((d) => [d, entryInSection(textOf.get(d), CONTRIBUTIONS_SECTION)]));
-  const markersByDoc = new Map(archDocs.map((d) => [d, markersInSection(textOf.get(d), DEFECTS_SECTION)]));
+  const markersByDoc = new Map(archDocs.map((d) => [d, markersInSection(textOf.get(d), DEFECTS_SECTION, config.words)]));
 
   let ids = explicit;
   let origin = "passed by hand";
   if (!ids.length && all) {
-    const every = /^(?:## |- \*\*)(BKLG-\d+)/gm;
-    ids = [...new Set([...openText.matchAll(every), ...closedText.matchAll(every)].map((m) => m[1]))]
-      .filter((id) => declaredDocs(block(id), resolveDoc)?.length);
+    const every = [...new Set([...openIds(openText), ...closedLines(closedText).map((c) => c.id)])];
+    ids = every.filter((id) => declaredDocs(block(id), resolveDoc, config)?.length);
     origin = "those that declare a document";
     if (!ids.length) {
-      console.log(`anchor: no entry declares an architecture document (${archDocs.length} docs in ${config.architectureDir}/) — nothing to verify.`);
+      console.log(
+        `anchor: no entry declares an architecture document — read ${every.length} entries (open and closed),` +
+          ` ${archDocs.length} docs in ${config.architectureDir}/; the field read is «${fieldName(config, "Architecture")}». Nothing to verify.`,
+      );
       return 0;
     }
   }
@@ -293,10 +332,10 @@ function main() {
   for (const id of ids) {
     const b = block(id);
     const closed = isClosed(id);
-    const declared = declaredDocs(b, resolveDoc);
+    const declared = declaredDocs(b, resolveDoc, config);
     const touched = footprint(id, git);
     const derived = [...namesFile.entries()].filter(([, s]) => [...touched].some((f) => s.has(f))).map(([d]) => d);
-    const read = entryOrphans(b);
+    const read = entryOrphans(b, config);
     markersRead += read.present.length;
     const { unknown, missing, markers, orphans, toCheck } = judgement({
       id, closed, declared, derived, citesEntry, entryContributions, markersByDoc, orphans: read.orphans,

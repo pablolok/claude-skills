@@ -20,16 +20,19 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { citedEntries } from "./docIndex.mjs";
-import { DEFAULTS, project } from "./project.mjs";
+import { DEFAULTS, WORDS, project } from "./project.mjs";
 
-/** The canonical section names live here and nowhere else — they are data searched for in docs. */
-export const DEFECTS_SECTION = "Open defects";
-export const CONTRIBUTIONS_SECTION = "Who worked on it";
 /**
- * An optional third table mapping each open defect to the entry that will close it. Named here so
- * it is never confused with the contributions table — they answer different questions.
+ * The canonical section names are data searched for in docs: the project's words (`words` in its config), English by
+ * default. The owners table is optional, named so it is never confused with the contributions table.
  */
-export const OWNERS_SECTION = "Defect owners";
+export const DEFECTS_SECTION = WORDS.openDefects;
+export const CONTRIBUTIONS_SECTION = WORDS.contributions;
+export const OWNERS_SECTION = WORDS.owners;
+
+/** Any of `words`, as a whole word, case-insensitive (`\b` fails on accented letters, so the edges are explicit). */
+const anyWord = (words) =>
+  new RegExp(`(^|[^\\p{L}\\p{N}])(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?=$|[^\\p{L}\\p{N}])`, "iu");
 
 /** Index docs of the folder, not architecture docs: they have no defects of their own. */
 const INDEX_DOC = "README.md";
@@ -51,11 +54,11 @@ export function isTheSection(title, name) {
 }
 
 /** Which of the two canonical sections this document has. */
-export function shapeOf(text) {
+export function shapeOf(text, words = WORDS) {
   const titles = sectionsOf(text).map((s) => s.title);
   return {
-    defects: titles.some((t) => isTheSection(t, DEFECTS_SECTION)),
-    contributions: titles.some((t) => isTheSection(t, CONTRIBUTIONS_SECTION)),
+    defects: titles.some((t) => isTheSection(t, words.openDefects)),
+    contributions: titles.some((t) => isTheSection(t, words.contributions)),
   };
 }
 
@@ -74,19 +77,20 @@ export function entryInSection(text, name) {
  * so the list stays in the section — but counting it as open would reject a closed entry for the
  * defect it closed itself.
  */
-const RETIRED_LINE = /\bretired\b/i;
+const retiredLine = (words) => anyWord(words.retired);
 
 /**
  * The defect markers named in a section — `D3`, `R5`, `D10` — as words, not only as headings:
  * a doc may name its defects in prose or tables. Retired-list lines are skipped.
  * Declared limit: an open marker on the SAME line as the retired list is lost (the safe direction).
  */
-export function markersInSection(text, name) {
+export function markersInSection(text, name, words = WORDS) {
   const found = new Set();
+  const retired = retiredLine(words);
   for (const s of sectionsOf(text)) {
     if (!isTheSection(s.title, name)) continue;
     for (const line of s.body.split("\n")) {
-      if (RETIRED_LINE.test(line)) continue;
+      if (retired.test(line)) continue;
       for (const m of line.matchAll(/\b([A-Z]\d{1,3})\b/g)) found.add(m[1]);
     }
   }
@@ -94,21 +98,21 @@ export function markersInSection(text, name) {
 }
 
 /** The column heading in which a defect row declares who closes it — wherever that table lives. */
-export const OWNER_COLUMN = "closed by";
+export const OWNER_COLUMN = WORDS.ownerColumn;
 
 /**
  * Tables whose heading says they are NOT open defects: accepted limits (ownerless by definition)
  * and retired defects. Decided by the table's own heading, which is local to the row.
  */
-export const NON_DEFECT_HEADINGS = ["limit", "retired"];
+export const NON_DEFECT_HEADINGS = WORDS.nonDefectHeadings;
 
 const cellsOf = (line) => line.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
 
 /**
- * Every defect named in a table row (first cell `D<n>` or `**D<n>**`), with the owner cell.
- * It reads THAT cell, not the row: prose may cite an entry as evidence, which is not an owner.
+ * Every table row whose first cell names a defect (`D<n>` or `**D<n>**`), with its table's heading cells. Shared by
+ * the gates that read defect tables (here, and `closed-defects`), so they read the same rows.
  */
-export function defectsInTable(text) {
+export function defectRows(text) {
   const found = [];
   let heading = null;
   for (const line of text.split("\n")) {
@@ -119,16 +123,29 @@ export function defectsInTable(text) {
     }
     if (/^\|[\s:|-]+\|?$/.test(t)) continue; // separator row
     const cells = cellsOf(t);
-    const first = /^\*{0,2}(D\d{1,3})\*{0,2}\b/.exec(cells[0] ?? "");
+    const first = /^\*{0,2}(D\d{1,3})\*{0,2}(?![\w])/.exec(cells[0] ?? "");
     if (!first) {
       if (!heading) heading = cells;
       continue;
     }
-    if (RETIRED_LINE.test(t)) continue;
-    const head = (heading ?? []).map((c) => c.toLowerCase());
-    if (head.some((c) => NON_DEFECT_HEADINGS.some((n) => c === n || c.startsWith(n + " ")))) continue;
-    const i = head.findIndex((c) => c.includes(OWNER_COLUMN));
-    found.push({ id: first[1], attributable: i >= 0, owner: i >= 0 ? (cells[i] ?? "") : null });
+    found.push({ id: first[1], line: t, cells, head: (heading ?? []).map((c) => c.toLowerCase()) });
+  }
+  return found;
+}
+
+/**
+ * Every defect named in a table row, with the owner cell. It reads THAT cell, not the row: prose may cite an entry as
+ * evidence, which is not an owner.
+ */
+export function defectsInTable(text, words = WORDS) {
+  const retired = retiredLine(words);
+  const owner = words.ownerColumn.toLowerCase();
+  const found = [];
+  for (const row of defectRows(text)) {
+    if (retired.test(row.line)) continue;
+    if (row.head.some((c) => words.nonDefectHeadings.some((n) => c === n || c.startsWith(n + " ")))) continue;
+    const i = row.head.findIndex((c) => c.includes(owner));
+    found.push({ id: row.id, attributable: i >= 0, owner: i >= 0 ? (row.cells[i] ?? "") : null });
   }
   return found;
 }
@@ -137,11 +154,11 @@ export function defectsInTable(text) {
  * FAILS: defects with no cell anywhere in which to declare the owner. Asked per DEFECT, not per row:
  * a summary table without the column is fine if another table of the same doc attributes it.
  */
-export function withoutOwnerCell(docs) {
+export function withoutOwnerCell(docs, words = WORDS) {
   return docs
     .map(({ name, text }) => {
       const per = new Map();
-      for (const d of defectsInTable(text)) per.set(d.id, (per.get(d.id) ?? false) || d.attributable);
+      for (const d of defectsInTable(text, words)) per.set(d.id, (per.get(d.id) ?? false) || d.attributable);
       return { name, missing: [...per].filter(([, ok]) => !ok).map(([id]) => id) };
     })
     .filter((d) => d.missing.length);
@@ -152,14 +169,15 @@ export function withoutOwnerCell(docs) {
  * opening an entry per defect), and a gate nothing can close is a gate people learn to skip.
  * A written "none"/"nobody" wins over an entry mentioned in the same cell ("none — maybe [[BKLG-NNN]]").
  */
-export function defectsWithoutOwner(docs) {
+export function defectsWithoutOwner(docs, words = WORDS) {
+  const nobody = anyWord(words.none);
   const found = [];
   for (const { name, text } of docs) {
     const per = new Map();
-    for (const d of defectsInTable(text)) {
+    for (const d of defectsInTable(text, words)) {
       if (!d.attributable) continue;
       const cell = d.owner ?? "";
-      const hasEntry = /\[\[BKLG-\d+\]\]/.test(cell) && !/\b(none|nobody)\b/i.test(cell);
+      const hasEntry = /\[\[BKLG-\d+\]\]/.test(cell) && !nobody.test(cell);
       per.set(d.id, (per.get(d.id) ?? false) || hasEntry);
     }
     for (const [id, hasEntry] of per) if (!hasEntry) found.push(`${name}#${id}`);
@@ -168,18 +186,19 @@ export function defectsWithoutOwner(docs) {
 }
 
 /** Which documents lack one of the two canonical sections. Pure. */
-export function withoutShape(docs) {
+export function withoutShape(docs, words = WORDS) {
   return docs
-    .map(({ name, text }) => ({ name, ...shapeOf(text) }))
+    .map(({ name, text }) => ({ name, ...shapeOf(text, words) }))
     .filter((d) => !d.defects || !d.contributions);
 }
 
 /**
  * Every architecture doc, nested folders included, root-relative (`<architectureDir>/x.md`).
- * The folder's `README.md` index is excluded. A missing folder is zero docs, not an error.
- * Shared with `backlog-anchor.mjs` so both gates judge the same set.
+ * The folder's `README.md` index is excluded, and so is each doc in `exclusions` (the project's
+ * `architectureExclusions`, each with its reason, printed by the gate). A missing folder is zero docs, not an error.
+ * Shared with the other gates so they judge the same set.
  */
-export function architectureDocs(root, folder = DEFAULTS.architectureDir) {
+export function architectureDocs(root, folder = DEFAULTS.architectureDir, exclusions = {}) {
   const out = [];
   const walk = (dir) => {
     let entries;
@@ -195,24 +214,29 @@ export function architectureDocs(root, folder = DEFAULTS.architectureDir) {
     }
   };
   walk(path.join(root, folder));
-  return out.sort();
+  return out.filter((d) => !(d in exclusions)).sort();
 }
 
 function main() {
   const { root, config } = project();
+  const words = config.words;
+  const { openDefects: DEFECTS_SECTION, contributions: CONTRIBUTIONS_SECTION, owners: OWNERS_SECTION, ownerColumn: OWNER_COLUMN } = words;
   const folder = config.architectureDir;
-  const docs = architectureDocs(root, folder).map((rel) => ({
+  const docs = architectureDocs(root, folder, config.architectureExclusions).map((rel) => ({
     name: rel.slice(folder.length + 1),
     text: readFileSync(path.join(root, rel), "utf8"),
   }));
-  const broken = withoutShape(docs);
-  const rows = docs.reduce((a, d) => a + defectsInTable(d.text).length, 0);
-  const markers = docs.reduce((a, d) => a + markersInSection(d.text, DEFECTS_SECTION).size, 0);
-  const withoutCell = withoutOwnerCell(docs);
-  const orphans = defectsWithoutOwner(docs);
+  const broken = withoutShape(docs, words);
+  const rows = docs.reduce((a, d) => a + defectsInTable(d.text, words).length, 0);
+  const markers = docs.reduce((a, d) => a + markersInSection(d.text, DEFECTS_SECTION, words).size, 0);
+  const withoutCell = withoutOwnerCell(docs, words);
+  const orphans = defectsWithoutOwner(docs, words);
 
   // The control case, always printed: "0 without the shape" on an unread folder looks like a real 0.
   console.log(`architecture doc shape: ${docs.length} read in ${folder}/ (${INDEX_DOC} excluded)`);
+  const excluded = Object.entries(config.architectureExclusions);
+  console.log(`   excluded, and declared (${excluded.length}):`);
+  for (const [doc, why] of excluded) console.log(`   · ${doc} — ${why}`);
   console.log(`   canonical sections: «${DEFECTS_SECTION}» · «${CONTRIBUTIONS_SECTION}»`);
   console.log(`   defect markers read: ${markers} · defect table rows read: ${rows} · owner column: «${OWNER_COLUMN}»`);
 

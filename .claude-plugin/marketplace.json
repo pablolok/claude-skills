@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Track a project's work in BACKLOG.md with doc folders archived on close; ships the doc gates and a two-way GitHub Issues mirror.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -132,6 +132,17 @@
       ]
     },
     {
+      "name": "review-backlog",
+      "source": "./published/workflow/review-backlog",
+      "description": "Periodic review of the backlog: run the document gates, clean up what has rotted, close with ONE proposal of what to do next.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
       "name": "review-optimization",
       "source": "./published/audit/review-optimization",
       "description": "Use after a phase completion but before final user verification to analyze execution history, audit skill efficiency, and suggest workflow optimizations.",
@@ -146,7 +157,7 @@
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
       "description": "When a piece of work closes, rewrite the skills it used in place with what it taught; two hooks log the skills used and ask for the retrospective.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "category": "workflow",
       "strict": false,
       "skills": [

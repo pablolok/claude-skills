@@ -17,8 +17,14 @@
  *     "skipFolders": ["Library"],                     extra generated root folders (used outside git only)
  *     "instructionPaths": ["docs/guides/"],           extra docs whose backticked paths must exist
  *     "pastPaths": ["docs/old-notes/"],               extra docs that describe the past (citations not checked)
- *     "pathExceptions": { "a/b.png": "why it is not a file of the repo" }
+ *     "pathExceptions": { "a/b.png": "why it is not a file of the repo" },
+ *     "architectureExclusions": { "docs/architecture/glossary.md": "why it has no defects of its own" },
+ *     "fieldNames": { "Architecture": "Architettura" },  the project's name for an entry field the scripts read
+ *     "words": { "openDefects": "I difetti aperti", ... }  the words the gates look for in the documents
  *   }
+ *
+ * `fieldNames` and `words` exist because the gates search documents for words, and the words are the project's:
+ * a register written in another language names its fields and sections in it. Each key has an English default.
  *
  * The GitHub repo and its default branch are not configured: they are read from git (`origin`), so they cannot
  * drift from it.
@@ -29,6 +35,33 @@ import path from "node:path";
 
 /** The project's config file, relative to its root. */
 export const CONFIG_FILE = ".claude/backlog.json";
+
+/** The entry fields the scripts read, by their canonical (English) name. */
+export const FIELDS = Object.freeze(["Status", "Priority", "Added", "Manual", "Architecture", "Doc", "Summary", "Issue"]);
+
+/** The words the gates look for in the documents, with their English defaults. */
+export const WORDS = Object.freeze({
+  /** The architecture doc's section listing its open defects. */
+  openDefects: "Open defects",
+  /** The architecture doc's section with one row per entry that worked on it. */
+  contributions: "Who worked on it",
+  /** An optional table mapping each open defect to the entry that will close it. */
+  owners: "Defect owners",
+  /** The column heading in which a defect row names the entry that closes it. */
+  ownerColumn: "closed by",
+  /** The column heading of a defect row's declared state (closed-defects reads tables that have both columns). */
+  stateColumn: "state",
+  /** Words that declare a defect closed in its state cell (a ✅ always does). */
+  closed: ["closed", "done", "fixed"],
+  /** Words that say "none": an `Architecture` field declaring no doc, an owner cell naming nobody (whole words). */
+  none: ["none", "nobody"],
+  /** Words marking a history line of an entry that was REOPENED (closed twice is then the history, not a mistake). */
+  reopened: ["reopened"],
+  /** A line listing retired defect numbers, kept in the defects section but not open. */
+  retired: ["retired"],
+  /** Table headings that say the table is not about open defects (accepted limits, retired ones). */
+  nonDefectHeadings: ["limit", "retired"],
+});
 
 /** Every key the config may carry, with its default. A key not listed here is a typo and is reported. */
 export const DEFAULTS = Object.freeze({
@@ -41,7 +74,26 @@ export const DEFAULTS = Object.freeze({
   instructionPaths: [],
   pastPaths: [],
   pathExceptions: {},
+  architectureExclusions: {},
+  fieldNames: {},
+  words: WORDS,
 });
+
+const isStringMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v) && Object.values(v).every((x) => typeof x === "string");
+const isStringList = (v) => Array.isArray(v) && v.every((x) => typeof x === "string");
+const sameShape = (expected, value) =>
+  Array.isArray(expected) ? isStringList(value) : typeof expected === "string" ? typeof value === "string" && value.trim() !== "" : isStringMap(value);
+
+/** A nested map whose keys are fixed (`fieldNames`, `words`): an unknown key is a typo, reported by name. */
+function checkKeys(key, value, known) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error(`${CONFIG_FILE}: "${key}" must be an object`);
+  for (const k of Object.keys(value)) {
+    if (!known.includes(k)) throw new Error(`${CONFIG_FILE}: unknown ${key} key "${k}" (known: ${known.join(", ")})`);
+  }
+}
+
+/** The project's name for a canonical entry field (`Architecture` → `Architettura`). */
+export const fieldName = (config, canonical) => config.fieldNames?.[canonical] ?? canonical;
 
 /** The project root: `CLAUDE_PROJECT_DIR`, else the git work tree of `cwd`, else `cwd`. */
 export function projectRoot(env = process.env, cwd = process.cwd()) {
@@ -70,13 +122,22 @@ export function parseConfig(text) {
   const config = { ...DEFAULTS };
   for (const [key, value] of Object.entries(raw)) {
     if (!(key in DEFAULTS)) throw new Error(`${CONFIG_FILE}: unknown key "${key}" (known: ${Object.keys(DEFAULTS).join(", ")})`);
+    if (key === "fieldNames") {
+      checkKeys(key, value, FIELDS);
+      if (!isStringMap(value)) throw new Error(`${CONFIG_FILE}: "fieldNames" values must be strings`);
+      config.fieldNames = value;
+      continue;
+    }
+    if (key === "words") {
+      checkKeys(key, value, Object.keys(WORDS));
+      for (const [k, v] of Object.entries(value)) {
+        if (!sameShape(WORDS[k], v)) throw new Error(`${CONFIG_FILE}: "words.${k}" has the wrong shape (expected ${JSON.stringify(WORDS[k])}-like)`);
+      }
+      config.words = { ...WORDS, ...value };
+      continue;
+    }
     const expected = DEFAULTS[key];
-    const ok = Array.isArray(expected)
-      ? Array.isArray(value) && value.every((v) => typeof v === "string")
-      : typeof expected === "string"
-        ? typeof value === "string" && value.trim() !== ""
-        : value !== null && typeof value === "object" && !Array.isArray(value) && Object.values(value).every((v) => typeof v === "string");
-    if (!ok) throw new Error(`${CONFIG_FILE}: "${key}" has the wrong shape (expected ${JSON.stringify(expected)}-like)`);
+    if (!sameShape(expected, value)) throw new Error(`${CONFIG_FILE}: "${key}" has the wrong shape (expected ${JSON.stringify(expected)}-like)`);
     config[key] = typeof value === "string" ? value.replace(/\\/g, "/").replace(/\/+$/, "") : value;
   }
   return config;

@@ -15,8 +15,11 @@ import {
   hasArchitectureField,
   judgement,
   lastOpenBlock,
+  lastOpenBlocks,
+  removalCommits,
 } from "./backlog-anchor.mjs";
 import { createResolver } from "./docIndex.mjs";
+import { parseConfig } from "./project.mjs";
 
 const SEP = "@@COMMIT@@";
 const commit = (subject, ...files) => `${SEP}${subject}\n${files.join("\n")}\n`;
@@ -283,4 +286,52 @@ test("⭐ lastOpenBlock reads the entry from BACKLOG.md as it was just before re
 test("· no removing commit, or git failing, gives an empty block", () => {
   assert.equal(lastOpenBlock("BKLG-004", () => ""), "");
   assert.equal(lastOpenBlock("BKLG-004", () => { throw new Error("no git"); }), "");
+});
+
+test("⭐ removalCommits: one log read gives every entry's last removal, both heading levels", () => {
+  const log = [
+    "@@COMMIT@@ccc", "-## BKLG-002 — closed last", "+- **BKLG-002** done",
+    "@@COMMIT@@bbb", "-### BKLG-003 — closed", "--- a/docs/BACKLOG.md",
+    "@@COMMIT@@aaa", "-## BKLG-002 — an older removal", "+## BKLG-002 — reopened",
+  ].join("\n");
+  const removals = removalCommits(log);
+  assert.equal(removals.get("BKLG-002"), "ccc", "newest first: the first removal seen is the last");
+  assert.equal(removals.get("BKLG-003"), "bbb");
+  assert.equal(removals.has("BKLG-004"), false);
+});
+
+test("· lastOpenBlocks reads the history once for many entries", () => {
+  const calls = [];
+  const run = (args) => {
+    calls.push(args[0]);
+    if (args[0] === "log") return "@@COMMIT@@abc\n-## BKLG-005 — five\n-## BKLG-006 — six\n";
+    return "## Open\n\n## BKLG-005 — five\n- **Architecture**: a.md\n\n## BKLG-006 — six\n- **Architecture**: b.md\n";
+  };
+  const before = lastOpenBlocks(run, "docs/implementations/BACKLOG.md");
+  assert.match(before("BKLG-005"), /a\.md/);
+  assert.match(before("BKLG-006"), /b\.md/);
+  assert.equal(before("BKLG-007"), "");
+  assert.deepEqual(calls, ["log", "show"], "one log, one show for the shared removing commit");
+});
+
+// ─── A register in another layout and another language ────────────────────────────────────────
+
+test("⭐ a commit that OPENS a ### entry is seen (the case a ##-only reader missed for weeks)", () => {
+  const { opened, closed } = entriesOfCommit("+### BKLG-030 — nuova\n+- **Stato**: open\n", "");
+  assert.deepEqual(opened, ["BKLG-030"]);
+  assert.deepEqual(closed, []);
+});
+
+test("· a closed PHASE in the history diff does not close its entry", () => {
+  assert.deepEqual(entriesOfCommit("", "+- **BKLG-031 F1** fase\n+- **BKLG-032** intera\n").closed, ["BKLG-032"]);
+});
+
+test("the Architecture field is read under the project's name, with its words for 'none'", () => {
+  const config = parseConfig(JSON.stringify({ fieldNames: { Architecture: "Architettura" }, words: { none: ["nessuno", "nessuna"] } }));
+  const resolve = createResolver(new Set(["docs/architecture/billing.md"]));
+  const block = "### BKLG-033 — x\n- **Architettura**: billing.md#D2 — la tabella cambia\n";
+  assert.deepEqual(declaredDocs(block, resolve, config), [{ doc: "docs/architecture/billing.md", ref: "billing.md", markers: ["D2"] }]);
+  assert.deepEqual(declaredDocs("- **Architettura**: nessuno — non tocca i documenti\n", resolve, config), []);
+  // Control: with the defaults the Italian field is not a declaration at all.
+  assert.equal(declaredDocs(block, resolve), null);
 });

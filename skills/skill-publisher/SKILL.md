@@ -32,6 +32,10 @@ The `automate_publish.py` script will:
 1. Increment the version in `skills/<skill-name>/metadata.json`.
 2. Append the summary to `skills/<skill-name>/CHANGELOG.md`.
 3. Recursively copy the source to `published/<category>/<skill-name>`.
+4. Regenerate the plugin marketplace (`.claude-plugin/marketplace.json`, via `build_marketplace.py`).
 
 ## Finalize
-Commit the changes with a clear message: `feat(published): sync skill '<skill-name>' to version <new-version>`.
+1. Run the whole suite (`python -m unittest discover -s tests -p "test_*.py"`) and `claude plugin validate .`.
+2. Commit with a clear message: `feat(published): sync skill '<skill-name>' to version <new-version>`.
+3. Tag and push: `python tag_published.py --push` creates `<skill>@<version>` for every published version not yet
+   tagged — projects that run a skill's scripts from CI or git hooks pin it by that tag. Then push the commit.

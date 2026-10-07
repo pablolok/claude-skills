@@ -33,7 +33,7 @@ only requirement.
 ## The entry format
 
 ```
-## BKLG-NNN — <title>
+## BKLG-NNN — <title>          (or ### — the project's register decides the level)
 - **Status**: open | in-progress | blocked — <where it really stands>
 - **Priority**: high | medium | low
 - **Added**: YYYY-MM-DD
@@ -167,11 +167,23 @@ green. Read the **control counts** each prints: "0 broken" without "out of how m
 |---|---|
 | `check-doc-refs.mjs` | links, `file:line` pointers and (in instructions) backticked paths point at something that exists; entries are cited as `[[BKLG-NNN]]`; every activity folder is claimed by an Open entry |
 | `backlog-anchor.mjs --all` | every entry's declared `Architecture` docs cite it, markers both ways |
-| `architecture-shape.mjs` | every stable doc has `## Open defects` and `## Who worked on it` |
+| `architecture-shape.mjs` | every stable doc has its open-defects and contributions sections, and an owner cell per defect |
+| `backlog-coherence.mjs` | an entry lives in one place: never open and closed at once, never twice in one register |
+| `closed-defects.mjs` | a defect row with a state says what the entry that closes it says |
+| `related-docs.mjs [HEAD]` | not a gate (always exit 0): the live docs that cite the entry or name a file a change touched |
 
-Run `check-doc-refs` after every `add` and `done`; all three before closing an entry. A legitimate reference to
-something that is not a file of the repo goes in `pathExceptions` **with its reason** — never by weakening a rule.
-The gates are git-aware: they judge what git keeps, as a CI checkout would.
+Run `check-doc-refs` and `backlog-coherence` after every `add` and `done`; all the gates before closing an entry.
+A legitimate reference to something that is not a file of the repo goes in `pathExceptions` **with its reason** —
+never by weakening a rule. The gates are git-aware: they judge what git keeps, as a CI checkout would.
+
+Outside a Claude session (CI, git hooks, package scripts) a project copies `bootstrap/backlog-gate.mjs` into its
+repository: `node scripts/backlog-gate.mjs check-doc-refs` fetches this skill once at the version it pins and runs
+the gate on the project.
+
+**The register's language is the project's.** Entries may be `##` or `###` headings; the history may keep
+one-liners, phases (`- **BKLG-077 F1**`) or whole cards. A register that names its fields or its document sections
+in another language declares them in **.claude/backlog.json** (`fieldNames`, `words` — see the README), so the
+gates read them; never rename a project's fields to suit the gates.
 
 ## add
 

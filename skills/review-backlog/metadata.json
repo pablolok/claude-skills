@@ -1,0 +1,5 @@
+{
+  "name": "review-backlog",
+  "version": "1.0.0",
+  "description": "Periodic review of the backlog: run the document gates, clean up what has rotted, close with ONE proposal of what to do next."
+}

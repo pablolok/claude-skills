@@ -48,6 +48,7 @@ import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { DEFAULTS, project } from "./project.mjs";
+import { openEntries } from "./register.mjs";
 
 const GH = process.platform === "win32" ? "gh.exe" : "gh";
 
@@ -95,78 +96,20 @@ export function stripMarkdown(s) {
 }
 
 /**
- * Parse the ## Open section of BACKLOG.md into structured entries.
- * Only entries under `## Open` (each an `## BKLG-NNN — title` block) are returned;
- * `## Pending verification` and other sections are ignored.
+ * The `## Open` entries of BACKLOG.md as the mirror needs them. The layout (heading level, where an entry ends, wrapped
+ * field values, the project's field names) is `register.mjs`'s; this only shapes the result.
  * @param {string} md
+ * @param {object} [config] the project's config (its `fieldNames`)
  * @returns {Array<{id:number, idStr:string, title:string, fields:Record<string,string>, issue:number|null}>}
  */
-export function parseOpenEntries(md) {
-  const lines = md.split(/\r?\n/);
-  const entries = [];
-  let inOpen = false;
-  /** @type {null | {id:number, idStr:string, title:string, fields:Record<string,string>, issue:number|null}} */
-  let current = null;
-  /** Field whose value is still being built, so wrapped lines can be appended. */
-  let lastKey = /** @type {string|null} */ (null);
-
-  const pushCurrent = () => {
-    if (current) entries.push(current);
-    current = null;
-  };
-
-  for (const line of lines) {
-    const heading = /^##\s+(.*)$/.exec(line);
-    if (heading) {
-      const text = heading[1].trim();
-      const bklg = /^BKLG-(\d+)\s+—\s+(.*)$/.exec(text);
-      if (bklg) {
-        if (inOpen) {
-          pushCurrent();
-          current = {
-            id: Number(bklg[1]),
-            idStr: `BKLG-${bklg[1]}`,
-            title: stripMarkdown(bklg[2]),
-            fields: {},
-            issue: null,
-          };
-          continue;
-        }
-        // A BKLG heading outside ## Open (shouldn't happen) — ignore.
-        continue;
-      }
-      // A non-BKLG H2 heading is a section boundary.
-      pushCurrent();
-      inOpen = /^Open$/i.test(text);
-      continue;
-    }
-    if (current) {
-      const field = /^-\s+\*\*([^*]+)\*\*:\s*(.*)$/.exec(line);
-      if (field) {
-        const key = field[1].trim();
-        current.fields[key] = field[2].trim();
-        lastKey = key;
-        if (/^Issue$/i.test(key)) {
-          const num = /#(\d+)/.exec(field[2]);
-          current.issue = num ? Number(num[1]) : null;
-        }
-        continue;
-      }
-      // Continuation of the field above. A non-trivial Summary wraps across lines, and
-      // dropping the wrapped part would truncate the issue body to half a sentence.
-      // INDENTATION is the test: an unindented line (`---`, a new top-level item) starts a
-      // new thought, so requiring indentation can never swallow an unrelated line.
-      if (lastKey && /^\s+\S/.test(line)) {
-        current.fields[lastKey] = `${current.fields[lastKey]} ${line.trim()}`.trim();
-        continue;
-      }
-      // A blank line, or an unindented non-field line, closes the value being built — so a
-      // stray paragraph further down can never be appended to a field it does not belong to.
-      lastKey = null;
-    }
-  }
-  pushCurrent();
-  return entries;
+export function parseOpenEntries(md, config = DEFAULTS) {
+  return openEntries(md, config).map((e) => ({
+    id: Number(e.id.slice("BKLG-".length)),
+    idStr: e.id,
+    title: stripMarkdown(e.title),
+    fields: e.fields,
+    issue: e.fields.Issue ? Number(/#(\d+)/.exec(e.fields.Issue)?.[1] ?? NaN) || null : null,
+  }));
 }
 
 /**
@@ -541,9 +484,9 @@ function upsertEntry(entry, issue, repo, dryRun, where) {
   }
 }
 
-function cmdUpsert(bklgArg, { repo, where, backlogPath }, flags) {
+function cmdUpsert(bklgArg, { repo, where, backlogPath, config }, flags) {
   const md = readFileSafe(backlogPath);
-  const entries = parseOpenEntries(md);
+  const entries = parseOpenEntries(md, config);
   const target = entries.find((e) => e.idStr.toLowerCase() === bklgArg.toLowerCase());
   if (!target) {
     console.error(`${bklgArg} not found in ## Open of BACKLOG.md`);
@@ -585,11 +528,11 @@ function cmdClose(bklgArg, { repo }, flags) {
   if (!r.ok) warn(`close #${issue.number} failed: ${r.error}`);
 }
 
-function cmdSyncAll({ repo, where, backlogPath, historyPath }, flags) {
+function cmdSyncAll({ repo, where, backlogPath, historyPath, config }, flags) {
   console.log(`sync-all ⟷ ${repo}  (${flags.dryRun ? "DRY-RUN" : "EXECUTE"})\n`);
   const backlogMd = readFileSafe(backlogPath);
   const historyMd = readFileSafe(historyPath);
-  const entries = parseOpenEntries(backlogMd);
+  const entries = parseOpenEntries(backlogMd, config);
   const listed = listBacklogIssues(repo);
   if (!listed.ok) {
     warn(`could not list issues: ${listed.error}`);
@@ -658,6 +601,7 @@ function main() {
     where: { branch: deriveBranch(root, repo), docsDir: config.docsDir },
     backlogPath: path.join(root, backlog),
     historyPath: path.join(root, history),
+    config,
   };
   if (command === "upsert-issue") return cmdUpsert(positional[1], ctx, flags);
   if (command === "close-issue") return cmdClose(positional[1], ctx, flags);

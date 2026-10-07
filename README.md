@@ -12,6 +12,7 @@ For most users, we recommend installing the **Compliance Audit Orchestrator**. I
 | **[Pre-Implementation Review](./skills/pre-implementation-review/)** | Reuse-first planning skill that checks for existing abstractions and duplication risk before implementation starts. |
 | **[Conductor](./skills/conductor/)** | Context-Driven Development workflow. Provides the `/conductor:*` commands for planning, tracking, and executing implementation phases. |
 | **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. Installs two hooks (Node) that log the skills used and ask for the retrospective after an archived backlog entry or 8 commits. |
+| **[Review Backlog](./skills/review-backlog/)** | The periodic review of the backlog: run the gates, clean up what has rotted, close with ONE proposal of what to do next. Pairs with Backlog. |
 | **[Backlog](./skills/backlog/)** | The project's work tracked in `BACKLOG.md`, one doc folder per substantial piece of work archived on close, with the doc gates and a two-way GitHub Issues mirror (Node scripts inside the skill; project values in `.claude/backlog.json`). |
 
 ## 🔌 Install as Claude Code plugins (no Python, works in cloud sessions)
