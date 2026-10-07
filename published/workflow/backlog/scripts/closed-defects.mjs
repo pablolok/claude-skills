@@ -8,8 +8,8 @@
  * it gets the wrong work picked next.
  *
  * Read: every architecture doc's tables whose heading has BOTH the owner column (`words.ownerColumn`) and the state
- * column (`words.stateColumn`). Per row, the owners are the `[[BKLG-NNN]]` in the OWNER cell only (a citation
- * elsewhere in the row is context, not ownership); the row says "closed" with ✅ or one of `words.closed`.
+ * column (`words.stateColumn`). Per row, the owners are the entries the OWNER cell cites (`[[BKLG-NNN]]`, or
+ * the bare id under `"citation": "bare"`) — that cell only: a citation elsewhere in the row is context, not ownership; the row says "closed" with ✅ or one of `words.closed`.
  *   - every owner entry is closed, the row doesn't say so            → fail;
  *   - the row says closed, an owner entry is still open             → fail.
  * An owner found in neither register is not judged here (an unresolved citation is check-doc-refs' question).
@@ -24,7 +24,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { architectureDocs } from "./architecture-shape.mjs";
-import { WORDS, project } from "./project.mjs";
+import { citedEntries } from "./docIndex.mjs";
+import { DEFAULTS, WORDS, project } from "./project.mjs";
 import { closedIds, openIds } from "./register.mjs";
 
 const cellsOf = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
@@ -39,8 +40,11 @@ export function saysClosed(state, words = WORDS) {
   return state.includes("✅") || anyWord(words.closed).test(state);
 }
 
-/** The rows of the owner tables: the defect cell, the owners (owner cell only) and the state cell. Pure. */
-export function ownerRows(text, words = WORDS) {
+/**
+ * The rows of the owner tables: the defect cell, the owners (the entries the owner cell cites, in the project's
+ * citation form — the owner cell only) and the state cell. Pure.
+ */
+export function ownerRows(text, words = WORDS, config = DEFAULTS) {
   const lines = text.split(/\r?\n/);
   const rows = [];
   for (let i = 0; i < lines.length; i++) {
@@ -60,7 +64,7 @@ export function ownerRows(text, words = WORDS) {
       }
       const ownerCell = cells[owner] ?? "";
       // A written "none" wins over an entry mentioned beside it ("none — maybe [[BKLG-NNN]]"), as architecture-shape reads it.
-      const owners = nobody(words).test(ownerCell) ? [] : [...ownerCell.matchAll(/\[\[(BKLG-\d+)\]\]/g)].map((m) => m[1]);
+      const owners = nobody(words).test(ownerCell) ? [] : [...citedEntries(ownerCell, config)];
       rows.push({ defect: cells[0] ?? "", owners, state: cells[state] ?? "" });
     }
   }
@@ -111,7 +115,7 @@ function main() {
   const found = [];
   const malformed = [];
   for (const doc of docs) {
-    const rows = ownerRows(read(root, doc) ?? "", words);
+    const rows = ownerRows(read(root, doc) ?? "", words, config);
     if (!rows.length) continue;
     withTable++;
     rowsRead += rows.length;

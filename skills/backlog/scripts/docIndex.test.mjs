@@ -273,3 +273,35 @@ test("· architectureOnly follows the project's architectureDir", () => {
     assert.deepEqual([...docIndex(root, { architectureOnly: true, config }).citesEntry.keys()], ["handbook/design/a.md"]);
   });
 });
+
+// ─── citation: "bare" ─────────────────────────────────────────────────────────────────────────────
+
+const BARE_CITING = parseConfig(JSON.stringify({ citation: "bare" }));
+
+test("citation bare: an id written in prose IS a citation, and the wiki form still counts", () => {
+  assert.deepEqual([...citedEntries("since BKLG-001 and then [[BKLG-002]]", BARE_CITING)].sort(), ["BKLG-001", "BKLG-002"]);
+  // Control: the same text under the default form cites only the bracketed one.
+  assert.deepEqual([...citedEntries("since BKLG-001 and then [[BKLG-002]]")], ["BKLG-002"]);
+});
+
+test("· citation bare: what is not a mention under the wiki form is not a citation either", () => {
+  for (const text of [
+    "see implementations/archive/BKLG-003/plan.md",
+    "the id is written `BKLG-004`",
+    "## BKLG-005 — its own heading",
+    ["```", "git commit -m 'BKLG-006: x'", "```"].join("\n"),
+  ]) assert.deepEqual([...citedEntries(text, BARE_CITING)], [], text);
+});
+
+test("citation bare: no bare mention is ever reported — every bare id is a citation", () => {
+  assert.deepEqual(bareMentions("closed by BKLG-002 and by [[BKLG-001]]", BARE_CITING), []);
+  // Control: the default form reports it.
+  assert.deepEqual(bareMentions("closed by BKLG-002 and by [[BKLG-001]]").map((m) => m.id), ["BKLG-002"]);
+});
+
+test("· docIndex reads the project's citation form", () => {
+  inTree({ "docs/architecture/a.md": "Opened by BKLG-001." }, (root) => {
+    assert.deepEqual([...docIndex(root, { config: BARE_CITING }).citesEntry.get("docs/architecture/a.md")], ["BKLG-001"]);
+    assert.equal(docIndex(root).citesEntry.size, 0);
+  });
+});

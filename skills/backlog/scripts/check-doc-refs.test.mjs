@@ -176,6 +176,14 @@ test("a bare entry mention in a live doc is reported; a citation is counted", ()
   });
 });
 
+test("citation bare: rule 4 does not apply — a bare id is counted as a citation, nothing reported", () => {
+  const config = parseConfig(JSON.stringify({ citation: "bare" }));
+  onTree({ "docs/architecture/combat.md": "opened by BKLG-001, closed by [[BKLG-002]]\n" }, (outcome) => {
+    assert.deepEqual(outcome.broken, []);
+    assert.equal(outcome.examined.entry, 2, "both are citations: the control that it looked");
+  }, { config });
+});
+
 test("⛔ the history register keeps its bare ids", () => {
   onTree({ "docs/implementations/BACKLOG-HISTORY.md": "- **BKLG-001** done — followed up by BKLG-002\n" }, (outcome) => {
     assert.deepEqual(outcome.broken, []);
@@ -215,6 +223,23 @@ test("archive/ is not an activity kind: it is the other half of the invariant", 
     assert.deepEqual(outcome.orphans, []);
     assert.equal(outcome.registerRead, true, "without a register the green is worth nothing");
   });
+});
+
+test("the open section is the project's `words.open`: a mention above it claims nothing", () => {
+  const files = {
+    "docs/implementations/BACKLOG.md":
+      "# Registro\nUn esempio: bugs/preamble\n\n## Aperte\n\n### BKLG-001 — viva\n- **Doc**: [bugs/live/plan.md](bugs/live/plan.md)\n",
+    "docs/implementations/bugs/live/plan.md": "# live\n",
+    "docs/implementations/bugs/preamble/plan.md": "# preamble\n",
+  };
+  const root = fakeTree(files);
+  try {
+    const declared = orphanFolders(root, parseConfig(JSON.stringify({ words: { open: "Aperte" } })));
+    assert.deepEqual(declared.orphans, ["bugs/preamble"]);
+    assert.deepEqual(declared.claimed, ["bugs/live"], "the control: the live folder is claimed");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("without BACKLOG.md the gate SAYS so instead of saying zero", () => {

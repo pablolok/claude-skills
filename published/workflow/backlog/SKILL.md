@@ -118,7 +118,8 @@ Committed but NOT yet verified. Remove a line the moment its check passes.
 - A check that **fails** is not removed: it becomes the entry's Status.
 - Read on session resume and before closing any entry.
 
-⚠️ Inside `BACKLOG.md` every mention of an entry other than its own heading is a citation, `[[BKLG-NNN]]`.
+⚠️ Inside `BACKLOG.md` every mention of an entry other than its own heading is a citation — `[[BKLG-NNN]]`, or the
+bare id in a project that declares `"citation": "bare"`.
 
 ## Doc folder — where the detail doc lives (by type)
 
@@ -162,6 +163,10 @@ in that doc's `## Open defects`, its owner cell `[[BKLG-NNN]]`, **in the same co
 - **Ownership**: the **file** owns the id, the doc link and the prose (an issue body that drifted is rewritten,
   announced as `BODY`); **GitHub** owns the lifecycle (open/closed, `status:*` / `priority:*` labels, assignee).
   Each side's drift is reported, not clobbered.
+- **The project's words**: a register whose Status or Priority values are in its own language maps them in
+  **.claude/backlog.json** (`github.statusWords`, `github.priorityWords`); the label names and the close comment the
+  mirror writes are `github.labels` and `github.closeComment` (see the README). A warning naming an entry and a value
+  means that value maps to no label: add its word to the map — never rewrite the project's values to English.
 - Commands (dry-run unless `--execute`; `--repo owner/name` overrides): `upsert-issue BKLG-NNN`,
   `close-issue BKLG-NNN`, `sync-all` (also reports issues to adopt and issues closed on GitHub whose entry is still
   open — the file move on close is never automated: run `done`).
@@ -175,7 +180,7 @@ green. Read the **control counts** each prints: "0 broken" without "out of how m
 
 | script | the question |
 |---|---|
-| `check-doc-refs.mjs` | links, `file:line` pointers and (in instructions) backticked paths point at something that exists; entries are cited as `[[BKLG-NNN]]`; every activity folder is claimed by an Open entry |
+| `check-doc-refs.mjs` | links, `file:line` pointers and (in instructions) backticked paths point at something that exists; entries are cited as `[[BKLG-NNN]]` (a project citing bare ids has nothing to report here); every activity folder is claimed by an Open entry |
 | `backlog-anchor.mjs --all` | every entry's declared `Architecture` docs cite it, markers both ways |
 | `architecture-shape.mjs` | every stable doc has its open-defects and contributions sections, and an owner cell per defect |
 | `backlog-coherence.mjs` | an entry lives in one place: never open and closed at once, never twice in one register |
@@ -192,8 +197,9 @@ the gate on the project.
 
 **The register's language is the project's.** Entries may be `##` or `###` headings; the history may keep
 one-liners, phases (`- **BKLG-077 F1**`) or whole cards. A register that names its fields or its document sections
-in another language declares them in **.claude/backlog.json** (`fieldNames`, `words` — see the README), so the
-gates read them; never rename a project's fields to suit the gates.
+in another language declares them in **.claude/backlog.json** (`fieldNames`, `words` — `words.open` for its
+`## Open` section — see the README), so the gates read them; a project that cites entries by the bare id declares
+`"citation": "bare"`. Never rename a project's fields, sections or citations to suit the gates.
 
 ## add
 
@@ -207,7 +213,7 @@ gates read them; never rename a project's fields to suit the gates.
    concrete plan — no placeholders. A temporary patch just shipped: its commit and why it isn't the real fix.
 3. **Doc folder**: pick the type, create `<type>/<name>/<file>.md` in the backlog folder with the plan, link it
    from `- **Doc**:`. A shape change carries its target shape and acceptance from the start.
-4. Insert the entry at the TOP of `## Open`. Don't touch other entries.
+4. Insert the entry at the TOP of `## Open` (the project's `words.open`). Don't touch other entries.
 5. Confirm the new id + one-line summary; **say the Manual step out loud**. Commit only in a commit flow or when
    asked, in the project's commit format (its CLAUDE.md or AGENTS.md, its recent `git log`); with none,
    `docs(backlog): add BKLG-NNN — <title>`.
@@ -257,8 +263,9 @@ shows; by default `**Obsolete**: <why>` instead of `**Done**`).
 
 - One concern per entry, self-contained so it is actionable months later (file paths and the concrete change, not
   "fix the bug").
-- Cite entries as `[[BKLG-NNN]]` in documents — the form the gates read as a citation (`check-doc-refs` reports a
-  bare id in a live document); the entry's own heading `## BKLG-NNN — …` stays bare, and so does a history line's
-  leading `- **BKLG-NNN**`.
+- Cite entries in documents in the project's form: `[[BKLG-NNN]]` by default — the form the gates read as a
+  citation (`check-doc-refs` reports a bare id in a live document) — or the bare id when its config says
+  `"citation": "bare"`. The entry's own heading `## BKLG-NNN — …` stays bare, and so does a history line's leading
+  `- **BKLG-NNN**`.
 - Newest at the top in both files. Never delete history — archive.
 - Absolute dates (the session's current date).

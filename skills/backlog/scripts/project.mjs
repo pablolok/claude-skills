@@ -21,10 +21,16 @@
  *     "architectureExclusions": { "docs/architecture/glossary.md": "why it has no defects of its own" },
  *     "fieldNames": { "Architecture": "Architettura" },  the project's name for an entry field (and the close fields)
  *     "words": { "openDefects": "I difetti aperti", ... }  the words the gates look for in the documents
+ *     "citation": "wiki",                             how a document cites an entry: `[[BKLG-NNN]]` (wiki) or the id alone (bare)
+ *     "github": { "labels": {...}, "closeComment": "...", "statusWords": {...}, "priorityWords": {...} }
+ *                                                     what the GitHub mirror writes, and the project's Status/Priority words
  *   }
  *
  * `fieldNames` and `words` exist because the gates search documents for words, and the words are the project's:
  * a register written in another language names its fields and sections in it. Each key has an English default.
+ *
+ * `citation` is a closed choice, not a pattern: a pattern that matches nothing blinds every gate without an error,
+ * and the two forms are the ones registers use.
  *
  * The GitHub repo and its default branch are not configured: they are read from git (`origin`), so they cannot
  * drift from it.
@@ -47,6 +53,8 @@ export const FIELDS = Object.freeze([
 
 /** The words the gates look for in the documents, with their English defaults. */
 export const WORDS = Object.freeze({
+  /** BACKLOG.md's section holding the open entries (`## Open`). */
+  open: "Open",
   /** The architecture doc's section listing its open defects. */
   openDefects: "Open defects",
   /** The architecture doc's section with one row per entry that worked on it. */
@@ -69,6 +77,33 @@ export const WORDS = Object.freeze({
   nonDefectHeadings: ["limit", "retired"],
 });
 
+/** How a document cites an entry: `wiki` = `[[BKLG-NNN]]`, `bare` = the id alone. */
+export const CITATION_FORMS = Object.freeze(["wiki", "bare"]);
+
+/** The canonical statuses and priorities the GitHub mirror labels; a project maps its own words onto them. */
+export const STATUSES = Object.freeze(["open", "in-progress", "blocked"]);
+export const PRIORITIES = Object.freeze(["high", "medium", "low"]);
+
+/** The labels the mirror owns, by canonical name; `github.labels` renames any of them. */
+export const GITHUB_LABELS = Object.freeze([
+  "backlog",
+  ...STATUSES.map((s) => `status:${s}`),
+  ...PRIORITIES.map((p) => `priority:${p}`),
+  "feature", "bug", "analysis", "diagnostic",
+]);
+
+/** What the GitHub mirror writes into the project's GitHub, and how it reads Status/Priority values. */
+export const GITHUB = Object.freeze({
+  /** canonical label → the project's label name. */
+  labels: Object.freeze({}),
+  /** The comment left on an issue the mirror closes. */
+  closeComment: "Resolved via the `backlog` skill — moved to BACKLOG-HISTORY.md.",
+  /** The project's Status word → a canonical status (the canonical words are always recognised). */
+  statusWords: Object.freeze({}),
+  /** The project's Priority word → a canonical priority (the canonical words are always recognised). */
+  priorityWords: Object.freeze({}),
+});
+
 /** Every key the config may carry, with its default. A key not listed here is a typo and is reported. */
 export const DEFAULTS = Object.freeze({
   docsDir: "docs/implementations",
@@ -83,6 +118,8 @@ export const DEFAULTS = Object.freeze({
   architectureExclusions: {},
   fieldNames: {},
   words: WORDS,
+  citation: "wiki",
+  github: GITHUB,
 });
 
 const isStringMap = (v) => v !== null && typeof v === "object" && !Array.isArray(v) && Object.values(v).every((x) => typeof x === "string");
@@ -96,6 +133,32 @@ function checkKeys(key, value, known) {
   for (const k of Object.keys(value)) {
     if (!known.includes(k)) throw new Error(`${CONFIG_FILE}: unknown ${key} key "${k}" (known: ${known.join(", ")})`);
   }
+}
+
+/** A map of words onto a closed set of canonical values (`github.statusWords`): each value must be one of them. */
+function checkWordMap(key, value, allowed) {
+  if (!isStringMap(value)) throw new Error(`${CONFIG_FILE}: "${key}" must map words to strings`);
+  for (const [word, canonical] of Object.entries(value)) {
+    if (!allowed.includes(canonical)) {
+      throw new Error(`${CONFIG_FILE}: "${key}.${word}" is "${canonical}", not one of: ${allowed.join(", ")}`);
+    }
+  }
+}
+
+/** The `github` object: fixed keys, labels among the canonical ones, words mapped onto canonical values. */
+function parseGithub(value) {
+  checkKeys("github", value, Object.keys(GITHUB));
+  const github = { ...GITHUB, ...value };
+  checkKeys("github.labels", github.labels, GITHUB_LABELS);
+  if (!isStringMap(github.labels) || Object.values(github.labels).some((l) => l.trim() === "")) {
+    throw new Error(`${CONFIG_FILE}: "github.labels" values must be non-empty strings`);
+  }
+  if (typeof github.closeComment !== "string" || github.closeComment.trim() === "") {
+    throw new Error(`${CONFIG_FILE}: "github.closeComment" must be a non-empty string`);
+  }
+  checkWordMap("github.statusWords", github.statusWords, STATUSES);
+  checkWordMap("github.priorityWords", github.priorityWords, PRIORITIES);
+  return github;
 }
 
 /** The project's name for a canonical entry field (`Architecture` → `Architettura`). */
@@ -140,6 +203,15 @@ export function parseConfig(text) {
         if (!sameShape(WORDS[k], v)) throw new Error(`${CONFIG_FILE}: "words.${k}" has the wrong shape (expected ${JSON.stringify(WORDS[k])}-like)`);
       }
       config.words = { ...WORDS, ...value };
+      continue;
+    }
+    if (key === "citation") {
+      if (!CITATION_FORMS.includes(value)) throw new Error(`${CONFIG_FILE}: "citation" must be one of: ${CITATION_FORMS.join(", ")}`);
+      config.citation = value;
+      continue;
+    }
+    if (key === "github") {
+      config.github = parseGithub(value);
       continue;
     }
     const expected = DEFAULTS[key];

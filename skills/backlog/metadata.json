@@ -1,5 +1,5 @@
 {
   "name": "backlog",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Manage a project's tracked work in BACKLOG.md \u2014 add, list, process and close fixes, features and ideas; AND the entry point when STARTING work that needs a design doc (spec, plan, report) \u2014 open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates and a GitHub Issues mirror. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"fix this later\", \"what's in the backlog\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder."
 }

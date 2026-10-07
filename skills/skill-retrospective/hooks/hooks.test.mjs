@@ -63,6 +63,29 @@ test("the archive folders come from SKILL_RETRO_ARCHIVE_DIRS, normalized, with t
   assert.deepEqual(archiveDirs({ [ARCHIVE_ENV]: "Tasks\\archive\\, /old/done/" }), ["Tasks/archive", "old/done"]);
 });
 
+/** A project folder whose `.claude/backlog.json` holds `text` (none when null). */
+function projectWithBacklogConfig(text) {
+  const root = mkdtempSync(join(tmpdir(), "retro-backlog-cfg-"));
+  if (text !== null) {
+    mkdirSync(join(root, ".claude"), { recursive: true });
+    writeFileSync(join(root, ".claude/backlog.json"), text);
+  }
+  return root;
+}
+
+test("the archive folder follows the project's backlog docsDir; SKILL_RETRO_ARCHIVE_DIRS still wins", () => {
+  const root = projectWithBacklogConfig(JSON.stringify({ docsDir: "handbook\\backlog/" }));
+  assert.deepEqual(archiveDirs({}, root), ["handbook/backlog/archive"]);
+  assert.deepEqual(archiveDirs({ [ARCHIVE_ENV]: "Tasks/archive" }, root), ["Tasks/archive"]);
+});
+
+test("· no backlog config, one without docsDir, or one that does not parse: the default", () => {
+  assert.deepEqual(archiveDirs({}, projectWithBacklogConfig(null)), DEFAULT_ARCHIVE_DIRS);
+  assert.deepEqual(archiveDirs({}, projectWithBacklogConfig(JSON.stringify({ pastPaths: [] }))), DEFAULT_ARCHIVE_DIRS);
+  assert.deepEqual(archiveDirs({}, projectWithBacklogConfig("{ not json")), DEFAULT_ARCHIVE_DIRS);
+  assert.deepEqual(archiveDirs({}, projectWithBacklogConfig(JSON.stringify({ docsDir: 3 }))), DEFAULT_ARCHIVE_DIRS);
+});
+
 test("a configured archive folder counts its first-level folders, and only those", () => {
   const out = [
     "Tasks/archive/bugs/EU-1-x/TASK.md",
@@ -159,6 +182,28 @@ test("end to end: an archive under SKILL_RETRO_ARCHIVE_DIRS holds the stop, the 
   git("commit", "-qm", "archive");
   assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root), "");
   const held = JSON.parse(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root, cfg));
+  assert.equal(held.decision, "block");
+  assert.match(held.reason, /1 backlog entry was archived/);
+});
+
+test("end to end: an archive under the backlog's docsDir holds the stop, with no environment variable", () => {
+  const root = mkdtempSync(join(tmpdir(), "retro-docsdir-"));
+  const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  mkdirSync(join(root, ".claude"), { recursive: true });
+  writeFileSync(join(root, ".claude/backlog.json"), JSON.stringify({ docsDir: "handbook/backlog" }));
+  mkdirSync(join(root, "handbook/backlog/bugs/x"), { recursive: true });
+  writeFileSync(join(root, "handbook/backlog/bugs/x/plan.md"), "a\n");
+  git("add", "-A");
+  git("commit", "-qm", "init");
+  assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root), "");
+
+  mkdirSync(join(root, "handbook/backlog/archive"), { recursive: true });
+  git("mv", "handbook/backlog/bugs/x", "handbook/backlog/archive/x");
+  git("commit", "-qm", "close");
+  const held = JSON.parse(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root));
   assert.equal(held.decision, "block");
   assert.match(held.reason, /1 backlog entry was archived/);
 });

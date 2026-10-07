@@ -13,9 +13,11 @@
  *                       (`CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, the architecture folder, and the
  *                       project's `instructionPaths`). Registers cite deleted files on purpose.
  *   4. CITATIONS      — an entry is mentioned as `[[BKLG-NNN]]`, which is what makes it readable to
- *                       `backlog-anchor`. Past-describing docs are exempt.
+ *                       `backlog-anchor`. Past-describing docs are exempt. A project that cites bare ids
+ *                       (`"citation": "bare"`) has every prose id counted as a citation, and nothing to report.
  *   5. FOLDER ⟺ CARD  — every folder under `<docsDir>/{features,bugs,diagnostic,analysis}` is claimed by
- *                       an OPEN entry; closing an entry moves its folder to `archive/`.
+ *                       an OPEN entry (below `## Open`, the project's `words.open`); closing an entry moves its
+ *                       folder to `archive/`.
  *                       An orphan folder is a plan no register claims any more.
  *
  * Usage: node <skill>/scripts/check-doc-refs.mjs      (exit 0 = clean, 1 = broken)
@@ -35,6 +37,7 @@ import {
   vocabulary,
 } from "./docIndex.mjs";
 import { DEFAULTS, project } from "./project.mjs";
+import { isOpenHeading } from "./register.mjs";
 
 /** Rule 3's scope: instructions to follow, and docs that describe the present. */
 const isInstruction = (rel, config) =>
@@ -57,17 +60,18 @@ function createExistence(files) {
 export const ACTIVITY_KINDS = ["features", "bugs", "diagnostic", "analysis"];
 
 /**
- * Is every activity folder claimed by an OPEN entry? Only the `## Open` section counts: a mention in
- * a closed entry or a log claims nothing — that is exactly how a folder gets left behind.
+ * Is every activity folder claimed by an OPEN entry? Only what follows the open section's heading (`## Open`, the
+ * project's `words.open`) counts: a mention above it, in a pending ledger or a log, claims nothing — that is exactly
+ * how a folder gets left behind. A register without that heading is read whole.
  * Also returns the claimed ones (the control case) and whether the register was read at all.
  */
 export function orphanFolders(root = process.cwd(), config = DEFAULTS) {
   const base = join(root, config.docsDir);
   let open;
   try {
-    const text = readFileSync(join(base, "BACKLOG.md"), "utf8");
-    const i = text.indexOf("\n## Open");
-    open = i === -1 ? text : text.slice(i);
+    const lines = readFileSync(join(base, "BACKLOG.md"), "utf8").split("\n");
+    const i = lines.findIndex((l) => isOpenHeading(l.replace(/\r$/, ""), config));
+    open = (i === -1 ? lines : lines.slice(i)).join("\n");
   } catch {
     return { orphans: [], claimed: [], registerRead: false };
   }
@@ -114,10 +118,11 @@ export function findBrokenRefs(root = process.cwd(), { config = DEFAULTS, except
     const instruction = isInstruction(doc, config);
     const past = describesThePast(doc, config);
 
-    // Rule 4. The history register keeps its bare ids as written at closing time.
+    // Rule 4. The history register keeps its bare ids as written at closing time. A project citing bare ids has no
+    // bare mention to report (`bareMentions` is empty there): the rule counts its citations and nothing else.
     if (!past) {
-      examined.entry += citedEntries(text).size;
-      for (const m of bareMentions(text)) {
+      examined.entry += citedEntries(text, config).size;
+      for (const m of bareMentions(text, config)) {
         broken.push({ rule: "citation", where: `${doc}:${m.line}`, ref: `${m.id} without double brackets`, note: `write [[${m.id}]]` });
       }
     }
@@ -183,7 +188,10 @@ function main() {
   console.log(`documents read: ${documents}`);
   console.log(`references examined: ${examined.link} links · ${examined.line} file:line · ${examined.path} paths (in instructions)`);
   console.log(`   · file:line not judgeable: ${examined.lineUnresolved} (ambiguous path or file gone) — counted, not failed`);
-  console.log(`entry citations examined: ${examined.entry}`);
+  console.log(
+    `entry citations examined: ${examined.entry}` +
+      (config.citation === "bare" ? " · form: bare (a bare id is a citation; no bare mention to report)" : ""),
+  );
   console.log(
     `activity folders: ${claimed.length + orphans.length} · claimed by an open entry: ${claimed.length}` +
       (registerRead ? "" : `  ⚠️ ${config.docsDir}/BACKLOG.md not read`),

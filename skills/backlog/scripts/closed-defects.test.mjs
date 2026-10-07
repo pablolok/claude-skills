@@ -54,6 +54,16 @@ test("the project's words: Italian columns and 'chiuso'", () => {
   assert.equal(ownerRows(doc).length, 0);
 });
 
+test("citation bare: the owners are the bare ids of the owner cell", () => {
+  const config = parseConfig(JSON.stringify({ citation: "bare" }));
+  const doc = "| defect | closed by | state |\n|---|---|---|\n| D1 x | BKLG-030, BKLG-031 | open |\n| D2 y | none — maybe BKLG-032 | open |\n";
+  const rows = ownerRows(doc, config.words, config);
+  assert.deepEqual(rows.map((r) => r.owners), [["BKLG-030", "BKLG-031"], []]);
+  assert.equal(contradictions(rows, { open: [], closed: ["BKLG-030", "BKLG-031"] }, config.words).length, 1);
+  // Control: under the default form the same cell owns nothing.
+  assert.deepEqual(ownerRows(doc)[0].owners, []);
+});
+
 test("· a row that lost a cell is marked, never judged", () => {
   const doc = "| | closed by | state |\n|---|---|---|\n| **D1** x | [[BKLG-050]] | open |\n| [[BKLG-051]] | ✅ closed |\n";
   const rows = ownerRows(doc);

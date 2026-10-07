@@ -4,8 +4,9 @@
  * it, rewritten in place, never appended as a log.
  *
  * The turn is held ONCE (never when `stop_hook_active`) when, since the last retrospective, either
- *  - a backlog entry was archived: a folder moved under an archive folder — docs/implementations/archive/ by default,
- *    or the comma-separated paths in SKILL_RETRO_ARCHIVE_DIRS (a project without one simply never matches), or
+ *  - a backlog entry was archived: a folder moved under an archive folder — the comma-separated paths in
+ *    SKILL_RETRO_ARCHIVE_DIRS when set, else `<docsDir>/archive` when the project's .claude/backlog.json declares a
+ *    docsDir, else docs/implementations/archive/ (a project without one simply never matches), or
  *  - at least SKILL_RETRO_COMMITS commits (default 8) piled up — a long piece of work.
  *
  * The last retrospective is the commit in .claude/.state/last-retrospective (the skill writes it); the skills used
@@ -25,13 +26,34 @@ export const COMMITS_ENV = "SKILL_RETRO_COMMITS";
 export const ARCHIVE_ENV = "SKILL_RETRO_ARCHIVE_DIRS";
 export const DEFAULT_ARCHIVE_DIRS = ["docs/implementations/archive"];
 
-/** The archive folders, repo-relative with forward slashes, from SKILL_RETRO_ARCHIVE_DIRS or the default. */
-export function archiveDirs(env) {
+/** The backlog skill's project config, read for its `docsDir` (this plugin cannot import that one). */
+export const BACKLOG_CONFIG = ".claude/backlog.json";
+
+const normalized = (dir) => dir.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+
+/** `<docsDir>/archive` from the project's backlog config; null when it has none, or no readable `docsDir`. */
+function backlogArchive(root) {
+  if (!root) return null;
+  try {
+    const docsDir = JSON.parse(readFileSync(join(root, BACKLOG_CONFIG), "utf8"))?.docsDir;
+    return typeof docsDir === "string" && normalized(docsDir) ? `${normalized(docsDir)}/archive` : null;
+  } catch {
+    return null; // absent or unreadable: the default
+  }
+}
+
+/**
+ * The archive folders, repo-relative with forward slashes: SKILL_RETRO_ARCHIVE_DIRS when set, else `<docsDir>/archive`
+ * from the project's backlog config (`.claude/backlog.json`), else the default.
+ */
+export function archiveDirs(env, root) {
   const dirs = String(env?.[ARCHIVE_ENV] ?? "")
     .split(",")
-    .map((dir) => dir.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""))
+    .map(normalized)
     .filter(Boolean);
-  return dirs.length ? dirs : DEFAULT_ARCHIVE_DIRS;
+  if (dirs.length) return dirs;
+  const fromBacklog = backlogArchive(root);
+  return fromBacklog ? [fromBacklog] : DEFAULT_ARCHIVE_DIRS;
 }
 
 /** What to tell the model: run the retrospective on these skills (null when there is nothing to say). */
@@ -94,7 +116,7 @@ function main(input, env) {
     archived: archivedFolders(
       // No pathspec on purpose: limited to the archive path git sees an ADD, since the rename source is outside it.
       git(root, ["log", range, "-M", "--diff-filter=R", "--name-only", "--format="]),
-      archiveDirs(env),
+      archiveDirs(env, root),
     ).size,
     threshold: Number(env[COMMITS_ENV]) || DEFAULT_COMMITS,
     alreadyBlocked: event.stop_hook_active === true,

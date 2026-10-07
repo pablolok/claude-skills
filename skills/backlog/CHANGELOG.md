@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2026-10-07
+- The scripts read the project's conventions instead of imposing fixed ones: citation (wiki [[BKLG-NNN]] by default, or bare ids) through one helper for every gate (bare: a prose id is a citation, rule 4 has nothing to report); words.open names the ## Open section; github.labels, github.closeComment, github.statusWords and github.priorityWords for the mirror, which matches a value's leading word past an emoji and warns on a Status/Priority value no word matches instead of leaving it unlabelled. The BKLG prefix and the folder names stay fixed, with the reasons in the README. Bootstrap VERSION 1.3.0.
+
+
 ## [1.2.0] - 2026-10-07
 - Follows the project's conventions: the close line in the project's declared form (preamble, fieldNames.Done/Obsolete, or the history's own lines), commit messages in the project's format, field and section names the project's; new next-id script: the next id from the backlog folder's documents only (registers, activity folders, archive), also used by sync-all's adoption; bootstrap VERSION 1.2.0
 

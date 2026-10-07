@@ -146,25 +146,44 @@ export function namedFiles(text, resolve, shapes = DEFAULT_VOCABULARY) {
 // ─── Entry citations ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * The backlog entries a text CITES. To cite is to LINK: `[[BKLG-NNN]]`, not a bare `BKLG-NNN` —
- * a bare id inside a URL, a code block or a folder name says nothing about what the doc discusses.
+ * The backlog entries a text CITES, in the project's citation form (`citation` in its config) — the one helper every
+ * gate asks, so no gate keeps its own idea of what a citation is.
+ *
+ * - `wiki` (default): to cite is to LINK, `[[BKLG-NNN]]` — a bare id inside a URL, a code block or a folder name says
+ *   nothing about what the doc discusses, and a bare id in prose is a mention `bareMentions` reports.
+ * - `bare`: the id alone is the citation. What counts is exactly what `wiki` would report as a bare mention (prose
+ *   ids: never a heading or history line of its own, a code span or fence, a link's text, a URL, a path, a range),
+ *   plus any `[[BKLG-NNN]]`. So under `bare` no mention is ever "one that should have been a citation".
  */
-export function citedEntries(text) {
-  return new Set([...text.matchAll(/\[\[(BKLG-\d+)\]\]/g)].map((m) => m[1]));
+export function citedEntries(text, config = DEFAULTS) {
+  const linked = [...text.matchAll(/\[\[(BKLG-\d+)\]\]/g)].map((m) => m[1]);
+  const bare = citesBare(config) ? proseIds(text).map((m) => m.id) : [];
+  return new Set([...linked, ...bare]);
+}
+
+/** Does the project cite entries by their bare id? */
+const citesBare = (config) => (config?.citation ?? DEFAULTS.citation) === "bare";
+
+/**
+ * The twin of `citedEntries`: bare mentions that SHOULD have been citations — none when the project cites bare ids
+ * (each of them IS a citation there). Kept next to it so the two cannot drift apart.
+ */
+export function bareMentions(text, config = DEFAULTS) {
+  return citesBare(config) ? [] : proseIds(text);
 }
 
 /**
- * The twin of `citedEntries`: bare mentions that SHOULD have been citations. Kept next to it so
- * the two exclusion lists cannot drift apart. Not reported:
+ * The ids a text names in its prose. Not counted:
  * - identity: a line OPENING with the id (`## BKLG-NNN — Title`, `- **BKLG-NNN**` history line);
  * - guarded: inside backticks, a link's text, a URL or a path;
  * - inside a ``` fence;
- * - ranges (`BKLG-NNN/MMM`): the second half is not an id, linking the first alone would lie.
+ * - ranges (`BKLG-NNN/MMM`): the second half is not an id, linking the first alone would lie;
+ * - the wiki form `[[BKLG-NNN]]`, a citation in either form.
  */
 const IDENTITY = /^(#{1,6} BKLG-\d+|- \*\*BKLG-\d+\*\*)/;
 const GUARDED = [/`[^`]*`/g, /\[[^\]]*\]/g, /https?:\/\/\S+/g, /[\w.\/-]*\/[\w.\/-]+/g];
 
-export function bareMentions(text) {
+function proseIds(text) {
   const found = [];
   let insideCode = false;
   text.split("\n").forEach((line, i) => {
@@ -205,7 +224,7 @@ export function docIndex(root, { architectureOnly = false, config = DEFAULTS } =
     const text = readFileSync(path.join(root, doc), "utf8");
     const files = namedFiles(text, resolve, shapes);
     if (files.size) namesFile.set(doc, files);
-    const entries = citedEntries(text);
+    const entries = citedEntries(text, config);
     if (entries.size) citesEntry.set(doc, entries);
   }
   return { sources, namesFile, citesEntry, all };

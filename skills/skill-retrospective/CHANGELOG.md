@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.0] - 2026-10-07
+- The Stop hook's archive trigger reads the project's backlog docsDir (.claude/backlog.json, archive = <docsDir>/archive) when SKILL_RETRO_ARCHIVE_DIRS is not set; the default stays docs/implementations/archive.
+
+
 ## [1.4.0] - 2026-10-07
 - Commits follow the conventions of the repository they land in (language, subject form and length, body), the fixed subject only as the fallback; a plugin's lesson goes to the skill repository the plugin comes from (its clone, or an issue there), also in the Stop hook's request
 

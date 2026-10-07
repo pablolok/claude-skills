@@ -72,7 +72,7 @@ function main() {
   }
   if (openAndClosed.length) {
     console.log(`\n⛔ open AND closed (${openAndClosed.length}): ${openAndClosed.join(", ")}`);
-    console.log("   The close wrote the history line and left the card under ## Open (or the reverse): finish the move.");
+    console.log(`   The close wrote the history line and left the card under ## ${config.words.open} (or the reverse): finish the move.`);
   }
   if (openTwice.length) console.log(`\n⛔ open twice (${openTwice.length}): ${openTwice.join(", ")} — two truths about one piece of work: merge them.`);
   if (closedTwice.length) console.log(`\n⛔ closed twice (${closedTwice.length}): ${closedTwice.join(", ")} — keep one history line.`);

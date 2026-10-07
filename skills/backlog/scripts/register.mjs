@@ -13,7 +13,7 @@
  *
  * The format's own template (`BKLG-NNN`, letters) is never an entry. Pure functions: callers pass the text in.
  */
-import { fieldName } from "./project.mjs";
+import { DEFAULTS, WORDS, fieldName } from "./project.mjs";
 
 /** An open entry's heading: level 2 or 3, the id first. */
 const OPEN_HEADING = /^(#{2,3}) (BKLG-\d+)\b(?:\s+[—–-]\s+(.*))?/;
@@ -143,12 +143,21 @@ export function fieldLine(config, canonical) {
 }
 
 /**
- * The open entries of `BACKLOG.md` with their title and fields — only those under the `## Open` section (a pending
- * ledger's lines are not entries).
+ * Does a line open the section of the open entries — `## Open`, or `## <words.open>` in the project's words? The one
+ * matcher for every reader of that section (how far each reads after it is its own question).
  */
-export function openEntries(text, config) {
+export function isOpenHeading(line, config = DEFAULTS) {
+  const word = (config?.words?.open ?? WORDS.open).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^## ${word}\\s*$`, "iu").test(line);
+}
+
+/**
+ * The open entries of `BACKLOG.md` with their title and fields — only those under the open section (`## Open`, or the
+ * project's `words.open`); a pending ledger's lines are not entries.
+ */
+export function openEntries(text, config = DEFAULTS) {
   const lines = text.split(/\r?\n/);
-  const openAt = lines.findIndex((l) => /^## Open\s*$/i.test(l));
+  const openAt = lines.findIndex((l) => isOpenHeading(l, config));
   if (openAt < 0) return [];
   const nextSection = lines.findIndex((l, i) => i > openAt && /^## /.test(l) && !OPEN_HEADING.test(l));
   const section = lines.slice(openAt + 1, nextSection < 0 ? undefined : nextSection).join("\n");

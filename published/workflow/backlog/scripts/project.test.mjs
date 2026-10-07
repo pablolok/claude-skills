@@ -69,3 +69,35 @@ test("project() reads the register's paths from the config", () => {
     assert.equal(p.history, "handbook/backlog/BACKLOG-HISTORY.md");
   });
 });
+
+test("citation: `wiki` by default, `bare` accepted, any other form fails naming the two", () => {
+  assert.equal(parseConfig(null).citation, "wiki");
+  assert.equal(parseConfig(JSON.stringify({ citation: "bare" })).citation, "bare");
+  assert.throws(() => parseConfig(JSON.stringify({ citation: "[[{id}]]" })), /"citation" must be one of: wiki, bare/);
+});
+
+test("words.open names the open section: `Open` by default, the project's word when declared", () => {
+  assert.equal(parseConfig(null).words.open, "Open");
+  assert.equal(parseConfig(JSON.stringify({ words: { open: "Aperte" } })).words.open, "Aperte");
+});
+
+test("github: defaults, a project's labels, close comment and value words merged over them", () => {
+  const d = parseConfig(null).github;
+  assert.deepEqual(d.labels, {});
+  assert.match(d.closeComment, /BACKLOG-HISTORY\.md/);
+  const c = parseConfig(JSON.stringify({
+    github: { labels: { "priority:high": "priorità:alta" }, closeComment: "Chiusa.", priorityWords: { alta: "high" } },
+  })).github;
+  assert.equal(c.labels["priority:high"], "priorità:alta");
+  assert.equal(c.closeComment, "Chiusa.");
+  assert.deepEqual(c.priorityWords, { alta: "high" });
+  assert.deepEqual(c.statusWords, {});
+});
+
+test("⛔ github: an unknown key, an unknown label, a word mapped to no canonical value fail by name", () => {
+  assert.throws(() => parseConfig(JSON.stringify({ github: { label: {} } })), /unknown github key "label"/);
+  assert.throws(() => parseConfig(JSON.stringify({ github: { labels: { "priority:urgent": "x" } } })), /unknown github\.labels key "priority:urgent"/);
+  assert.throws(() => parseConfig(JSON.stringify({ github: { statusWords: { aperta: "opened" } } })), /github\.statusWords\.aperta.*open, in-progress, blocked/);
+  assert.throws(() => parseConfig(JSON.stringify({ github: { priorityWords: { alta: "urgent" } } })), /github\.priorityWords\.alta.*high, medium, low/);
+  assert.throws(() => parseConfig(JSON.stringify({ github: { closeComment: " " } })), /github\.closeComment/);
+});

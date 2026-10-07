@@ -9,7 +9,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | File | Role |
 |---|---|
 | `SKILL.md` | The procedure: entry format, Status as a sentence, phase tables, pending ledgers, doc folders, `add` / `list` / `process` / `done`. |
-| `scripts/check-doc-refs.mjs` | Gate: links, `file:line` pointers and backticked paths resolve; entries cited as `[[BKLG-NNN]]`; every activity folder claimed by an open entry. |
+| `scripts/check-doc-refs.mjs` | Gate: links, `file:line` pointers and backticked paths resolve; entries cited as `[[BKLG-NNN]]` (or the project's `citation` form); every activity folder claimed by an open entry. |
 | `scripts/backlog-anchor.mjs` | Gate: an entry's declared architecture docs cite it, defect markers both ways (open → listed, closed → gone). |
 | `scripts/architecture-shape.mjs` | Gate: every stable architecture doc has its open-defects and contributions sections, and an owner cell per defect. |
 | `scripts/backlog-coherence.mjs` | Gate: an entry lives in one place — never open and closed at once, never twice in one register. |
@@ -59,11 +59,25 @@ Everything has a default. A project that differs writes **.claude/backlog.json**
 | `architectureExclusions` | none (the folder's `README.md` is always left out) | architecture docs that have no defects of their own, each with its reason |
 | `fieldNames` | the English names | the project's name for an entry field the scripts read: `Status`, `Priority`, `Added`, `Manual`, `Architecture`, `Doc`, `Summary`, `Issue`; and for the history line's close fields, `Done` and `Obsolete` (no gate parses them: the skill writes the close line under the project's name, e.g. `"Done": "Chiusa"`) |
 | `words` | English | the words the gates look for in the documents (below) |
+| `citation` | `"wiki"` | how a document cites an entry (below) |
+| `github` | English labels and comment | what the GitHub mirror writes, and the register's Status/Priority words (below) |
+
+`citation` — `"wiki"` cites an entry as `[[BKLG-NNN]]`; `"bare"` cites it by the id alone (`BKLG-012`). A closed
+choice rather than a pattern: a pattern that matches nothing would blind every gate without an error, and these are
+the two forms registers use. One helper reads it for every gate (`citedEntries` in `docIndex.mjs`):
+
+| rule | `wiki` | `bare` |
+|---|---|---|
+| what cites an entry (backlog-anchor, related-docs, the contributions section) | `[[BKLG-NNN]]` | a prose id, or `[[BKLG-NNN]]` |
+| an owner cell (architecture-shape, closed-defects) | its `[[BKLG-NNN]]` | its ids |
+| check-doc-refs rule 4 | a prose id is reported: write `[[BKLG-NNN]]` | does not apply — every prose id is a citation; the count is printed |
+| never a citation in either form | a line opening with its own id (heading, history line), a code span or fence, a link's text, a URL, a path, a range (`BKLG-010/011`) | same |
 
 `words` — a register written in another language names its sections and states in it:
 
 | key | default | read by |
 |---|---|---|
+| `open` | `Open` | `BACKLOG.md`'s section of the open entries (`## Open`): the entries the gates and the mirror read, the doc folders an open entry claims |
 | `openDefects` / `contributions` / `owners` | `Open defects` / `Who worked on it` / `Defect owners` | the architecture docs' section titles |
 | `ownerColumn` / `stateColumn` | `closed by` / `state` | defect table headings |
 | `closed` | `closed`, `done`, `fixed` | a state cell that says closed (a ✅ always does) |
@@ -85,12 +99,47 @@ An Italian register, for example:
 }
 ```
 
+`github` — what the mirror writes into the project's GitHub, and how it reads the register's values:
+
+| key | default | what it changes |
+|---|---|---|
+| `labels` | the canonical names | the project's name for each label the mirror owns: `backlog`, `status:open` / `status:in-progress` / `status:blocked`, `priority:high` / `priority:medium` / `priority:low`, `feature` / `bug` / `analysis` / `diagnostic` (the type, from the doc folder) |
+| `closeComment` | ``Resolved via the `backlog` skill — moved to BACKLOG-HISTORY.md.`` | the comment left on an issue `close-issue` closes |
+| `statusWords` | none | the register's Status words, each mapped onto `open`, `in-progress` or `blocked` |
+| `priorityWords` | none | the register's Priority words, each mapped onto `high`, `medium` or `low` |
+
+The English words always count; a mapped word matches at the start of the value as a whole word, so a value may
+carry a note after it (`alta — the core of it`, `in corso — step 2`). A Status or Priority value no word matches is
+**reported** — a warning naming the entry and the value — never left silently without its label. The issue body's
+footer line stays English.
+
+```json
+{
+  "github": {
+    "labels": { "priority:high": "priorità:alta", "priority:medium": "priorità:media", "priority:low": "priorità:bassa" },
+    "closeComment": "Chiusa con la skill `backlog`: la voce è in BACKLOG-HISTORY.md.",
+    "statusWords": { "aperta": "open", "in corso": "in-progress", "bloccata": "blocked" },
+    "priorityWords": { "alta": "high", "media": "medium", "bassa": "low" }
+  }
+}
+```
+
 An unknown key or a value of the wrong shape stops the scripts with a message — a typo is never ignored silently.
 The GitHub repo and branch are not configured: they come from git.
 
 The registers' layout needs no configuration: an open entry is a `## BKLG-NNN — title` or `### BKLG-NNN — title`
 heading; the history keeps one-liners (`- **BKLG-NNN** …`, optionally with a phase: `- **BKLG-077 F1** …`) or the
 whole card with its heading.
+
+**Fixed, on purpose**:
+- **The `BKLG` prefix.** Every register parser matches it with no config in hand, and so do the issue titles, the
+  scripts' arguments, commit messages and other tools' hooks: a configurable prefix would have to reach all of them at
+  once, and one that missed would read zero entries while printing green.
+- **The folder names** — `features`, `bugs`, `diagnostic`, `analysis` and `archive`. The folder ⟺ card rule, the
+  mirror's type labels, the past-describing `archive/` (any path through one is not checked) and the
+  skill-retrospective hook (another plugin, which reads `<docsDir>/archive`) all name them; a renamed activity folder
+  would get no type label, and a renamed archive would be checked as live. The folders sit under `docsDir`, which is
+  configurable.
 
 What a project adds to the **procedure** (extra entry fields, its pending ledgers, how it verifies, whether the
 GitHub mirror is on) goes in the preamble of its `BACKLOG.md` — the skill reads it first. Long rules go in a

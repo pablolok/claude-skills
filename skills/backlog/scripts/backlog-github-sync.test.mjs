@@ -18,7 +18,10 @@ import {
   bodyNeedsUpdate,
   repoFromRemote,
   branchFromOriginHead,
+  unmappedWarnings,
+  closeCommentFor,
 } from "./backlog-github-sync.mjs";
+import { DEFAULTS, parseConfig } from "./project.mjs";
 
 const SAMPLE = `# Implementation Backlog
 
@@ -253,6 +256,61 @@ test("labelsFor reads the status line `<keyword> — <where it stands>`", () => 
   const [, e001] = parseOpenEntries(SAMPLE);
   const labels = labelsFor(e001.fields);
   assert.deepEqual(labels.sort(), ["backlog", "bug", "priority:high", "status:in-progress"].sort());
+});
+
+// ─── The project's words and labels (.claude/backlog.json `github`) ──────────────────────────────
+
+const ITALIAN = parseConfig(JSON.stringify({
+  github: {
+    statusWords: { aperta: "open", "in corso": "in-progress" },
+    priorityWords: { alta: "high", media: "medium", bassa: "low" },
+  },
+}));
+
+test("labelsFor matches the project's Status/Priority words, multi-word and accented ones too", () => {
+  assert.deepEqual(labelsFor({ Status: "in corso — passo 2", Priority: "alta — il cuore" }, undefined, ITALIAN).sort(),
+    ["backlog", "priority:high", "status:in-progress"]);
+  assert.deepEqual(labelsFor({ Status: "aperta", Priority: "bassa oggi, media domani" }, undefined, ITALIAN).sort(),
+    ["backlog", "priority:low", "status:open"]);
+  // The canonical English words stay recognised under a mapping (a register may mix them).
+  assert.ok(labelsFor({ Status: "in-progress — x" }, undefined, ITALIAN).includes("status:in-progress"));
+  // Control: without the mapping the Italian words get no label.
+  assert.deepEqual(labelsFor({ Status: "aperta", Priority: "alta" }), ["backlog"]);
+});
+
+test("a leading emoji or mark does not hide the word: `📋 aperta — …` is open", () => {
+  assert.ok(labelsFor({ Status: "📋 aperta — diagnosticata" }, undefined, ITALIAN).includes("status:open"));
+  assert.ok(labelsFor({ Status: "🚧 in-progress" }).includes("status:in-progress"));
+  assert.deepEqual(unmappedWarnings({ idStr: "BKLG-010", fields: { Status: "📋 aperta" } }, ITALIAN), []);
+});
+
+test("⛔ an unmapped Status/Priority value is reported, naming the entry and the value — never silently unlabelled", () => {
+  const entry = { idStr: "BKLG-007", fields: { Status: "parcheggiata — dopo il rilascio", Priority: "alta" } };
+  const warnings = unmappedWarnings(entry, ITALIAN);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /BKLG-007/);
+  assert.match(warnings[0], /parcheggiata/);
+  assert.match(warnings[0], /github\.statusWords/);
+  // An absent field is not a value: nothing to report.
+  assert.deepEqual(unmappedWarnings({ idStr: "BKLG-008", fields: {} }, ITALIAN), []);
+  // Control: the default words map English values with no warning.
+  assert.deepEqual(unmappedWarnings({ idStr: "BKLG-009", fields: { Status: "open", Priority: "high" } }), []);
+});
+
+test("the project's label names replace the canonical ones, and its stale labels are still removed", () => {
+  const config = parseConfig(JSON.stringify({
+    github: { labels: { backlog: "registro", "priority:high": "priorità:alta", "priority:low": "priorità:bassa", feature: "funzione" } },
+  }));
+  assert.deepEqual(labelsFor({ Priority: "high", Doc: "[x](features/y/spec.md)" }, undefined, config).sort(),
+    ["funzione", "priorità:alta", "registro"]);
+  const d = labelDelta(["registro", "priorità:bassa", "external-note"], ["registro", "priorità:alta"], config);
+  assert.deepEqual(d.add, ["priorità:alta"]);
+  assert.deepEqual(d.remove, ["priorità:bassa"]);
+});
+
+test("the close comment is the project's when declared, the English default otherwise", () => {
+  assert.match(closeCommentFor(DEFAULTS), /moved to BACKLOG-HISTORY\.md/);
+  assert.equal(closeCommentFor(parseConfig(JSON.stringify({ github: { closeComment: "Chiusa: vedi la storia." } }))), "Chiusa: vedi la storia.");
 });
 
 test("knownBklgIds uses the canonical zero-padded id, so issue ids below 100 are recognised", () => {

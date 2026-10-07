@@ -197,6 +197,19 @@ test("⛔ a defect with NO owner cell anywhere fails, and says which", () => {
   assert.deepEqual(withoutOwnerCell([{ name: "combat.md", text }]), [{ name: "combat.md", missing: ["D3"] }]);
 });
 
+test("citation bare: an owner cell and a section cite an entry by its bare id", () => {
+  const config = parseConfig(JSON.stringify({ citation: "bare" }));
+  const doc = [
+    "## Open defects", "| # | defect | closed by |", "|---|---|---|", "| D1 | x | BKLG-011 |", "| D2 | y | none — maybe BKLG-012 |", "",
+    "## Who worked on it", "| BKLG-010 | z |",
+  ].join("\n");
+  assert.deepEqual(defectsWithoutOwner([{ name: "a.md", text: doc }], config.words, config), ["a.md#D2"]);
+  assert.deepEqual([...entryInSection(doc, CONTRIBUTIONS_SECTION, config)], ["BKLG-010"]);
+  // Control: under the default form the bare owner is no owner, and the section cites nothing.
+  assert.deepEqual(defectsWithoutOwner([{ name: "a.md", text: doc }]), ["a.md#D1", "a.md#D2"]);
+  assert.deepEqual([...entryInSection(doc, CONTRIBUTIONS_SECTION)], []);
+});
+
 // ─── The folder walk ─────────────────────────────────────────────────────────────────────────────
 
 test("architectureDocs recurses, skips the README index, and tolerates a missing folder", () => {

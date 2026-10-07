@@ -62,12 +62,12 @@ export function shapeOf(text, words = WORDS) {
   };
 }
 
-/** The entries cited inside a section. What "cites" means is decided by `docIndex.mjs`. */
-export function entryInSection(text, name) {
+/** The entries cited inside a section. What "cites" means is decided by `docIndex.mjs` (the project's `citation`). */
+export function entryInSection(text, name, config = DEFAULTS) {
   const found = new Set();
   for (const s of sectionsOf(text)) {
     if (!isTheSection(s.title, name)) continue;
-    for (const id of citedEntries(s.body)) found.add(id);
+    for (const id of citedEntries(s.body, config)) found.add(id);
   }
   return found;
 }
@@ -167,9 +167,10 @@ export function withoutOwnerCell(docs, words = WORDS) {
 /**
  * LISTS, never fails: defects nobody is closing. No single gesture brings it to zero (it would take
  * opening an entry per defect), and a gate nothing can close is a gate people learn to skip.
- * A written "none"/"nobody" wins over an entry mentioned in the same cell ("none — maybe [[BKLG-NNN]]").
+ * A written "none"/"nobody" wins over an entry mentioned in the same cell ("none — maybe [[BKLG-NNN]]"). The owner is
+ * an entry the cell cites, in the project's citation form.
  */
-export function defectsWithoutOwner(docs, words = WORDS) {
+export function defectsWithoutOwner(docs, words = WORDS, config = DEFAULTS) {
   const nobody = anyWord(words.none);
   const found = [];
   for (const { name, text } of docs) {
@@ -177,7 +178,7 @@ export function defectsWithoutOwner(docs, words = WORDS) {
     for (const d of defectsInTable(text, words)) {
       if (!d.attributable) continue;
       const cell = d.owner ?? "";
-      const hasEntry = /\[\[BKLG-\d+\]\]/.test(cell) && !nobody.test(cell);
+      const hasEntry = citedEntries(cell, config).size > 0 && !nobody.test(cell);
       per.set(d.id, (per.get(d.id) ?? false) || hasEntry);
     }
     for (const [id, hasEntry] of per) if (!hasEntry) found.push(`${name}#${id}`);
@@ -230,7 +231,7 @@ function main() {
   const rows = docs.reduce((a, d) => a + defectsInTable(d.text, words).length, 0);
   const markers = docs.reduce((a, d) => a + markersInSection(d.text, DEFECTS_SECTION, words).size, 0);
   const withoutCell = withoutOwnerCell(docs, words);
-  const orphans = defectsWithoutOwner(docs, words);
+  const orphans = defectsWithoutOwner(docs, words, config);
 
   // The control case, always printed: "0 without the shape" on an unread folder looks like a real 0.
   console.log(`architecture doc shape: ${docs.length} read in ${folder}/ (${INDEX_DOC} excluded)`);

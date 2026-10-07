@@ -292,7 +292,7 @@ function main() {
   const resolveDoc = createResolver(new Set(archDocs));
   const textOf = new Map(archDocs.map((d) => [d, readFileSync(path.join(root, d), "utf8")]));
   const { contributions: CONTRIBUTIONS_SECTION, openDefects: DEFECTS_SECTION } = config.words;
-  const entryContributions = new Map(archDocs.map((d) => [d, entryInSection(textOf.get(d), CONTRIBUTIONS_SECTION)]));
+  const entryContributions = new Map(archDocs.map((d) => [d, entryInSection(textOf.get(d), CONTRIBUTIONS_SECTION, config)]));
   const markersByDoc = new Map(archDocs.map((d) => [d, markersInSection(textOf.get(d), DEFECTS_SECTION, config.words)]));
 
   let ids = explicit;

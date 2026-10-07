@@ -41,6 +41,11 @@
  *   close-issue  <BKLG-NNN>   close the entry's issue with a linking comment
  *   sync-all                  full reconcile of ## Open ⟷ open backlog issues + a report
  * FLAGS: --dry-run (default) | --execute ; --repo <owner/name> (else derived from origin)
+ *
+ * THE PROJECT'S WORDS (`github` in .claude/backlog.json): the label names it writes (`labels`, canonical → its own),
+ * the close comment (`closeComment`), and the Status/Priority words of its register mapped onto the canonical values
+ * (`statusWords`, `priorityWords`; the English words always count). A value no word matches is WARNED about, naming
+ * the entry and the value — never left silently unlabelled.
  */
 
 import { spawnSync } from "node:child_process";
@@ -48,13 +53,19 @@ import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { registerIds } from "./next-id.mjs";
-import { DEFAULTS, project } from "./project.mjs";
+import { CONFIG_FILE, DEFAULTS, GITHUB, GITHUB_LABELS, PRIORITIES, STATUSES, fieldName, project } from "./project.mjs";
 import { extractBklgIds, formatBklgId, nextBklgId, openEntries } from "./register.mjs";
 
 // The id helpers live in register.mjs (next-id uses them too); re-exported for the mirror's callers.
 export { extractBklgIds, formatBklgId, nextBklgId };
 
 const GH = process.platform === "win32" ? "gh.exe" : "gh";
+
+/**
+ * The labels below are CANONICAL names: what the mirror writes is the project's name for each (`github.labels` in
+ * `.claude/backlog.json`), the canonical one when it declares none.
+ */
+export const labelName = (config, canonical) => config?.github?.labels?.[canonical] ?? canonical;
 
 /** The single always-present label + the label namespaces we own. */
 export const BACKLOG_LABEL = "backlog";
@@ -137,25 +148,82 @@ export function issueTitleFor(entry) {
  * @returns {string}
  */
 export function leadingKeyword(value) {
-  return (/^[a-z-]+/i.exec((value || "").trim().toLowerCase())?.[0]) || "";
+  return (/^[\p{L}\p{N}-]+/iu.exec((value || "").trim().toLowerCase())?.[0]) || "";
 }
 
 /**
- * The set of labels an entry's issue should carry, derived from its fields.
+ * The two labelled dimensions of an entry: its field, the canonical values, and the config key mapping the project's
+ * words onto them. Priority first: the order the labels are written in.
+ */
+const DIMENSIONS = Object.freeze([
+  { field: "Priority", canonical: PRIORITIES, words: "priorityWords", label: (/** @type {string} */ v) => `priority:${v}` },
+  { field: "Status", canonical: STATUSES, words: "statusWords", label: (/** @type {string} */ v) => `status:${v}` },
+]);
+
+/** The words that name each canonical value of a dimension — the canonical word itself, plus the project's — longest first. */
+function wordsOf(dimension, config) {
+  const words = new Map(dimension.canonical.map((c) => [c, c]));
+  for (const [word, canonical] of Object.entries(config?.github?.[dimension.words] ?? {})) words.set(word.trim().toLowerCase(), canonical);
+  return [...words].sort(([a], [b]) => b.length - a.length);
+}
+
+/**
+ * The canonical value a field's value opens with: one of `words` as a whole word at its start (a value carries a note
+ * after it — `in-progress — step 2`, `alta oggi`), longest first so `in corso` wins over `in`. A leading emoji or
+ * mark (`📋 aperta`) is not part of the word. Null when none matches.
+ * @param {string|undefined} value
+ * @param {Array<[string, string]>} words word → canonical, longest first
+ * @returns {string|null}
+ */
+export function canonicalValue(value, words) {
+  const v = (value || "").toLowerCase().replace(/^[^\p{L}\p{N}]+/u, "");
+  for (const [word, canonical] of words) {
+    if (v.startsWith(word) && !/[\p{L}\p{N}]/u.test(v.charAt(word.length))) return canonical;
+  }
+  return null;
+}
+
+/**
+ * The set of labels an entry's issue should carry, derived from its fields, under the project's label names.
  * @param {Record<string,string>} fields
  * @param {string} [docLink] the raw `- **Doc**:` value, for the type label
+ * @param {object} [config] the project's config (`github.labels`, `github.statusWords`, `github.priorityWords`)
  * @returns {string[]}
  */
-export function labelsFor(fields, docLink) {
-  const labels = [BACKLOG_LABEL];
-  const priority = leadingKeyword(fields.Priority);
-  if (priority in PRIORITY_LABELS) labels.push(PRIORITY_LABELS[/** @type {keyof typeof PRIORITY_LABELS} */ (priority)]);
-  const status = leadingKeyword(fields.Status);
-  if (status in STATUS_LABELS) labels.push(STATUS_LABELS[/** @type {keyof typeof STATUS_LABELS} */ (status)]);
+export function labelsFor(fields, docLink, config = DEFAULTS) {
+  const labels = [labelName(config, BACKLOG_LABEL)];
+  for (const d of DIMENSIONS) {
+    const value = canonicalValue(fields[d.field], wordsOf(d, config));
+    if (value) labels.push(labelName(config, d.label(value)));
+  }
   const typeLabel = typeLabelFromDoc(docLink || fields.Doc || "");
-  if (typeLabel) labels.push(typeLabel);
+  if (typeLabel) labels.push(labelName(config, typeLabel));
   return labels;
 }
+
+/**
+ * One line per Status/Priority value that maps to no label — reported, where it used to leave the issue silently
+ * unlabelled. An absent field is not a value: nothing to say.
+ * @param {{idStr:string, fields:Record<string,string>}} entry
+ * @param {object} [config]
+ * @returns {string[]}
+ */
+export function unmappedWarnings(entry, config = DEFAULTS) {
+  const warnings = [];
+  for (const d of DIMENSIONS) {
+    const value = (entry.fields[d.field] || "").trim();
+    if (!value || canonicalValue(value, wordsOf(d, config))) continue;
+    const shown = value.length > 40 ? `${value.slice(0, 40)}…` : value;
+    warnings.push(
+      `${entry.idStr}: ${fieldName(config, d.field)} «${shown}» matches no ${d.field.toLowerCase()} label — map its ` +
+        `word in github.${d.words} of ${CONFIG_FILE} (onto: ${d.canonical.join(", ")})`,
+    );
+  }
+  return warnings;
+}
+
+/** The comment left on an issue the mirror closes: the project's (`github.closeComment`), else the default. */
+export const closeCommentFor = (config) => config?.github?.closeComment ?? GITHUB.closeComment;
 
 /**
  * Map the Doc link's folder to a type label (features/→feature, bugs/→bug, …).
@@ -216,18 +284,17 @@ export function bodyNeedsUpdate(current, desired) {
 
 /**
  * Diff the labels an issue currently has vs the labels it should have, limited
- * to the label namespaces we own (backlog / priority: / status: / the type
- * labels). Foreign labels a collaborator added are left untouched.
+ * to the labels we own (backlog / priority: / status: / the type labels, under
+ * their canonical names and the project's). Foreign labels a collaborator added
+ * are left untouched.
  * @param {string[]} current
  * @param {string[]} desired
+ * @param {object} [config] the project's config (`github.labels`)
  * @returns {{add:string[], remove:string[]}}
  */
-export function labelDelta(current, desired) {
-  const owned = (l) =>
-    l === BACKLOG_LABEL ||
-    l.startsWith("priority:") ||
-    l.startsWith("status:") ||
-    Object.values(TYPE_LABELS).includes(/** @type {never} */ (l));
+export function labelDelta(current, desired, config = DEFAULTS) {
+  const named = new Set(GITHUB_LABELS.flatMap((c) => [c, labelName(config, c)]));
+  const owned = (l) => named.has(l) || l.startsWith("priority:") || l.startsWith("status:");
   const cur = new Set(current);
   const des = new Set(desired);
   const add = desired.filter((l) => !cur.has(l));
@@ -264,13 +331,14 @@ export function runGh(args, cwd = undefined) {
 }
 
 /**
- * Fetch all backlog-labelled issues (any state) as structured records.
+ * Fetch all backlog-labelled issues (any state) as structured records — the label under the project's name for it.
  * @param {string} repo
+ * @param {object} [config]
  * @returns {{ok:true, issues:GhIssue[]} | {ok:false, error:string}}
  */
-export function listBacklogIssues(repo) {
+export function listBacklogIssues(repo, config = DEFAULTS) {
   const res = runGh([
-    "issue", "list", "--repo", repo, "--label", BACKLOG_LABEL, "--state", "all",
+    "issue", "list", "--repo", repo, "--label", labelName(config, BACKLOG_LABEL), "--state", "all",
     "--limit", "500", "--json", "number,title,state,labels,assignees,body",
   ]);
   if (!res.ok) return { ok: false, error: res.error };
@@ -299,6 +367,7 @@ export function ensureLabel(repo, name, color) {
   return runGh(["label", "create", name, "--repo", repo, "--color", color, "--force"]);
 }
 
+/** Each canonical label's colour (the label is created under the project's name for it). */
 const LABEL_COLORS = {
   backlog: "6f42c1",
   "priority:high": "d73a4a",
@@ -395,23 +464,25 @@ function parseArgs(argv) {
   return { flags, positional };
 }
 
-function ensureAllLabels(repo, dryRun) {
+function ensureAllLabels(repo, dryRun, config) {
   if (dryRun) return;
-  for (const [name, color] of Object.entries(LABEL_COLORS)) {
+  for (const [canonical, color] of Object.entries(LABEL_COLORS)) {
+    const name = labelName(config, canonical);
     const r = ensureLabel(repo, name, color);
     if (!r.ok) warn(`label '${name}': ${r.error}`);
   }
 }
 
 /**
- * Create-or-update the issue for one entry (file→GitHub).
+ * Create-or-update the issue for one entry (file→GitHub). A Status/Priority value no label matches is warned about.
  * @param {ReturnType<typeof parseOpenEntries>[number]} entry
  * @param {GhIssue|undefined} issue existing issue for this BKLG, if any
  */
-function upsertEntry(entry, issue, repo, dryRun, where) {
+function upsertEntry(entry, issue, repo, dryRun, where, config) {
   const title = issueTitleFor(entry);
-  const desired = labelsFor(entry.fields);
+  const desired = labelsFor(entry.fields, undefined, config);
   const body = issueBodyFor(entry, repo, where);
+  for (const w of unmappedWarnings(entry, config)) warn(w);
   if (!issue) {
     console.log(`  + CREATE issue "${title}"  labels=[${desired.join(", ")}]`);
     if (dryRun) return;
@@ -422,7 +493,7 @@ function upsertEntry(entry, issue, repo, dryRun, where) {
     else console.log(`    → ${r.stdout.trim()}`);
     return;
   }
-  const { add, remove } = labelDelta(issue.labels, desired);
+  const { add, remove } = labelDelta(issue.labels, desired, config);
   const reopen = issue.state === "closed"; // file says Open → GitHub should be open
   // The file OWNS the prose (see FIELD OWNERSHIP above), so a body that drifted —
   // because the entry's Summary/Doc changed here, or because someone edited the
@@ -462,25 +533,25 @@ function cmdUpsert(bklgArg, { repo, where, backlogPath, config }, flags) {
   const entries = parseOpenEntries(md, config);
   const target = entries.find((e) => e.idStr.toLowerCase() === bklgArg.toLowerCase());
   if (!target) {
-    console.error(`${bklgArg} not found in ## Open of BACKLOG.md`);
+    console.error(`${bklgArg} not found in ## ${config.words.open} of BACKLOG.md`);
     process.exitCode = 1;
     return;
   }
   console.log(`upsert-issue ${target.idStr} → ${repo}  (${flags.dryRun ? "DRY-RUN" : "EXECUTE"})`);
-  const listed = listBacklogIssues(repo);
+  const listed = listBacklogIssues(repo, config);
   if (!listed.ok) {
     warn(`could not list issues: ${listed.error}`);
     warn("fail-soft: the file backlog is unchanged; retry once gh can reach the repo.");
     return;
   }
-  ensureAllLabels(repo, flags.dryRun);
+  ensureAllLabels(repo, flags.dryRun, config);
   const issue = listed.issues.find((i) => i.bklg === target.idStr);
-  upsertEntry(target, issue, repo, flags.dryRun, where);
+  upsertEntry(target, issue, repo, flags.dryRun, where, config);
 }
 
-function cmdClose(bklgArg, { repo }, flags) {
+function cmdClose(bklgArg, { repo, config }, flags) {
   console.log(`close-issue ${bklgArg} → ${repo}  (${flags.dryRun ? "DRY-RUN" : "EXECUTE"})`);
-  const listed = listBacklogIssues(repo);
+  const listed = listBacklogIssues(repo, config);
   if (!listed.ok) {
     warn(`could not list issues: ${listed.error} (fail-soft)`);
     return;
@@ -496,8 +567,7 @@ function cmdClose(bklgArg, { repo }, flags) {
   }
   console.log(`  x CLOSE #${issue.number} "${issue.title}"`);
   if (flags.dryRun) return;
-  const comment = `Resolved via the \`backlog\` skill — moved to BACKLOG-HISTORY.md.`;
-  const r = runGh(["issue", "close", String(issue.number), "--repo", repo, "--comment", comment]);
+  const r = runGh(["issue", "close", String(issue.number), "--repo", repo, "--comment", closeCommentFor(config)]);
   if (!r.ok) warn(`close #${issue.number} failed: ${r.error}`);
 }
 
@@ -506,7 +576,7 @@ function cmdSyncAll({ repo, where, root, backlogPath, historyPath, config }, fla
   const backlogMd = readFileSafe(backlogPath);
   const historyMd = readFileSafe(historyPath);
   const entries = parseOpenEntries(backlogMd, config);
-  const listed = listBacklogIssues(repo);
+  const listed = listBacklogIssues(repo, config);
   if (!listed.ok) {
     warn(`could not list issues: ${listed.error}`);
     warn("fail-soft: nothing changed. Ensure `gh auth login` (or GH_TOKEN) can reach " + repo + ".");
@@ -514,13 +584,13 @@ function cmdSyncAll({ repo, where, root, backlogPath, historyPath, config }, fla
     return;
   }
   const issues = listed.issues;
-  ensureAllLabels(repo, flags.dryRun);
+  ensureAllLabels(repo, flags.dryRun, config);
 
   // ---- file → GitHub: every Open entry gets a matching, correctly-labelled issue.
   console.log("File → GitHub (Open entries):");
   for (const entry of entries) {
     const issue = issues.find((i) => i.bklg === entry.idStr);
-    upsertEntry(entry, issue, repo, flags.dryRun, where);
+    upsertEntry(entry, issue, repo, flags.dryRun, where, config);
   }
 
   // ---- GitHub → file: surface what a collaborator changed on the issue side.
@@ -536,7 +606,7 @@ function cmdSyncAll({ repo, where, root, backlogPath, historyPath, config }, fla
   for (const i of orphans) {
     const newId = formatBklgId(adoptCounter++);
     console.log(`  ⬇ ADOPT issue #${i.number} "${i.title}" → ${newId} (add BKLG entry + retitle issue)`);
-    warn(`adoption writes a new ## Open entry — do it via \`backlog\` so the doc folder is created too.`);
+    warn(`adoption writes a new ## ${config.words.open} entry — do it via \`backlog\` so the doc folder is created too.`);
   }
   if (!orphans.length) console.log("  (no un-adopted backlog issues)");
 

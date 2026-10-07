@@ -125,3 +125,11 @@ test("open entries: only under ## Open, with titles and wrapped values", () => {
   assert.equal(entries[0].fields.Summary, "first line and its continuation");
   assert.deepEqual(openEntries("# no open section\n## BKLG-001 — x\n"), []);
 });
+
+test("open entries: the section is the project's `words.open`", () => {
+  const text = "# Registro\n\n## Aperte\n\n### BKLG-003 — Tre\n- **Status**: open\n\n## Chiuse\n- old\n";
+  const config = parseConfig(JSON.stringify({ words: { open: "Aperte" } }));
+  assert.deepEqual(openEntries(text, config).map((e) => e.id), ["BKLG-003"]);
+  // Control: under the default word the same register has no open section.
+  assert.deepEqual(openEntries(text), []);
+});
