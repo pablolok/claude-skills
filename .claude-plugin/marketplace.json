@@ -123,8 +123,8 @@
     {
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
-      "description": "Review planned work before implementation to identify reuse opportunities, existing abstractions, duplication risks, and the right reusable boundary.",
-      "version": "1.0.6",
+      "description": "Before writing code, decide the right design — responsibilities, the pattern for each, ownership and seams, what is stored only if it can't be derived; reuse and low duplication follow from it.",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [

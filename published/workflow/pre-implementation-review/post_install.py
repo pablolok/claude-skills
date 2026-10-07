@@ -14,7 +14,7 @@ INSERT_BEFORE = "3. **Write Failing Tests (Red Phase):**"
 NEW_STEP = """
 3. **Run Pre-Implementation Review:**
    - Invoke the `pre-implementation-review` skill before writing tests, code, or scaffolding files for the selected task.
-   - Use the review to identify reuse opportunities, extension points, shared styling primitives, validators, mappers, enum boundaries, or other abstractions that should be decided before implementation.
+   - Use the review to decide the task's responsibilities, the pattern and owner of each, and its seams; reuse, extension points, shared styling primitives, validators, mappers and enum boundaries follow from that design.
    - If the review changes the implementation boundary or reveals reusable work that should be tracked explicitly, update the current phase tasks in `plan.md` before continuing.
    - The adjusted tasks must reflect the chosen abstraction, ownership boundary, and any additional tests or consumer updates implied by that decision.
 """

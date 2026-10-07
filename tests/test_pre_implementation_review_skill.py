@@ -63,7 +63,7 @@ class TestPreImplementationReviewSkill(unittest.TestCase):
         skill_path = os.path.join("skills", "pre-implementation-review", "SKILL.md")
 
         with open(skill_path, "r", encoding="utf-8") as handle:
-            content = handle.read()
+            content = " ".join(handle.read().split())   # a rule wrapped across lines is still the rule
 
         self.assertIn("semantic string literals", content)
         self.assertIn("shared constants, resource keys, typed wrappers, or configuration inputs", content)
