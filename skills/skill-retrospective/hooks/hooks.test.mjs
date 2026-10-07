@@ -1,4 +1,4 @@
-// node --test skills/skill-retrospective/hooks/
+// node --test skills/skill-retrospective/hooks/hooks.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -6,7 +6,9 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { archivedFolders, retroText, stopReason, DEFAULT_COMMITS } from "./retrospective-hint.mjs";
+import {
+  archiveDirs, archivedFolders, retroText, stopReason, ARCHIVE_ENV, DEFAULT_ARCHIVE_DIRS, DEFAULT_COMMITS,
+} from "./retrospective-hint.mjs";
 import { isNew, skillName } from "./log-skill-use.mjs";
 import { projectRoot, stateDir } from "./state.mjs";
 
@@ -46,6 +48,23 @@ test("only a file moved INTO the archive counts, once per folder", () => {
   assert.equal(archivedFolders("docs/architecture/x.md").size, 0);
 });
 
+test("the archive folders come from SKILL_RETRO_ARCHIVE_DIRS, normalized, with the default when unset", () => {
+  assert.deepEqual(archiveDirs({}), DEFAULT_ARCHIVE_DIRS);
+  assert.deepEqual(archiveDirs({ [ARCHIVE_ENV]: " , " }), DEFAULT_ARCHIVE_DIRS);
+  assert.deepEqual(archiveDirs({ [ARCHIVE_ENV]: "Tasks\\archive\\, /old/done/" }), ["Tasks/archive", "old/done"]);
+});
+
+test("a configured archive folder counts its first-level folders, and only those", () => {
+  const out = [
+    "Tasks/archive/bugs/EU-1-x/TASK.md",
+    "Tasks/archive/epics/EU-2/bugs/EU-3-y/TASK.md",
+    "Tasks/archive/README.md",
+    "docs/implementations/archive/old-bug/plan.md",
+  ].join("\n");
+  assert.deepEqual([...archivedFolders(out, ["Tasks/archive"])].sort(), ["bugs", "epics"]);
+  assert.equal(archivedFolders(out, ["Tasks/archived"]).size, 0);
+});
+
 test("the skill log keeps each name once and drops plugin prefixes", () => {
   assert.equal(skillName({ skill: "superpowers:brainstorming" }), "brainstorming");
   assert.equal(skillName(undefined), "");
@@ -71,10 +90,10 @@ test("the state folder keeps itself out of git", () => {
   assert.equal(readFileSync(join(dir, ".gitignore"), "utf8"), "*\n");
 });
 
-function run(hook, payload, root) {
+function run(hook, payload, root, extraEnv = {}) {
   try {
     const stdout = execFileSync("node", [join(HOOKS, hook)], {
-      input: JSON.stringify(payload), env: { ...process.env, CLAUDE_PROJECT_DIR: root }, encoding: "utf8",
+      input: JSON.stringify(payload), env: { ...process.env, CLAUDE_PROJECT_DIR: root, ...extraEnv }, encoding: "utf8",
     });
     return stdout;
   } catch (error) {
@@ -108,6 +127,28 @@ test("end to end: logged skills, a silent first stop, a held stop after an archi
   assert.match(held.reason, /skill-retrospective skill on: backlog/);
 
   assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop", stop_hook_active: true }, root), "");
+});
+
+test("end to end: an archive under SKILL_RETRO_ARCHIVE_DIRS holds the stop, the default folder alone does not", () => {
+  const root = mkdtempSync(join(tmpdir(), "retro-cfg-"));
+  const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  mkdirSync(join(root, "Tasks/bugs/EU-1-x"), { recursive: true });
+  writeFileSync(join(root, "Tasks/bugs/EU-1-x/TASK.md"), "a\n");
+  git("add", "-A");
+  git("commit", "-qm", "init");
+  const cfg = { [ARCHIVE_ENV]: "Tasks/archive" };
+  assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root, cfg), "");
+
+  mkdirSync(join(root, "Tasks/archive/bugs"), { recursive: true });
+  git("mv", "Tasks/bugs/EU-1-x", "Tasks/archive/bugs/EU-1-x");
+  git("commit", "-qm", "archive");
+  assert.equal(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root), "");
+  const held = JSON.parse(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, root, cfg));
+  assert.equal(held.decision, "block");
+  assert.match(held.reason, /1 backlog entry was archived/);
 });
 
 test("outside a git repository the stop hook stays silent (fail-open)", () => {

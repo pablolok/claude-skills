@@ -94,6 +94,10 @@ class TestLocalSettingsWarning(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as project:
             subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+            # a developer's global excludes file may already ignore settings.local.json
+            empty_excludes = os.path.join(project, ".git", "no-global-excludes")
+            open(empty_excludes, "w", encoding="utf-8").close()
+            subprocess.run(["git", "config", "core.excludesFile", empty_excludes], cwd=project, check=True)
             self.assertTrue(post_install._tracked_by_git(project, wiring.SETTINGS))  # pylint: disable=protected-access
             with open(os.path.join(project, ".gitignore"), "w", encoding="utf-8") as handle:
                 handle.write(".claude/settings.local.json\n")
@@ -106,7 +110,9 @@ class TestLocalSettingsWarning(unittest.TestCase):
 class TestNodeHooks(unittest.TestCase):
     def test_node_hook_suite_passes(self) -> None:
         result = subprocess.run(
-            ["node", "--test", str(SOURCE / "hooks")], capture_output=True, text=True, check=False
+            # the file, not the folder: recent Node versions do not accept a folder argument
+            ["node", "--test", str(SOURCE / "hooks" / "hooks.test.mjs")],
+            capture_output=True, text=True, encoding="utf-8", check=False
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
