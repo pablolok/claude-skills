@@ -1,0 +1,5 @@
+{
+  "name": "writing-architecture-docs",
+  "version": "1.0.0",
+  "description": "Usala quando un lavoro va progettato prima di essere scritto \u2014 una feature grossa, un rifacimento, un difetto che attraversa piu' livelli, un lavoro in piu' fasi \u2014 o quando la domanda e' \u00abcom'e' fatto oggi\u00bb, \u00abche forma deve avere\u00bb, \u00abperche' cosi' e non altrimenti\u00bb. Vale per qualsiasi progetto e qualsiasi linguaggio. La meccanica dei diagrammi NON e' qui: sta nella skill mermaid-diagrams."
+}

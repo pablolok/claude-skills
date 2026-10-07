@@ -16,6 +16,8 @@ cloud session too.
 | **[C# / OOP Standards](./skills/csharp-oop-standards/)** | The C#/.NET layer on top of Clean-Code Standards: idioms, tooling and the coverage bar; the persistence stack is opt-in per project. |
 | **[TypeScript / React Standards](./skills/typescript-react-standards/)** | The TypeScript, React and Node/Deno layer on top of Clean-Code Standards: idioms, tooling and the coverage bar; the data-layer stack is opt-in per project. |
 | **[Verification Gates](./skills/verification-gates/)** | Before handing work back: the required gates (tests, builds, compilers, linters, static analysis) are green on real evidence and nothing was silently removed. |
+| **[Writing Architecture Docs](./skills/writing-architecture-docs/)** | The design doc of a piece of work and the stable "how it is now" doc of an area: three questions, the skeleton, nine rules, one diagram per question (Italian). |
+| **[Mermaid Diagrams](./skills/mermaid-diagrams/)** | Mermaid diagrams that really render in the VS Code preview and on GitHub: when to pre-render to SVG, a validator and a renderer behind one stable project command (`node scripts/mermaid.mjs check` / `render`), the dead ends (Italian). |
 
 ## Install
 

@@ -24,6 +24,12 @@
     },
     "verification-gates": {
       "category": "workflow"
+    },
+    "writing-architecture-docs": {
+      "category": "workflow"
+    },
+    "mermaid-diagrams": {
+      "category": "workflow"
     }
   }
 }

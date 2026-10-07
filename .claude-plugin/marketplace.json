@@ -41,6 +41,17 @@
       ]
     },
     {
+      "name": "mermaid-diagrams",
+      "source": "./published/workflow/mermaid-diagrams",
+      "description": "Diagrammi mermaid nei documenti markdown di QUALSIASI progetto, in modo che RENDANO davvero nella preview di VSCode e su GitHub. Usala prima di aggiungere o modificare un diagramma in docs/ — livelli, architettura, UML, sequence. Porta la regola su quando pre-renderizzare in SVG, i due script (validatore e renderer), il meccanismo per cui la preview lascia riquadri vuoti senza dare errore, e i vicoli ciechi già verificati da non ripercorrere. LIVING DOC — ogni scoperta nuova si aggiunge qui.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Before writing code, decide the right design — responsibilities, the pattern for each, ownership and seams, what is stored only if it can't be derived; reuse and low duplication follow from it.",
@@ -113,6 +124,17 @@
       "name": "verification-gates",
       "source": "./published/workflow/verification-gates",
       "description": "Use before declaring code work done / handing it back — verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "writing-architecture-docs",
+      "source": "./published/workflow/writing-architecture-docs",
+      "description": "Usala quando un lavoro va progettato prima di essere scritto — una feature grossa, un rifacimento, un difetto che attraversa piu' livelli, un lavoro in piu' fasi — o quando la domanda e' «com'e' fatto oggi», «che forma deve avere», «perche' cosi' e non altrimenti». Vale per qualsiasi progetto e qualsiasi linguaggio. La meccanica dei diagrammi NON e' qui: sta nella skill mermaid-diagrams.",
       "version": "1.0.0",
       "category": "workflow",
       "strict": false,
