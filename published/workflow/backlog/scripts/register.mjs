@@ -35,7 +35,9 @@ export function closedLines(text) {
   for (const l of text.split(/\r?\n/)) {
     const line = CLOSED_LINE.exec(l);
     if (line) {
-      const phase = line[2].trim();
+      // After the id, inside the bold: a PHASE (`F1`, `T6`) — or the entry's TITLE (`— Title`), which closes it whole.
+      const rest = line[2].trim();
+      const phase = /^[—–-]/.test(rest) ? "" : rest;
       found.push({ id: line[1], phase, label: phase ? `${line[1]} ${phase}` : line[1], text: l });
       continue;
     }

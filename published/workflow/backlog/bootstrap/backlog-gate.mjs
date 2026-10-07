@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 
 /** The skill and the version this project uses: change it here to upgrade. */
 const SKILL = "backlog";
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 const REPO_URL = "https://github.com/pablolok/claude-skills.git";
 const PUBLISHED_PATH = "published/workflow/backlog";
 
@@ -55,7 +55,7 @@ function skillDir(root) {
   const clone = path.join(cache, tag);
   if (!existsSync(path.join(clone, PUBLISHED_PATH, "scripts"))) {
     mkdirSync(cache, { recursive: true });
-    const r = spawnSync("git", ["clone", "-q", "--depth", "1", "--branch", tag, REPO_URL, clone], { stdio: "inherit" });
+    const r = spawnSync("git", ["-c", "advice.detachedHead=false", "clone", "-q", "--depth", "1", "--branch", tag, REPO_URL, clone], { stdio: "inherit" });
     if (r.status !== 0) {
       console.error(`backlog-gate: could not fetch ${tag} from ${REPO_URL} (offline? set BACKLOG_SKILL_DIR).`);
       process.exit(2);

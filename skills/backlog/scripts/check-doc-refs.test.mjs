@@ -48,6 +48,12 @@ test("a broken relative link is found — and a good one is not", () => {
   });
 });
 
+test("· a link with any URI scheme is not a file of the repo", () => {
+  onTree({ "docs/guide.md": "[web](https://x.dev) [mail](mailto:a@b.c) [memory](mem://features/goals) [gone](../nowhere.md)\n" }, (outcome) => {
+    assert.deepEqual(refs(outcome), ["../nowhere.md"]);
+  });
+});
+
 test("· a link to a folder resolves", () => {
   onTree({ "src/app/Real.cs": "x\n", "docs/guide.md": "[scripts](../src/app)\n" }, (outcome) => {
     assert.deepEqual(outcome.broken, []);

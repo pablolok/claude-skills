@@ -133,7 +133,8 @@ export function findBrokenRefs(root = process.cwd(), { config = DEFAULTS, except
 
       for (const m of insideFence || !live ? [] : withoutCode.matchAll(LINK)) {
         const raw = m[1];
-        if (/^(https?:|mailto:|#)/.test(raw)) continue;
+        // Any URI scheme (http:, mailto:, a tool's own like mem:) or an anchor is not a file of the repo.
+        if (/^([a-z][a-z0-9+.-]*:|#)/i.test(raw)) continue;
         examined.link++;
         let decoded = raw.split("#")[0];
         try { decoded = decodeURIComponent(decoded); } catch { /* keep raw */ }

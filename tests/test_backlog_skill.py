@@ -115,6 +115,19 @@ class TestGatesOnAProject(unittest.TestCase):
         self.assertIn('unknown key "docDir"', result.stderr)
 
 
+class TestBootstrap(unittest.TestCase):
+    def test_the_bootstrap_pins_the_version_it_ships_with(self) -> None:
+        # A project copies the bootstrap at a release: it must pin that release, not an older one.
+        import json  # pylint: disable=import-outside-toplevel
+        import re  # pylint: disable=import-outside-toplevel
+
+        version = json.loads((SOURCE / "metadata.json").read_text(encoding="utf-8"))["version"]
+        text = (SOURCE / "bootstrap" / "backlog-gate.mjs").read_text(encoding="utf-8")
+        pinned = re.search(r'^const VERSION = "([^"]+)";', text, re.M)
+        self.assertIsNotNone(pinned)
+        self.assertEqual(pinned.group(1), version, "bump VERSION in bootstrap/backlog-gate.mjs with the release")
+
+
 @unittest.skipUnless(shutil.which("node"), "node is not installed")
 class TestNodeSuite(unittest.TestCase):
     def test_node_suite_passes(self) -> None:
