@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This repository is the source of the developer's Claude Code skills and the plugin marketplace `pablolok-skills`
+This repository is the source of a set of Claude Code skills and the plugin marketplace `pablolok-skills`
 that ships them: every published skill is a plugin of its own.
 
 ## Layout
@@ -28,19 +28,11 @@ A plugin skill is named `<plugin>:<skill>` inside a session (e.g. `backlog:backl
 
 ## Publishing
 
-For a request to `publish`, `sync` or `republish` a skill, follow `skills/skill-publisher/SKILL.md`; never edit
-`published/` or the marketplace by hand.
-
-1. `python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|major>` — bumps
-   `metadata.json`, adds the summary to `CHANGELOG.md`, copies the skill to `published/`, regenerates the marketplace.
-2. `python -m unittest discover -s tests -p "test_*.py"`
-3. `claude plugin validate .` (and `python build_marketplace.py --check`)
-4. Commit (`feat(<skill>): <version> — <what changed>`, or `fix(...)`, `docs(...)`, `chore(...)`).
-5. `python tag_published.py` tags `<skill>@<version>` for every published version not yet tagged (`--push` pushes
-   every published version's tag that origin lacks, including ones an earlier run created without it) — projects that run a skill's scripts from CI or git hooks pin it by that tag.
-
-A new skill is registered in `install.config.json` and gets its test file in the same change. A skill's text never
-links to another skill's folder (`../other/SKILL.md`): a plugin holds one skill alone, so it names the other skill.
+Any change to a skill — an edit, a new skill, a lesson from `skill-retrospective` — follows
+`skills/skill-publisher/SKILL.md` end to end: edit the source (generic, English, description ≤ 500 characters),
+`automate_publish.py`, the suite and the checks, commit, push, `tag_published.py --push`, then roll it out
+(`claude plugin update`, a restart, the projects' launchers). Never edit `published/`, the marketplace or an installed
+copy by hand.
 
 ## Skill Retrospective On This Repo
 

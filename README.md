@@ -58,13 +58,15 @@ publish flow; `.claude-plugin/marketplace.json` is generated from `install.confi
 ```bash
 python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|major>
 python -m unittest discover -s tests -p "test_*.py"
+python build_marketplace.py --check
 claude plugin validate .
-git commit ...
-python tag_published.py          # tags <skill>@<version>; --push pushes every tag origin lacks
+git commit ... && git push origin HEAD
+python tag_published.py --push   # tags <skill>@<version>, pushes every tag origin lacks
 ```
 
 Projects that run a skill's scripts outside Claude Code (CI, git hooks) pin the skill by its `<skill>@<version>`
-tag. The details are in [skills/skill-publisher](./skills/skill-publisher/SKILL.md).
+tag. The whole path — the rules a skill must meet, a new skill, the roll-out to machines, claude.ai and projects —
+is in [skills/skill-publisher](./skills/skill-publisher/SKILL.md).
 
 ---
 Created by [pablolok](https://github.com/pablolok)

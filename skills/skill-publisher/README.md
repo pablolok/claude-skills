@@ -1,23 +1,13 @@
 # Skill Publisher
 
-Automate the synchronization between development `skills/` and official `published/` directories.
+This repository's own skill: the whole path of a skill change, from the source in `skills/<skill>/` to the plugin
+updated where it is used. It is not published as a plugin — it only makes sense inside this repository.
 
-## Usage
+| Step | What happens |
+| :--- | :--- |
+| Edit | the source in `skills/<skill>/`, generic and in English, description ≤ 500 characters, launchers' `VERSION` bumped |
+| Publish | `automate_publish.py` bumps the version, writes the changelog, copies to `published/`, rebuilds the marketplace; the suite, `build_marketplace.py --check` and `claude plugin validate .` must pass |
+| Commit, tag, push | the commit pushed to `main` (the marketplace is read from there), then `tag_published.py --push` |
+| Roll out | `claude plugin update` on each machine (a session sees it after a restart), claude.ai syncs from GitHub, projects move their copied launchers when they should |
 
-### Publish a Skill
-Use the `automate_publish.py` script from the repository root:
-
-```bash
-python automate_publish.py <skill-name> <category> "<summary>"
-```
-
-**Options:**
-- `--bump`: `major`, `minor`, or `patch` (default: `patch`).
-- `category`: the skill's folder under `published/`, the same as its `category` in `install.config.json`
-  (`workflow` for every skill today).
-
-## Automated Checklist
-1. Bumps version in `skills/<skill-name>/metadata.json`.
-2. Adds entry to `skills/<skill-name>/CHANGELOG.md`.
-3. Copies all files to `published/<category>/<skill-name>`.
-4. Regenerates the plugin marketplace (`.claude-plugin/marketplace.json`).
+The steps, the rules each one checks and the environment variables are in `SKILL.md`.
