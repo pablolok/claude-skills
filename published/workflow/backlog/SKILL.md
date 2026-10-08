@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Manage a project's tracked work in BACKLOG.md — add, list, process and close fixes, features and ideas; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates and a GitHub Issues mirror. Trigger on "/backlog", "add to backlog", "metti nel backlog", "fix this later", "what's in the backlog", "close BKLG-NNN", or before creating a features/bugs/diagnostic/analysis folder.
+description: Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on "/backlog", "add to backlog", "metti nel backlog", "what's in the backlog", "backlog dashboard", "close BKLG-NNN", or before creating a features/bugs/diagnostic/analysis folder.
 ---
 
 # Backlog
@@ -223,6 +223,14 @@ in another language declares them in **.claude/backlog.json** (`fieldNames`, `wo
 
 The Open entries as a compact table: id · priority · status word · title · the project's key fields. The count,
 the highest-priority item, anything in a pending ledger. Full entries only when asked (`/backlog show BKLG-NNN`).
+
+## dashboard
+
+A local, read-only page of the register: progress, what is in progress (phases, last commit), what comes next, the
+pending ledgers, recent activity, and every document of the project readable and linked. Start it **in the
+background** — `node <skill>/scripts/dashboard.mjs` (in a project with the launcher: `node scripts/backlog-gate.mjs
+dashboard`); `--port N`, `--no-open` — and give the user the URL it prints. It rebuilds from the register and git
+on every refresh: nothing to update by hand. Its "next" is a hint; the move is `review-backlog`'s.
 
 ## process BKLG-NNN (implement the real fix)
 

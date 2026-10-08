@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0] - 2026-10-09
+- A local dashboard (dashboard.mjs): progress, the entries in progress with their phases and last commit, what comes next, the pending ledgers, recent activity, and every document readable and linked - rebuilt from the register and git on each refresh. canonicalField: the one reading of Status/Priority in the project's words.
+
+
 ## [1.3.1] - 2026-10-07
 - Dead code removed: leadingKeyword, PRIORITY_LABELS and STATUS_LABELS, which nothing called since the labels follow the project's words. Bootstrap VERSION 1.3.1.
 

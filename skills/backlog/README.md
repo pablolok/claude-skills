@@ -17,6 +17,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | `scripts/related-docs.mjs` | Not a gate (always exit 0): the live docs that cite the entry being worked on or name a file a change touched — a post-commit hook's job. |
 | `scripts/next-id.mjs` | Not a gate: prints the next entry id — the highest one the backlog folder's documents mention (registers, activity folders, archive; nothing outside it), + 1. |
 | `scripts/backlog-github-sync.mjs` | The GitHub Issues mirror (`upsert-issue`, `close-issue`, `sync-all`; dry-run unless `--execute`). |
+| `scripts/dashboard.mjs` | Not a gate: the local dashboard (see [Dashboard](#dashboard)). Its pieces: `dashboard-board.mjs` (the board, pure), `dashboard-activity.mjs` (commits → entries), `dashboard-docs.mjs` (the documents tree and the path guard), `dashboard-server.mjs` (HTTP), `dashboard-ui/` (the page). |
 | `scripts/project.mjs`, `scripts/register.mjs`, `scripts/docIndex.mjs` | The project root and its config; what an entry looks like in the two registers; the shared reference vocabulary. |
 | `scripts/*.test.mjs` | The scripts' tests (`node --test`). |
 | `bootstrap/backlog-gate.mjs` | Copied into a project (not run from the skill): runs a gate from CI, git hooks or package scripts, fetching this skill once at the version it pins. |
@@ -160,6 +161,37 @@ node scripts/backlog-gate.mjs check-doc-refs
 node scripts/backlog-gate.mjs backlog-anchor --all
 node scripts/backlog-gate.mjs related-docs HEAD     # in a post-commit hook, with `|| true`
 ```
+
+## Dashboard
+
+```bash
+node scripts/backlog-gate.mjs dashboard            # in a project with the launcher
+node <skill>/scripts/dashboard.mjs [--port N] [--no-open]
+```
+
+A page on `http://127.0.0.1:4317/` (a free port if that one is taken; loopback only, read-only). Every refresh
+rebuilds it from the register and `git log` — nothing is stored, nothing to keep in sync. It needs only Node; the
+page loads `marked` and `DOMPurify` from jsDelivr to render markdown (offline, documents show as plain text).
+
+- **Overview** — entries closed over all, phases done over all phases (dropped ones left out), in progress, not
+  started, blocked, pending checks; the entries in progress (their Status note, phase bar, current phase, last
+  commit), what comes next, the pending ledgers, recent commits, recent closes.
+- **Entries** — every open entry, searchable, filtered by status and priority, grouped by any field the register has.
+- **An entry** — its card rendered, its phases, its docs, what it waits on / unblocks / cites / is cited by, the
+  commits naming it.
+- **Documents** — every markdown file git keeps, grouped (register, work docs, architecture, archive, the rest);
+  relative links and images resolve, entry ids link to their entry, a doc lists the entries that link it.
+- **Activity** — the recent commits with the entries they name, and the closed lines.
+
+What it reads, and how:
+
+| shown | read from |
+|---|---|
+| status, priority | the entry's fields, in the project's words (`github.statusWords`, `github.priorityWords`) |
+| phases | phase-table rows (`**P1** …` with a state cell opening with ✅ ⏳ 🔨 ⛔ 📋) in the card and in its own docs (not `archive/`) |
+| waits on / unblocks | the ids a `blocked` Status cites |
+| last touched | the newest commit whose **subject** names the id (an id only in the body is a mention) |
+| next | not started, not blocked: what blocked entries wait on first, then priority, then the oldest `Added` — a hint; being cited is shown, not ranked (a tracker is cited by all it gathers) |
 
 ## Tests
 

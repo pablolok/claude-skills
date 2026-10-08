@@ -143,6 +143,20 @@ function wordsOf(dimension, config) {
 }
 
 /**
+ * An entry's canonical Status or Priority (`in-progress`, `high`), read in the project's words; null when its value
+ * opens with none of them. The one reading of those two fields for every consumer (the labels, the dashboard).
+ * @param {Record<string,string>} fields
+ * @param {"Status"|"Priority"} field
+ * @param {object} [config]
+ * @returns {string|null}
+ */
+export function canonicalField(fields, field, config = DEFAULTS) {
+  const dimension = DIMENSIONS.find((d) => d.field === field);
+  if (!dimension) throw new Error(`canonicalField: "${field}" is not one of ${DIMENSIONS.map((d) => d.field).join(", ")}`);
+  return canonicalValue(fields[field], wordsOf(dimension, config));
+}
+
+/**
  * The canonical value a field's value opens with: one of `words` as a whole word at its start (a value carries a note
  * after it — `in-progress — step 2`, `alta oggi`), longest first so `in corso` wins over `in`. A leading emoji or
  * mark (`📋 aperta`) is not part of the word. Null when none matches.
