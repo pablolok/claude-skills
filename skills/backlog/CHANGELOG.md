@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.0] - 2026-10-09
+- The plugin is a mod: /backlog-dashboard opens the dashboard in a Claude Code pane (overview, in progress, next, to verify, documents, activity; keys 1-6, Enter, b, r, Esc), drawn from dashboard.mjs --json; documents read in the pane with their links. Its own .claude-plugin/plugin.json and hooks/hooks.json, so its marketplace entry is strict (plugin-entry.json).
+
+
 ## [1.4.0] - 2026-10-09
 - A local dashboard (dashboard.mjs): progress, the entries in progress with their phases and last commit, what comes next, the pending ledgers, recent activity, and every document readable and linked - rebuilt from the register and git on each refresh. canonicalField: the one reading of Status/Priority in the project's words.
 

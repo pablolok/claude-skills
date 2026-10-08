@@ -79,30 +79,44 @@ function openBrowser(url) {
   }
 }
 
-/** `--port N`, `--no-open`. */
+const USAGE = "usage: dashboard.mjs [--port N] [--no-open] | --json [--root DIR]";
+
+/** `--port N`, `--no-open`; or `--json` (print the board and the documents tree once, for the mod), `--root DIR`. */
 export function parseArgs(argv) {
-  const options = { port: DEFAULT_PORT, open: true };
+  const options = { port: DEFAULT_PORT, open: true, json: false, root: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--no-open") options.open = false;
-    else if (argv[i] === "--port") {
+    else if (argv[i] === "--json") options.json = true;
+    else if (argv[i] === "--root") {
+      options.root = argv[++i];
+      if (!options.root) throw new Error(`--root needs a folder (${USAGE})`);
+    } else if (argv[i] === "--port") {
       const port = Number(argv[++i]);
       if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`--port: "${argv[i]}" is not a port`);
       options.port = port;
-    } else throw new Error(`unknown option "${argv[i]}" (usage: dashboard.mjs [--port N] [--no-open])`);
+    } else throw new Error(`unknown option "${argv[i]}" (${USAGE})`);
   }
   return options;
 }
 
+/** The documents tree of the project. */
+const readTree = ({ root, config }) => docTree(allFiles(root, config), config);
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const where = project();
+  const where = project(options.root ? { ...process.env, CLAUDE_PROJECT_DIR: options.root } : process.env);
   if (!existsSync(path.join(where.root, where.backlog))) {
     console.error(`dashboard: no register at ${where.backlog} under ${where.root}`);
     process.exit(2);
   }
+  if (options.json) {
+    // One snapshot on stdout: the mod draws it in Claude Code's pane (hooks/backlog-mod.js).
+    process.stdout.write(JSON.stringify({ root: where.root, board: readBoard(where), tree: readTree(where) }));
+    return;
+  }
   const handler = createHandler({
     board: () => readBoard(where),
-    tree: () => docTree(allFiles(where.root, where.config), where.config),
+    tree: () => readTree(where),
     readFile: (rel) => readServable(where.root, rel),
     uiDir: UI_DIR,
   });

@@ -22,6 +22,14 @@ below. A change is done when the plugin users get has it — not when the source
 - **No link to another skill's folder** (`../other/SKILL.md`): a plugin holds one skill alone, so name the skill.
 - **Hooks or commands** a skill needs as a plugin are declared in its own `plugin-entry.json` (paths through
   `${CLAUDE_PLUGIN_ROOT}`); a hook finds the project through `CLAUDE_PROJECT_DIR`, never through its own folder.
+- **A mod** (a plugin with a hooks module that draws panes or adds commands) keeps its `.claude-plugin/plugin.json`
+  (the name only) and `hooks/hooks.json` (`"modules": [...]`) in the skill, and declares `{"strict": true}` in
+  `plugin-entry.json`: under the default `strict: false` Claude Code refuses it at install ("conflicting manifests"),
+  and a marketplace entry cannot carry `modules`. Check it installed, not only validated: a scratch local marketplace
+  holding the published folder, `claude plugin install … --scope project` in a scratch repo, `claude plugin list
+  --json` shows no `errors`, and its command answers under `claude -p` (from PowerShell: Git Bash turns `/name` into a
+  path). Develop it with `claude --plugin-dir`; the `.claude-plugin/types/` and `tsconfig.json` Claude Code writes
+  there are git-ignored and `automate_publish.py` skips them.
 - **A launcher** a project copies (`bootstrap/<name>.mjs`, e.g. backlog's `backlog-gate.mjs`, mermaid's `mermaid.mjs`)
   pins the skill's version in its `VERSION` line: bump it to the new version in the same change (a test checks).
 

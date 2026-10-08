@@ -37,7 +37,9 @@ DESCRIPTION = "pablolok's Claude Code skills — one plugin per skill."
 MAX_DESCRIPTION = 500
 
 #: The plugin-entry fields a skill may declare for itself; their paths are relative to the skill's folder.
-ENTRY_FIELDS = ("hooks", "commands", "agents")
+#: `strict: true` is for a skill that ships its own `.claude-plugin/plugin.json` — a mod, whose `hooks/hooks.json` names
+#: its hooks module: under `strict: false` Claude Code refuses the plugin ("conflicting manifests").
+ENTRY_FIELDS = ("hooks", "commands", "agents", "strict")
 
 
 class MarketplaceError(Exception):
@@ -76,6 +78,8 @@ def plugin_entry(repo: pathlib.Path, name: str, category: str) -> typing.Dict[st
         unknown = sorted(set(declared) - set(ENTRY_FIELDS))
         if unknown:
             raise MarketplaceError(f"{name}/{PLUGIN_ENTRY}: unknown field(s) {unknown} (allowed: {list(ENTRY_FIELDS)})")
+        if "strict" in declared and not isinstance(declared["strict"], bool):
+            raise MarketplaceError(f"{name}/{PLUGIN_ENTRY}: \"strict\" is true or false, not {declared['strict']!r}")
         entry.update(declared)
     return entry
 

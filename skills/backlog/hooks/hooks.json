@@ -1,0 +1,4 @@
+{
+  "description": "The backlog mod: /backlog-dashboard opens the register's dashboard in a Claude Code pane",
+  "modules": ["./backlog-mod.js"]
+}

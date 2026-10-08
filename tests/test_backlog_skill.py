@@ -132,5 +132,29 @@ class TestNodeSuite(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
+@unittest.skipUnless(shutil.which("claude"), "the Claude Code CLI runs a mod's checks and tests")
+class TestMod(unittest.TestCase):
+    """The published plugin is a mod: Claude Code reads its hooks module, and the mod's own tests pass."""
+
+    def _claude(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["claude", "plugin", *args], cwd=PUBLISHED, capture_output=True, text=True,
+                              encoding="utf-8", check=False)
+
+    def test_the_mod_validates_and_registers_its_command(self) -> None:
+        result = self._claude("validate", ".")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("command.run{command=backlog-dashboard}", result.stdout)
+        self.assertNotIn("without .catch", result.stdout)
+
+    def test_the_mod_tests_pass(self) -> None:
+        result = self._claude("test")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout + result.stderr, r"\b[1-9]\d* pass")
+
+    def test_nothing_claude_code_generates_is_published(self) -> None:
+        self.assertFalse((PUBLISHED / ".claude-plugin" / "types").exists(), "automate_publish skips the generated types")
+        self.assertFalse((PUBLISHED / "tsconfig.json").exists(), "automate_publish skips the generated tsconfig")
+
+
 if __name__ == "__main__":
     unittest.main()

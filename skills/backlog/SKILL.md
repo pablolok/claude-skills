@@ -226,11 +226,17 @@ the highest-priority item, anything in a pending ledger. Full entries only when 
 
 ## dashboard
 
-A local, read-only page of the register: progress, what is in progress (phases, last commit), what comes next, the
-pending ledgers, recent activity, and every document of the project readable and linked. Start it **in the
-background** — `node <skill>/scripts/dashboard.mjs` (in a project with the launcher: `node scripts/backlog-gate.mjs
-dashboard`); `--port N`, `--no-open` — and give the user the URL it prints. It rebuilds from the register and git
-on every refresh: nothing to update by hand. Its "next" is a hint; the move is `review-backlog`'s.
+The register's progress, what is in progress (phases, last commit), what comes next, the pending ledgers, recent
+activity, and every document of the project readable and linked — read-only, rebuilt from the register and git each
+time. Two ways to open it:
+
+- **In Claude Code** (the plugin is a mod): the user types **`/backlog-dashboard`**; a pane opens in the session,
+  driven by keys (1–6 views, Enter opens a row, `b` back, `r` refresh, Esc closes). Claude cannot open it: tell the
+  user the command.
+- **In a browser**: start `node <skill>/scripts/dashboard.mjs` **in the background** (in a project with the launcher:
+  `node scripts/backlog-gate.mjs dashboard`; `--port N`, `--no-open`) and give the user the URL it prints.
+
+Its "next" is a hint; the move is `review-backlog`'s.
 
 ## process BKLG-NNN (implement the real fix)
 

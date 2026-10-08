@@ -9,8 +9,26 @@ import os
 import pathlib
 import shutil
 import sys
+import typing
 
 import build_marketplace
+
+#: Files Claude Code writes into a mod's folder each time it loads it from source (`--plugin-dir`): the type
+#: declarations for the running version, and a tsconfig that extends them. Derived, machine-specific, never published.
+PLUGIN_FOLDER = ".claude-plugin"
+GENERATED_TYPES = "types"
+GENERATED_TSCONFIG = "tsconfig.json"
+
+
+def _skip_generated(folder: str, names: typing.List[str]) -> typing.Set[str]:
+    """The generated files among a folder's entries: the types inside `.claude-plugin`, the tsconfig beside it."""
+    here = pathlib.Path(folder)
+    skipped = set()
+    if here.name == PLUGIN_FOLDER and GENERATED_TYPES in names:
+        skipped.add(GENERATED_TYPES)
+    if (here / PLUGIN_FOLDER).is_dir() and GENERATED_TSCONFIG in names:
+        skipped.add(GENERATED_TSCONFIG)
+    return skipped
 
 
 def update_json_file(path: pathlib.Path, updates: dict) -> None:
@@ -88,7 +106,7 @@ def publish_skill(
     if dest_path.exists():
         shutil.rmtree(dest_path)
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source_path, dest_path)
+    shutil.copytree(source_path, dest_path, ignore=_skip_generated)
     print(f"Synced {skill_name} to {dest_path}")
 
 

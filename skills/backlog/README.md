@@ -164,14 +164,34 @@ node scripts/backlog-gate.mjs related-docs HEAD     # in a post-commit hook, wit
 
 ## Dashboard
 
+The same board in two places, both read-only and rebuilt from the register and `git log` each time — nothing is
+stored, nothing to keep in sync.
+
+**In Claude Code — the mod.** Installed as a plugin, `backlog` is a [mod](https://code.claude.com/docs/en/plugins/mods/overview)
+(`hooks/hooks.json` → `hooks/backlog-mod.js`; Claude Code 2.1.287 or later, the terminal or the Desktop app's Code
+tab). Type `/backlog-dashboard`: a pane opens beside the transcript (a wide fullscreen terminal) or above the prompt.
+
+| key | does |
+|---|---|
+| `1`–`6` | Overview · In progress · Next · To verify · Documents · Activity |
+| Tab / ↑ ↓, Enter | move between rows, open the focused one (an entry, a document, a link) |
+| `b`, `r`, Esc | back, refresh (it also refreshes itself every minute while open), close |
+
+The hooks module has no Node APIs: it runs `scripts/dashboard.mjs --json --root <session folder>` and draws the
+snapshot, and reads documents with `$.fs.read`. Links inside a document are pressable where the terminal reports
+clicks, and listed as rows under it for the keyboard. Its tests: `claude plugin test` in the skill's folder.
+Developing it: `claude --plugin-dir <skill folder>` hot-reloads it; Claude Code then writes `.claude-plugin/types/`
+and `tsconfig.json` there (git-ignored, never published).
+
+**In a browser.**
+
 ```bash
 node scripts/backlog-gate.mjs dashboard            # in a project with the launcher
 node <skill>/scripts/dashboard.mjs [--port N] [--no-open]
 ```
 
-A page on `http://127.0.0.1:4317/` (a free port if that one is taken; loopback only, read-only). Every refresh
-rebuilds it from the register and `git log` — nothing is stored, nothing to keep in sync. It needs only Node; the
-page loads `marked` and `DOMPurify` from jsDelivr to render markdown (offline, documents show as plain text).
+A page on `http://127.0.0.1:4317/` (a free port if that one is taken; loopback only). It needs only Node; the page
+loads `marked` and `DOMPurify` from jsDelivr to render markdown (offline, documents show as plain text). Its views:
 
 - **Overview** — entries closed over all, phases done over all phases (dropped ones left out), in progress, not
   started, blocked, pending checks; the entries in progress (their Status note, phase bar, current phase, last

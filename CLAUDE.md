@@ -12,7 +12,8 @@ that ships them: every published skill is a plugin of its own.
 - `install.config.json` lists the published skills and their category (`workflow` for all of them today).
 - `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by
   `build_marketplace.py` — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its
-  own `plugin-entry.json`; one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
+  own `plugin-entry.json` (a mod, which ships its own `.claude-plugin/plugin.json`, declares `"strict": true` there);
+  one that cannot be a plugin sets `"plugin": false` in `install.config.json`.
 - `skills/skill-publisher/` is this repository's own skill (the publish flow). It is not published.
 - `bootstrap/claude-skills.mjs` is the managed-copies tool a shared or cloud project copies as
   `scripts/claude-skills.mjs` (`sync`, `check`, `list`; see the README). Its pure decisions are tested in

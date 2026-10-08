@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import subprocess
 import sys
 import typing
 import unittest
@@ -34,10 +35,24 @@ ALLOWED = ("pablolok/claude-skills", "pablolok-skills")
 MAX_DESCRIPTION = 500
 
 
+def _kept_by_git() -> typing.Optional[typing.Set[pathlib.Path]]:
+    """What git keeps (tracked and new, never ignored), or None outside a work tree: the files a skill ships, not the
+    tools' generated companions beside them (a mod's type declarations, written on every load)."""
+    try:
+        listed = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"], cwd=ROOT,
+                                capture_output=True, text=True, encoding="utf-8", check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return {(ROOT / rel).resolve() for rel in listed.split("\0") if rel}
+
+
 def _skill_files() -> typing.Iterator[pathlib.Path]:
+    kept = _kept_by_git()
     for folder in SCANNED:
         for path in sorted(folder.rglob("*")):
-            if path.is_file() and path.name != "CHANGELOG.md" and "node_modules" not in path.parts:
+            if not path.is_file() or path.name == "CHANGELOG.md" or "node_modules" in path.parts:
+                continue
+            if kept is None or path.resolve() in kept:
                 yield path
 
 

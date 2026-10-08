@@ -58,6 +58,17 @@ class TestBuild(unittest.TestCase):
         self.assertEqual(plugin["hooks"], hooks)
         self.assertEqual(plugin["commands"], ["./commands"])
 
+    def test_a_mod_declares_strict_so_its_own_manifest_is_read(self) -> None:
+        _skill(self.root, "workflow", "alpha", {"strict": True})
+        self._config({"alpha": {"category": "workflow"}})
+        [plugin] = build_marketplace.build(self.root)["plugins"]
+        self.assertIs(plugin["strict"], True)
+        self.assertEqual(plugin["skills"], ["./"])
+        _skill(self.root, "workflow", "beta", {"strict": "yes"})
+        self._config({"beta": {"category": "workflow"}})
+        with self.assertRaisesRegex(build_marketplace.MarketplaceError, "strict"):
+            build_marketplace.build(self.root)
+
     def test_an_unknown_declared_field_fails(self) -> None:
         _skill(self.root, "workflow", "alpha", {"source": "./elsewhere"})
         self._config({"alpha": {"category": "workflow"}})

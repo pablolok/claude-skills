@@ -147,3 +147,7 @@ cython_debug/
 
 # OS X
 .DS_Store
+
+# Written by Claude Code when it loads a mod from source (--plugin-dir): never committed or published
+skills/*/.claude-plugin/types/
+skills/*/tsconfig.json
