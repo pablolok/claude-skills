@@ -81,6 +81,9 @@ The numbered rules below are the specifics of that separation.
 14. **TDD with Vitest** (+ Testing Library for components). Deterministic tests for new logic; test
     doubles for injected collaborators/hooks; assert **behavior**, not implementation. Pure logic
     extracted to libs is tested directly — favor that over testing through the DOM.
+    A test helper with a default (`open(average = SAMPLE)`, `({ average = SAMPLE } = {})`) turns an explicit
+    `undefined` into the default, so a "still loading" / "missing" case silently tests the happy path: when
+    `undefined` is a state under test, read it with `"average" in options ? options.average : SAMPLE`.
 15. **Typecheck + lint clean.** The project's TS build (e.g. `tsc -b`, *not* `tsc --noEmit` if the
     build uses project references) and ESLint pass with **no** errors or warnings.
 16. **No warning suppression.** No `@ts-ignore`, no bare `@ts-expect-error`, no `eslint-disable`, no

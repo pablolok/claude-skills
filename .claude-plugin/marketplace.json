@@ -55,7 +55,7 @@
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -113,7 +113,7 @@
       "name": "typescript-react-standards",
       "source": "./published/workflow/typescript-react-standards",
       "description": "The TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and quality gates.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "category": "workflow",
       "strict": false,
       "skills": [

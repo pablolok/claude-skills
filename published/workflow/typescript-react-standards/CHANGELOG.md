@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.1] - 2026-10-09
+- a test helper's default parameter swallows an explicit undefined: read it with 'in' when undefined is a state under test
+
+
 ## [1.1.0] - 2026-10-07
 - The project-specific section (Vite + Supabase + TanStack Query, money as rationals, Deno edge functions) is removed: those projects keep it themselves; no person in the description or title; the domain layer is 'a domain module (e.g. src/lib/)', not a fixed path
 

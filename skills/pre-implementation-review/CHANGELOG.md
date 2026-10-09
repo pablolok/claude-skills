@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5] - 2026-10-09
+- a write decided from two independently refreshed reads is conditioned in the store (compare-and-set), not only guarded in the client
+
+
 ## [1.1.4] - 2026-10-09
 - a setting shared by a family is checked against every KIND of member, not only the ones it was calibrated on
 

@@ -172,6 +172,13 @@ These are not soft smells to mention — if the change would introduce one, the 
   stuck first try left produced a broken shape that passed its own count.
   A retry or fallback that **did not measure** never replaces an outcome that did (the verdict is the last attempt that
   produced an answer, the others are kept beside it), and a retry the remaining budget cannot finish is not started.
+- **A write decided from reads that refresh independently is conditioned where it lands.** When client code
+  decides to write by combining reads that come back separately (a summary and a settings record, two cached
+  queries), one can be newer than the other, and the decision can undo a change the user just made (an automatic
+  value overwriting one just set by hand). Put the precondition in the write itself — a compare-and-set on the fields
+  the decision relied on (`WHERE auto = true AND status <> 'archived'`) — and do not decide while any of the reads is
+  refetching; the client-side guard alone is not enough. A unit test that resolves the reads in a fixed order cannot
+  see it: a refreshed summary arriving before a stale settings record rewrote a value just fixed by hand, silently.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.
