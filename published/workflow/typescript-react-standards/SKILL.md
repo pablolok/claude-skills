@@ -84,6 +84,10 @@ The numbered rules below are the specifics of that separation.
     A test helper with a default (`open(average = SAMPLE)`, `({ average = SAMPLE } = {})`) turns an explicit
     `undefined` into the default, so a "still loading" / "missing" case silently tests the happy path: when
     `undefined` is a state under test, read it with `"average" in options ? options.average : SAMPLE`.
+    When a change alters what a shared seam passes or receives (a hook's callback gaining an argument, a call gaining
+    a field), first find the tests that double that seam or assert that call — mocks that invoke it the old way,
+    `toHaveBeenCalledWith` expectations, tests that read the source text — and update them in the same change; run
+    those before the full suite, where each one found late costs a whole run.
 15. **Typecheck + lint clean.** The project's TS build (e.g. `tsc -b`, *not* `tsc --noEmit` if the
     build uses project references) and ESLint pass with **no** errors or warnings.
 16. **No warning suppression.** No `@ts-ignore`, no bare `@ts-expect-error`, no `eslint-disable`, no

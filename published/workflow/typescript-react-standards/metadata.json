@@ -1,5 +1,5 @@
 {
   "name": "typescript-react-standards",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "The TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and quality gates."
 }

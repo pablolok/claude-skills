@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.2] - 2026-10-09
+- Before the full suite, update the tests that double a seam whose shape changed
+
+
 ## [1.1.1] - 2026-10-09
 - a test helper's default parameter swallows an explicit undefined: read it with 'in' when undefined is a state under test
 
