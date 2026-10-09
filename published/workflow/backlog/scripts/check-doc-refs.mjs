@@ -26,7 +26,6 @@
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname, resolve, relative, sep } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   LINK,
   allFiles,
@@ -38,6 +37,7 @@ import {
 } from "./docIndex.mjs";
 import { DEFAULTS, project } from "./project.mjs";
 import { isOpenHeading } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 /** Rule 3's scope: instructions to follow, and docs that describe the present. */
 const isInstruction = (rel, config) =>
@@ -226,9 +226,6 @@ function main() {
   return 1;
 }
 
-// `pathToFileURL`, not a hand-built string: on Windows `"file://" + argv[1]` never equals
-// `import.meta.url`, and the script would exit silently with 0 — a gate that checks nothing.
-// `process.argv[1]` is absent under `node -e "import(...)"`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

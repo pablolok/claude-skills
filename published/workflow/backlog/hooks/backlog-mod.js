@@ -145,7 +145,7 @@ const fileUrl = (root, rel) => 'file:///' + encodeURI((root.replace(/\\/g, '/') 
  * Markdown draws as a link), an entry id a link to the register at that entry. Returns the text and the targets.
  */
 function prepareMarkdown(text, baseDir, snap) {
-  const register = fileUrl(snap.root, snap.board.project.backlog)
+  const registerUrl = fileUrl(snap.root, snap.board.project.backlog)
   const targets = []
   const linked = String(text).replace(/(!?)\[([^\]]*)\]\(([^)\s]+)\)/g, (whole, bang, label, href) => {
     if (/^([a-z]+:|#)/i.test(href)) return whole
@@ -155,7 +155,7 @@ function prepareMarkdown(text, baseDir, snap) {
     if (/\.md$/i.test(rel)) targets.push({ kind: 'doc', path: rel, label: label || rel, href: url })
     return `${bang}[${label}](${url})`
   }).replace(/\[\[(BKLG-\d+)\]\]/g, (whole, id) => {
-    const url = `${register}#${id}`
+    const url = `${registerUrl}#${id}`
     targets.push({ kind: 'entry', id, label: id, href: url })
     return `[${id}](${url})`
   })

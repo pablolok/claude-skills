@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.2] - 2026-10-09
+- a hook started through a symbolic link runs instead of exiting silently (entry point compared as real paths)
+
+
 ## [1.5.1] - 2026-10-07
 - The source rule names managed copies: a folder under .claude/skills that .claude/claude-skills.json lists is installed from the skill repository, like a plugin; never edited in place (its check fails), fixed at the source, then synced by the project.
 

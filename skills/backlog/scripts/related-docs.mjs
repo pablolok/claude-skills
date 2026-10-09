@@ -17,9 +17,9 @@
  *   node <skill>/scripts/related-docs.mjs --entry BKLG-NNN    # name the entry when there is no message yet
  */
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
 import { describesThePast, docIndex } from "./docIndex.mjs";
 import { project } from "./project.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 // Re-exported so its test (with its control case) can sit among this tool's tests.
 export { describesThePast };
@@ -108,8 +108,6 @@ function main() {
   return 0;
 }
 
-// `pathToFileURL`, not a hand-built string (Windows would exit silently with 0); `argv[1]` is absent
-// under `node -e`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

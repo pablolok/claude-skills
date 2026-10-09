@@ -18,9 +18,9 @@
  */
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { citedEntries } from "./docIndex.mjs";
 import { DEFAULTS, WORDS, project } from "./project.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 /**
  * The canonical section names are data searched for in docs: the project's words (`words` in its config), English by
@@ -284,8 +284,6 @@ function main() {
   return 1;
 }
 
-// `pathToFileURL`, not a hand-built string (Windows would exit silently with 0); `argv[1]` is absent
-// under `node -e`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

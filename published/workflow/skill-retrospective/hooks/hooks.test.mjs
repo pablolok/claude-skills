@@ -2,15 +2,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   archiveDirs, archivedFolders, retroText, stopReason, ARCHIVE_ENV, DEFAULT_ARCHIVE_DIRS, DEFAULT_COMMITS,
 } from "./retrospective-hint.mjs";
 import { isNew, skillName } from "./log-skill-use.mjs";
 import { projectRoot, stateDir } from "./state.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 const HOOKS = dirname(fileURLToPath(import.meta.url));
 const quiet = { commits: 0, archived: 0, threshold: DEFAULT_COMMITS, alreadyBlocked: false };
@@ -231,4 +232,27 @@ test("⭐ without CLAUDE_PROJECT_DIR both hooks exit 0 and write no state anywhe
   }
   assert.equal(projectRoot({}), undefined);
   assert.equal(stateDir({}), null);
+});
+
+test("a hook started through a symbolic link still runs; an imported module never takes itself for the hook", (t) => {
+  // Not resolved on purpose: on macOS the temporary folder itself sits behind a link.
+  const root = mkdtempSync(join(tmpdir(), "retro-entry-point-"));
+  try {
+    const real = join(root, "real");
+    mkdirSync(real);
+    writeFileSync(join(real, "hook.mjs"), "");
+    writeFileSync(join(real, "other.mjs"), "");
+    const url = pathToFileURL(join(real, "hook.mjs")).href;
+    assert.equal(isEntryPoint(url, join(real, "hook.mjs")), true);
+    assert.equal(isEntryPoint(pathToFileURL(join(real, "other.mjs")).href, join(real, "hook.mjs")), false);
+    assert.equal(isEntryPoint(url, undefined), false);
+    try {
+      symlinkSync(real, join(root, "link"), "junction"); // a junction needs no privilege on Windows
+    } catch {
+      return t.skip("this system refuses to create the link");
+    }
+    assert.equal(isEntryPoint(url, join(root, "link", "hook.mjs")), true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -22,11 +22,11 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { architectureDocs } from "./architecture-shape.mjs";
 import { citedEntries } from "./docIndex.mjs";
 import { DEFAULTS, WORDS, project } from "./project.mjs";
 import { closedIds, openIds } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 const cellsOf = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
 
@@ -154,6 +154,6 @@ function main() {
   return 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

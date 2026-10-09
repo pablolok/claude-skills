@@ -23,11 +23,11 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { createResolver, docIndex } from "./docIndex.mjs";
 import { architectureDocs, entryInSection, markersInSection } from "./architecture-shape.mjs";
 import { DEFAULTS, fieldName, project } from "./project.mjs";
 import { closedLines, entryBlock as registerBlock, fieldLine, openIds } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 const SEP = "@@COMMIT@@";
 
@@ -395,8 +395,6 @@ function main() {
   return 0;
 }
 
-// `pathToFileURL`, not a hand-built string (Windows would exit silently with 0); `argv[1]` is absent
-// under `node -e`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

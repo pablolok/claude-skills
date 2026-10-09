@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"what's in the backlog\", \"backlog dashboard\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "category": "workflow",
       "strict": true,
       "skills": [
@@ -77,7 +77,7 @@
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
       "description": "Use when a piece of work closes — a backlog entry archived, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method — or when a hook asks for it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "category": "workflow",
       "strict": false,
       "skills": [

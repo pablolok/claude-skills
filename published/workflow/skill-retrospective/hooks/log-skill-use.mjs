@@ -8,8 +8,8 @@
  */
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { USED, stateDir } from "./state.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 /** The skill a Skill tool call ran, without a plugin prefix ("plugin:name" → "name"), or "". */
 export function skillName(toolInput) {
@@ -30,7 +30,7 @@ function main(input, env) {
   if (isNew(existsSync(file) ? readFileSync(file, "utf8") : "", name)) appendFileSync(file, name + "\n");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isEntryPoint(import.meta.url)) {
   let input = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => (input += chunk));

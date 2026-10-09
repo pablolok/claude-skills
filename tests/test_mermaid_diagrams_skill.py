@@ -43,7 +43,8 @@ def _pinned_version() -> str:
 
 def _write(path: pathlib.Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8", newline="\n")
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
 
 
 def _stub_skill(folder: pathlib.Path) -> None:

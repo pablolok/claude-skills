@@ -14,10 +14,10 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { allFiles } from "./docIndex.mjs";
 import { project } from "./project.mjs";
 import { extractBklgIds, formatBklgId, nextBklgId } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 /** A file that holds a NUL byte is binary: its bytes say nothing about ids. */
 const textOf = (file) => {
@@ -48,6 +48,6 @@ function main() {
   console.error(`highest: ${highest} · ${files} file(s) read under ${config.docsDir}/`);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   main();
 }

@@ -19,9 +19,9 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { WORDS, project } from "./project.mjs";
 import { closedIds, closedLines, openIds } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 const repeated = (items) => [...new Set(items.filter((x, i) => items.indexOf(x) !== i))].sort();
 
@@ -79,6 +79,6 @@ function main() {
   return 1;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   process.exit(main());
 }

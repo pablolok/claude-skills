@@ -50,11 +50,11 @@
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { registerIds } from "./next-id.mjs";
 import { CONFIG_FILE, DEFAULTS, GITHUB, GITHUB_LABELS, PRIORITIES, STATUSES, fieldName, project } from "./project.mjs";
 import { extractBklgIds, formatBklgId, nextBklgId, openEntries } from "./register.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 // The id helpers live in register.mjs (next-id uses them too); re-exported for the mirror's callers.
 export { extractBklgIds, formatBklgId, nextBklgId };
@@ -661,8 +661,6 @@ function usage(err) {
 }
 
 // Only run the CLI when invoked directly (so tests can import the pure helpers).
-// `pathToFileURL`, not a hand-built string: on Windows `"file://" + argv[1]` never equals
-// `import.meta.url`, and the script would exit silently with 0. `argv[1]` is absent under `node -e`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   main();
 }

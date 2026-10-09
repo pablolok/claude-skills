@@ -18,8 +18,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { MARK, USED, projectRoot, stateDir } from "./state.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 export const DEFAULT_COMMITS = 8;
 export const COMMITS_ENV = "SKILL_RETRO_COMMITS";
@@ -127,7 +127,7 @@ function main(input, env) {
   return text && { decision: "block", reason: text };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isEntryPoint(import.meta.url)) {
   let input = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => (input += chunk));

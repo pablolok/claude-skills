@@ -15,13 +15,14 @@
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { LOG_FORMAT, LOG_LIMIT, parseLog } from "./dashboard-activity.mjs";
 import { buildBoard, docsToRead } from "./dashboard-board.mjs";
 import { docTree, mediaType, servablePath } from "./dashboard-docs.mjs";
 import { createHandler, listen } from "./dashboard-server.mjs";
 import { allFiles } from "./docIndex.mjs";
 import { project } from "./project.mjs";
+import { isEntryPoint } from "./entry-point.mjs";
 
 /** The port tried first: fixed, so a bookmark keeps working. */
 export const DEFAULT_PORT = 4317;
@@ -132,7 +133,7 @@ async function main() {
   if (options.open) openBrowser(started.url);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isEntryPoint(import.meta.url)) {
   main().catch((error) => {
     console.error(`dashboard: ${error?.message ?? error}`);
     process.exit(1);

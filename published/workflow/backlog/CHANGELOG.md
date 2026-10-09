@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.1] - 2026-10-09
+- a script started through a symbolic link runs instead of exiting silently with 0 (entry point compared as real paths, macOS and Windows); the mod loads again (a local const shadowed its register())
+
+
 ## [1.5.0] - 2026-10-09
 - The plugin is a mod: /backlog-dashboard opens the dashboard in a Claude Code pane (overview, in progress, next, to verify, documents, activity; keys 1-6, Enter, b, r, Esc), drawn from dashboard.mjs --json; documents read in the pane with their links. Its own .claude-plugin/plugin.json and hooks/hooks.json, so its marketplace entry is strict (plugin-entry.json).
 
