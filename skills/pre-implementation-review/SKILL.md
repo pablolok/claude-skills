@@ -207,12 +207,12 @@ These are not soft smells to mention — if the change would introduce one, the 
 - **Find by name only with the owner's name for it.** A shared helper that looks something up by a conventional name
   (a part called "main", a field called "id") takes the name from the member that owns that vocabulary, and says so
   when it finds nothing — a lookup that silently did nothing hid that one member names the part differently.
-- **A new default applied to every member of a family** (every request, every record, every view): first list the
-  members that already do that job their own way, and decide each before writing. Applied on top, the default
-  doubles what a member had already tuned; usually the member declares itself the exception (store only the
-  exception), and the default leaves it alone. The same check runs the other way when a **member joins** a family
-  later: list the behaviours the family applies to every member and decide each for the newcomer (an effect written
-  for one kind of item reached every later item that adopted the shared component, and misbehaved on them).
+- **A default or setting shared by every member of a family** (every request, record, view, render window, timeout):
+  first list the members that already do that job their own way, **and the kinds of member the family has**, and
+  decide each before writing. Applied on top, the default doubles what a member had tuned (usually the member
+  declares itself the exception, and the default leaves it alone); and a value calibrated on one kind of member
+  says nothing about another kind until it is measured there. The same check runs the other way when a **member
+  joins** later: list the behaviours the family applies to every member and decide each for the newcomer.
 - Prefer separating a rule/decision (pure, no IO) from the data access (repository) and the external
   call (gateway) — even inside "one" function. Mixed responsibilities are the smell, and splitting
   them is what makes each reusable.

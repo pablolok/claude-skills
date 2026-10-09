@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2026-10-09
+- a setting shared by a family is checked against every KIND of member, not only the ones it was calibrated on
+
+
 ## [1.1.3] - 2026-10-08
 - an overwritten value is evidence to keep; a retry that did not measure never replaces one that did; explain a measurement from the control flow, not its arithmetic
 
