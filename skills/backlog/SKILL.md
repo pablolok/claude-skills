@@ -203,11 +203,14 @@ in another language declares them in **.claude/backlog.json** (`fieldNames`, `wo
 
 ## add
 
-1. **The next id**: `node <this skill's base directory>/scripts/next-id.mjs` prints it — the highest id in the
-   register's own documents + 1 (the first entry is `BKLG-001`). It reads every document of the backlog folder, not
-   just the cards: an id is also claimed by creating its folder, and a parallel session may have taken one. A
-   mention outside that folder (a bridge doc, a plan copied from another project) is not the register's and is not
-   counted. Read its control line (the highest id, the files read).
+1. **The next id**: `node <this skill's base directory>/scripts/next-id.mjs` prints it — the highest id the
+   register's own documents claim + 1 (the first entry is `BKLG-001`). An id is **claimed** by a card heading
+   (`## BKLG-NNN` / `### BKLG-NNN`), a history line (`- **BKLG-NNN**`) or an activity folder's name (a parallel
+   session may have created one before any card cites it) — not by every mention: a history line citing another
+   project's entry is a mention, and counting it once handed out a number past that project's ids. A mention outside
+   the backlog folder (a bridge doc, a copied plan) is not read at all. Read its control line (the highest claim, the
+   files read) and its warning: ids mentioned above the highest claim (`BKLG-200…207 mentioned but never claimed`)
+   are another project's, or a card never written — check before using the number.
 2. **Keep the entry lean** — the format's fields plus a 1–2 line Summary. Context, the real fix, acceptance and
    progress go in the **Doc**. From a one-liner, infer the rest from the code and the conversation and write a
    concrete plan — no placeholders. A temporary patch just shipped: its commit and why it isn't the real fix.

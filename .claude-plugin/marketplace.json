@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"what's in the backlog\", \"backlog dashboard\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "category": "workflow",
       "strict": true,
       "skills": [
@@ -55,7 +55,7 @@
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
-      "version": "1.1.5",
+      "version": "1.1.6",
       "category": "workflow",
       "strict": false,
       "skills": [

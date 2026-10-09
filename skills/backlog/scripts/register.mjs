@@ -21,8 +21,8 @@ const OPEN_HEADING = /^(#{2,3}) (BKLG-\d+)\b(?:\s+[—–-]\s+(.*))?/;
 const CLOSED_LINE = /^- \*\*(BKLG-\d+)([^*\n]*)\*\*/;
 
 /**
- * Every entry number a text mentions, in any form (a heading, a citation, a folder name) — what claims an id when
- * the next one is allocated.
+ * Every entry number a text mentions, in any form (a heading, a citation, a folder name). A mention is not a claim:
+ * `next-id` counts only the ids of card headings, history lines and folder names.
  * @param {string} text
  * @returns {number[]}
  */

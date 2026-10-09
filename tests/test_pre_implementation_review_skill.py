@@ -42,6 +42,13 @@ class TestPreImplementationReviewSkill(unittest.TestCase):
         self.assertIn("semantic string literals", content)
         self.assertIn("shared constants, resource keys, typed wrappers, or configuration inputs", content)
 
+    def test_a_constraint_on_stored_data_is_checked_against_every_writer(self) -> None:
+        content = " ".join(_read(SOURCE / "SKILL.md").split())
+        self.assertIn("A constraint added to stored data binds every writer", content)
+        self.assertIn("the store's own generators", content)
+        self.assertIn("at the edge of the allowed range", content)
+        self.assertIn("or the constraint waits", content)
+
     def test_readme_places_the_review_at_the_start_of_each_task(self) -> None:
         content = " ".join(_read(SOURCE / "README.md").split())
         self.assertIn("at the start of each task", content)

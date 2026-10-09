@@ -15,7 +15,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | `scripts/backlog-coherence.mjs` | Gate: an entry lives in one place — never open and closed at once, never twice in one register. |
 | `scripts/closed-defects.mjs` | Gate: a defect row with a state says what the entry that closes it says (both directions). |
 | `scripts/related-docs.mjs` | Not a gate (always exit 0): the live docs that cite the entry being worked on or name a file a change touched — a post-commit hook's job. |
-| `scripts/next-id.mjs` | Not a gate: prints the next entry id — the highest one the backlog folder's documents mention (registers, activity folders, archive; nothing outside it), + 1. |
+| `scripts/next-id.mjs` | Not a gate: prints the next entry id — the highest one the backlog folder's documents claim (a card heading, a history line, an activity folder's name; nothing outside it), + 1; ids only mentioned above it are a warning on stderr. |
 | `scripts/backlog-github-sync.mjs` | The GitHub Issues mirror (`upsert-issue`, `close-issue`, `sync-all`; dry-run unless `--execute`). |
 | `scripts/dashboard.mjs` | Not a gate: the local dashboard (see [Dashboard](#dashboard)). Its pieces: `dashboard-board.mjs` (the board, pure), `dashboard-activity.mjs` (commits → entries), `dashboard-docs.mjs` (the documents tree and the path guard), `dashboard-server.mjs` (HTTP), `dashboard-ui/` (the page). |
 | `scripts/project.mjs`, `scripts/register.mjs`, `scripts/docIndex.mjs` | The project root and its config; what an entry looks like in the two registers; the shared reference vocabulary. |

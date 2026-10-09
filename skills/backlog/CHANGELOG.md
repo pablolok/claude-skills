@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.2] - 2026-10-09
+- next-id counts the ids the register CLAIMS (a card heading, a history line, an activity folder's name), not every mention: a history line citing another project's entries no longer hands out a number past them; mentions above the highest claim are a warning on stderr. Bootstrap VERSION 1.5.2.
+
+
 ## [1.5.1] - 2026-10-09
 - a script started through a symbolic link runs instead of exiting silently with 0 (entry point compared as real paths, macOS and Windows); the mod loads again (a local const shadowed its register())
 

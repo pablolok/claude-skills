@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.6] - 2026-10-09
+- a constraint added to stored data binds every writer: list each path that writes a constrained field, and the values the system generates at the edge of the range, before adding it
+
+
 ## [1.1.5] - 2026-10-09
 - a write decided from two independently refreshed reads is conditioned in the store (compare-and-set), not only guarded in the client
 
