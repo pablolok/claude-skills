@@ -5,7 +5,8 @@
 // read with `$.fs.read`. Nothing is stored: every open and every refresh asks the register and git again.
 //
 // Keys while the pane has focus: 1-6 switch view, r refreshes, b goes back, Tab/arrows move between rows, Enter
-// opens the focused row, Esc closes.
+// opens the focused row, Esc closes. A phase (in the working-on-now card and on an entry's page) opens its detail in
+// place: what it is, its state and the whole note of its state cell.
 
 const PANE = 'backlog-dashboard'
 const COMMAND = 'backlog-dashboard'
@@ -15,13 +16,23 @@ const LOAD_TIMEOUT_MS = 60000
 const REFRESH_MS = 60000
 /** How many rows a list draws before it says how many more there are. */
 const LIST_LIMIT = { overview: 5, docs: 60, activity: 40, links: 30 }
-/** Phase states in drawing order, with the theme colour and the glyph of each. */
+/** Fills of the phase states and of the status tiles, on the surfaces that draw `Svg`. */
+const INK = { green: '#3fb950', amber: '#d29922', grey: '#6e7681', red: '#f85149', blue: '#58a6ff', dropped: '#f47067' }
+/** The SVG pattern a dropped phase is filled with: struck through, so it never reads as work still to do. */
+const HATCH_ID = 'dropped-hatch'
+/**
+ * Phase states in drawing order: the terminal's theme colour, bar glyph and list mark, and the vector fill. A dropped
+ * phase differs from a planned one by colour, texture and mark at once, so it reads apart even without colour.
+ */
 const PHASES = [
-  { state: 'done', color: 'success', glyph: '█' },
-  { state: 'active', color: 'warning', glyph: '█' },
-  { state: 'planned', color: 'inactive', glyph: '░' },
-  { state: 'dropped', color: 'subtle', glyph: '·' },
+  { state: 'done', color: 'success', glyph: '█', mark: '●', fill: INK.green, opacity: 1 },
+  { state: 'active', color: 'warning', glyph: '█', mark: '◐', fill: INK.amber, opacity: 1 },
+  { state: 'planned', color: 'inactive', glyph: '░', mark: '○', fill: INK.grey, opacity: 0.45 },
+  { state: 'dropped', color: 'error', glyph: '╳', mark: '✕', fill: `url(#${HATCH_ID})`, stroke: INK.dropped, opacity: 1 },
 ]
+const PHASE_BY_STATE = Object.fromEntries(PHASES.map((p) => [p.state, p]))
+/** A phase's style; a state the board does not know is drawn as work not started. */
+const phaseStyle = (state) => PHASE_BY_STATE[state] ?? PHASE_BY_STATE.planned
 const PRIORITY_COLOR = { high: 'error', medium: 'warning', low: 'subtle' }
 const STATUS_COLOR = { 'in-progress': 'warning', blocked: 'error', open: 'subtle' }
 
@@ -57,7 +68,7 @@ const WORDS = {
     cites: 'Cita', citedByL: 'Citata da', usedBy: 'Voci che lo collegano', linksIn: 'Link nel documento',
     notFound: 'Non trovato', failed: 'La dashboard non è riuscita a leggere il registro:',
     groups: { register: 'Registro', work: 'Documenti di lavoro', architecture: 'Architettura', archive: 'Archivio', other: 'Altri' },
-    states: { done: 'fatta', active: 'in corso', planned: 'da iniziare', dropped: 'scartata' },
+    states: { done: 'fatta', active: 'in corso', planned: 'da iniziare', dropped: 'annullata' },
     statuses: { 'in-progress': 'in corso', open: 'aperta', blocked: 'bloccata' },
     priorities: { high: 'alta', medium: 'media', low: 'bassa' },
     command: 'Apri la dashboard del backlog: avanzamento, lavori in corso, prossimi, documenti',
@@ -85,6 +96,7 @@ let isOpen = false
 let view = { name: 'overview' } // overview | progress | next | pending | docs | activity | entry {id} | doc {path, text}
 let trail = [] // the views Back returns to
 let docFilter = ''
+let openPhase = null // { id, name }: the phase whose detail is shown under its entry's phases
 
 const TAB_VIEWS = ['overview', 'progress', 'next', 'pending', 'docs', 'activity']
 
@@ -228,24 +240,49 @@ async function openDoc($, path) {
 // Surfaces that draw `Svg` (the desktop app) get rings, rounded bars and tiles instead of runs of block characters. The
 // drawing is an image: rows that must be pressed stay `Button`s around it, and the colours follow the system's light or
 // dark scheme through the stylesheet inside the image.
-/** Fills of the phase states and of the status tiles. */
-const INK = { green: '#3fb950', amber: '#d29922', grey: '#6e7681', red: '#f85149', blue: '#58a6ff', dropped: '#484f58' }
-const STATE_INK = { done: INK.green, active: INK.amber, planned: INK.grey, dropped: INK.dropped }
 /** Width of every drawing, in CSS pixels; the surface shrinks it to the pane. */
 const SVG_WIDTH = 540
 
 const hasSvg = (el) => typeof el.Svg === 'function'
 const xml = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-/** One SVG document: the shared stylesheet (text, muted text, card and track colours, light and dark) and a body. */
+/**
+ * One SVG document: the shared stylesheet (text, muted text, card and track colours, light and dark), the dropped
+ * phases' hatch, and a body.
+ */
 function svgDocument(height, body) {
   const style =
     '.t{fill:#e6edf3}.m{fill:#8b949e}.c{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.12)}.k{stroke:rgba(255,255,255,.14)}' +
     '@media (prefers-color-scheme: light){.t{fill:#1f2328}.m{fill:#656d76}.c{fill:rgba(0,0,0,.03);stroke:rgba(0,0,0,.12)}.k{stroke:rgba(0,0,0,.14)}}'
+  const hatch =
+    `<pattern id="${HATCH_ID}" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)">` +
+    `<rect width="5" height="5" fill="${INK.dropped}" fill-opacity=".22"/><rect width="2" height="5" fill="${INK.dropped}"/></pattern>`
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SVG_WIDTH} ${height}" width="${SVG_WIDTH}" height="${height}" ` +
-    `font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><style>${style}</style>${body}</svg>`
+    `font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><style>${style}</style><defs>${hatch}</defs>${body}</svg>`
   )
+}
+
+/** A rectangle filled as a phase state is: colour, hatch, outline and opacity from the state's style. */
+function phaseRect(state, x, y, width, height, rx = 0) {
+  const s = phaseStyle(state)
+  const stroke = s.stroke ? ` stroke="${s.stroke}" stroke-width="1"` : ''
+  return `<rect x="${x.toFixed(1)}" y="${y}" width="${width.toFixed(1)}" height="${height}" rx="${rx}" fill="${s.fill}" opacity="${s.opacity}"${stroke}/>`
+}
+
+/** The key of the states an entry's phases use, as a small swatch and the state's word each, right-aligned. */
+function phaseLegend(phases, y) {
+  const present = PHASES.filter((p) => phases.some((x) => x.state === p.state))
+  const items = present.map((p) => ({ state: p.state, word: T.states[p.state] }))
+  const widthOf = (item) => 14 + item.word.length * 6.3 + 12
+  let x = SVG_WIDTH - 4 - items.reduce((n, item) => n + widthOf(item), 0)
+  return items
+    .map((item) => {
+      const drawn = phaseRect(item.state, x, y - 9, 10, 10, 2) + `<text x="${(x + 14).toFixed(1)}" y="${y}" font-size="11" class="m">${xml(item.word)}</text>`
+      x += widthOf(item)
+      return drawn
+    })
+    .join('')
 }
 
 /** A rounded bar split into one segment per phase state; an empty track when there is nothing to count. */
@@ -258,7 +295,7 @@ function segmentedBar(x, y, width, height, counts, clipId) {
     const n = counts[p.state] ?? 0
     if (!n) return ''
     const w = (n / total) * width
-    const rect = `<rect x="${(x + at).toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${height}" fill="${STATE_INK[p.state]}"/>`
+    const rect = phaseRect(p.state, x + at, y, w, height)
     at += w
     return rect
   }).join('')
@@ -328,46 +365,70 @@ function currentWork() {
   return null
 }
 
-/** The current entry's phases as one rounded block each, named under it, with the live phase and the last commit. */
-function phaseTrack(e, commit, now) {
+/** The current entry's phases as one rounded block each, under its count and the key of the states it uses. */
+function phaseTrack(e) {
   const phases = e.phases
   const gap = 4
   const inner = SVG_WIDTH - 8
   const w = phases.length ? (inner - gap * (phases.length - 1)) / phases.length : inner
   const done = e.phaseCounts.done ?? 0
   const counted = phaseTotal(e.phaseCounts) - (e.phaseCounts.dropped ?? 0)
-  const blocks = phases
-    .map((p, i) => {
-      const x = 4 + i * (w + gap)
-      const fill = STATE_INK[p.state] ?? INK.grey
-      const bold = p.state === 'active' ? ' font-weight="700" class="t"' : ' class="m"'
-      return (
-        `<rect x="${x.toFixed(1)}" y="26" width="${w.toFixed(1)}" height="10" rx="5" fill="${fill}" opacity="${p.state === 'planned' ? 0.45 : 1}"/>` +
-        `<text x="${(x + w / 2).toFixed(1)}" y="52" font-size="10.5" text-anchor="middle"${bold}>${xml(clip(p.name, Math.max(2, Math.floor(w / 6))))}</text>`
-      )
-    })
-    .join('')
-  const active = phases.find((p) => p.state === 'active')
-  const live = active ? `${active.name} · ${plain(active.label)}` : ''
+  const blocks = phases.map((p, i) => phaseRect(p.state, 4 + i * (w + gap), 26, w, 10, 5)).join('')
   const body =
     `<text x="4" y="16" font-size="12" font-weight="600" class="t">${xml(T.phasesOf(done, counted))}</text>` +
-    blocks +
-    (live ? `<text x="4" y="74" font-size="12.5" font-weight="600" fill="${INK.amber}">${xml(clip(live, 78))}</text>` : '') +
-    `<text x="4" y="94" font-size="12" class="m">${xml(clip(`${ago(commit.date, now)} · ${commit.subject}`, 82))}</text>`
-  return svgDocument(104, body)
+    phaseLegend(phases, 16) +
+    blocks
+  return svgDocument(42, body)
 }
 
-/** "Now": the entry worked on last, as a card on the surfaces that draw one and a short text elsewhere. */
+/** Show a phase's detail under its entry's phases, or hide it when it is the one shown. */
+function togglePhase($, id, name) {
+  openPhase = openPhase?.id === id && openPhase.name === name ? null : { id, name }
+  $.ui.invalidate('ui.render')
+}
+
+const isOpenPhase = (e, p) => openPhase?.id === e.id && openPhase.name === p.name
+
+/** A phase as a pressable label: its state's mark, its name, and its label when there is room for one. */
+function phaseButton($, el, e, p, label) {
+  return el.Button({
+    key: `phase-${e.id}-${p.name}`,
+    label: `${phaseStyle(p.state).mark} ${label}`,
+    plain: true,
+    dimColor: Boolean(openPhase?.id === e.id) && !isOpenPhase(e, p),
+    onPress: () => togglePhase($, e.id, p.name),
+  })
+}
+
+/** The detail of the open phase of an entry: what it is, its state, and the whole note its state cell carries. */
+function phaseDetail($, el, e, width) {
+  const p = e.phases.find((x) => isOpenPhase(e, x))
+  if (!p) return []
+  const s = phaseStyle(p.state)
+  const rows = [el.Text({ color: s.color, bold: true, children: [`${s.mark} ${p.name} · ${T.states[p.state] ?? p.state}`] })]
+  if (p.label) rows.push(el.Text({ bold: true, children: [clip(plain(p.label), width * 3)] }))
+  if (p.note) rows.push(markdown($, el, `phase-md-${e.id}-${p.name}`, p.note, snapshot.board.project.docsDir).element)
+  return [card(el, rows)]
+}
+
+/** "Now": the entry worked on last, its phases pressable one by one, the live phase and the commit that touched it. */
 function nowCard($, el, width, now) {
   const current = currentWork()
   if (!current) return []
   const { entry: e, commit } = current
   const title = el.Button({ key: 'now-' + e.id, label: clip(`${e.id}  ${plain(e.title)}`, width - 2), plain: true, onPress: () => go($, { name: 'entry', id: e.id }) })
-  if (hasSvg(el) && e.phases.length) {
-    return [heading(el, T.now), card(el, [title, el.Svg({ source: phaseTrack(e, commit, now), alt: `${e.id}: ${commit.subject}` })]), blank(el)]
+  const active = e.phases.find((p) => p.state === 'active')
+  const rows = [title]
+  if (e.phases.length) {
+    if (hasSvg(el)) rows.push(el.Svg({ source: phaseTrack(e), alt: `${e.id}: ${T.phasesOf(e.phaseCounts.done ?? 0, phaseTotal(e.phaseCounts) - (e.phaseCounts.dropped ?? 0))}` }))
+    rows.push(
+      el.Box({ flexDirection: 'row', columnGap: 2, flexWrap: 'wrap', children: e.phases.map((p) => phaseButton($, el, e, p, p.name)) }),
+      ...phaseDetail($, el, e, width),
+    )
   }
-  const marks = e.phases.map((p) => (p.state === 'done' ? '●' : p.state === 'active' ? '◐' : '○')).join('')
-  return [heading(el, T.now), title, dim(el, clip(`${marks}  ${ago(commit.date, now)} · ${commit.subject}`, width)), blank(el)]
+  if (active) rows.push(el.Text({ color: 'warning', bold: true, children: [clip(`${active.name} · ${plain(active.label)}`, width - 2)] }))
+  rows.push(dim(el, clip(`${ago(commit.date, now)} · ${commit.subject}`, width - 2)))
+  return [heading(el, T.now), hasSvg(el) ? card(el, rows) : el.Box({ flexDirection: 'column', children: rows }), blank(el)]
 }
 
 /** The pane's title bar: the project, the register's path, and when the board was read. */
@@ -604,12 +665,8 @@ function entryView($, el, width, now) {
       ? el.Svg({ source: phaseSummary(e.phaseCounts, `${T.phases} · ${phasesOf}`), alt: `${T.phases}: ${phasesOf}` })
       : el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, T.phases), bar(el, e.phaseCounts, 24), dim(el, phasesOf)] }))
     for (const p of e.phases) {
-      const color = PHASES.find((x) => x.state === p.state)?.color ?? 'subtle'
-      rows.push(el.Box({
-        flexDirection: 'row',
-        columnGap: 1,
-        children: [el.Text({ color, children: ['●'] }), el.Text({ bold: true, children: [p.name] }), el.Text({ children: [clip(plain(p.label), width - p.name.length - 6)] })],
-      }))
+      rows.push(phaseButton($, el, e, p, clip(`${p.name}  ${plain(p.label)}`, width - 4)))
+      if (isOpenPhase(e, p)) rows.push(...phaseDetail($, el, e, width))
     }
     rows.push(blank(el))
   }

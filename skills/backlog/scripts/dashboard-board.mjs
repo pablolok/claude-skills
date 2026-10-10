@@ -70,6 +70,8 @@ const cells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split(
 /**
  * The phases a text's tables declare: a row whose first cell opens with a bold name (`**P1** parse the file`) and a
  * later cell opening with a state mark. Other tables (measures, mappings) carry no mark and are not phases.
+ * The label is the text after the name; a name alone in its cell (`| **F1** | the contract | workspace | ✅ |`) takes
+ * the cells between it and the state instead.
  * @param {string} text
  * @returns {Array<{name:string, label:string, state:string, note:string}>}
  */
@@ -80,11 +82,13 @@ export function phasesIn(text) {
     const [first, ...rest] = cells(line);
     const name = /^\s*\*\*([^*]+)\*\*\s*(.*)$/.exec(first ?? "");
     if (!name) continue;
-    const stateCell = rest.find((c) => markState(c));
-    if (!stateCell) continue;
+    const stateAt = rest.findIndex((c) => markState(c));
+    if (stateAt < 0) continue;
+    const stateCell = rest[stateAt];
+    const between = rest.slice(0, stateAt).map((c) => c.trim()).filter(Boolean).join(" · ");
     phases.push({
       name: name[1].trim(),
-      label: name[2].trim(),
+      label: name[2].trim() || between,
       state: markState(stateCell),
       note: stateCell.trim().replace(/^\S+\s*(?:[—–-]\s*)?/u, ""),
     });

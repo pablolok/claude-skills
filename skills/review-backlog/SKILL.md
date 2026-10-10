@@ -133,6 +133,14 @@ ago — this review is where it gets corrected, more often down than up.
 ⛔ **Don't propose the easiest work because it's easy.** If the honest candidate is expensive, say so and propose it
 anyway.
 
+### The move starts in the register
+
+Proposing it is not starting it. The proposed entry's `Status` becomes in progress, with the date and the step, and
+the step is a phase row marked active (the move itself when the entry has no phases left) — in a commit of its own
+whose message names **only that entry**. The dashboard's "working on now" is the entry of the newest commit, so a
+cleanup commit naming seven entries shows the first of them. Measured: a review proposed one entry and the board
+kept showing another, the first one its cleanup commit happened to name.
+
 ---
 
 ## What this review is NOT
@@ -150,6 +158,6 @@ Four things and nothing else:
 
 - **the gates**, with their control counts (`0 broken out of 567 examined`, not `0 broken`);
 - **what was cleaned**, one line each, and **what it was verified against**;
-- **the proposal**, in the Act 3 form;
-- if the cleanup touched files, the **commit** that carries it — repaired documents are committed in the same
-  session, or the next review finds them identical.
+- **the proposal**, in the Act 3 form, already started in the register;
+- the **commits**: the cleanup's, if it touched files — repaired documents are committed in the same session, or the
+  next review finds them identical — and the one that starts the move.

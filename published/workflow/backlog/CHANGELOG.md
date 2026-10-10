@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.0] - 2026-10-10
+- The dashboard draws a dropped phase apart from one not started (its own colour, a hatch and a ✕ mark, with a key of the states), and every phase is pressable: it opens its detail in place, the label and the whole note of its state cell. A phase whose name stands alone in its cell takes its label from the cells before its state. Bootstrap VERSION 1.8.0.
+
+
 ## [1.7.0] - 2026-10-10
 - The dashboard overview opens with a Working-on-now card: the entry whose commit is newest, whatever its status, with every phase as a block, the live phase and that commit
 

@@ -98,6 +98,14 @@ test("phases are the marked rows of a table whose first cell opens with a bold n
   assert.equal(phasesIn(SPEC)[0].note, "already counted from the card");
 });
 
+test("a name alone in its cell takes its label from the cells between it and the state", () => {
+  const table = "| | phase | where | state |\n|---|---|---|---|\n| **F1** | the contract | workspace | ✅ — written |\n| **F2** parse inline | here | 📋 |";
+  assert.deepEqual(phasesIn(table).map((p) => [p.name, p.label, p.note]), [
+    ["F1", "the contract · workspace", "written"],
+    ["F2", "parse inline", ""],
+  ]);
+});
+
 test("an entry's phases come from its card and its own docs, each name once, never from an archived doc", () => {
   const e = entry("BKLG-002");
   assert.deepEqual(e.phases.map((p) => p.name), ["P1", "P2", "P3", "P4", "P5"]);

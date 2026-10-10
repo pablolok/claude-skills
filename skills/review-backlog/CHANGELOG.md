@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.4] - 2026-10-10
+- The proposed move starts in the register: its entry's Status in progress and its step an active phase row, in a commit naming only that entry, so the dashboard shows it as the work in progress.
+
+
 ## [1.0.3] - 2026-10-07
 - What the cleanup writes follows the project's conventions (language, field names, commit format); the contributions section is the project's words.contributions
 

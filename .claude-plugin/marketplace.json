@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"what's in the backlog\", \"backlog dashboard\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "category": "workflow",
       "strict": true,
       "skills": [
@@ -66,7 +66,7 @@
       "name": "review-backlog",
       "source": "./published/workflow/review-backlog",
       "description": "Periodic review of a project's backlog (the backlog skill's BACKLOG.md) — run the document gates, clean up what has rotted, and close with ONE proposal of what to do next. Use when the user says \"review the backlog\", \"what's next\", \"review del backlog\", \"cosa facciamo adesso\", \"controlla che i documenti siano a posto\", or at the start of a session with no work in progress. Read-only until the cleanup, and the cleanup touches ONLY documents.",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "category": "workflow",
       "strict": false,
       "skills": [

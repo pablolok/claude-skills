@@ -10,7 +10,7 @@ const SNAPSHOT = {
     totals: {
       open: 2, inProgress: 1, blocked: 0, notStarted: 1, closed: 1, pending: 1,
       byPriority: { high: 1, medium: 1, low: 0, none: 0 },
-      phases: { done: 1, active: 1, dropped: 0, planned: 1 },
+      phases: { done: 1, active: 1, dropped: 1, planned: 1 },
     },
     entries: [
       {
@@ -21,8 +21,9 @@ const SNAPSHOT = {
           { name: 'P1', label: 'parse', state: 'done', note: '' },
           { name: 'P2', label: 'dedupe', state: 'active', note: '' },
           { name: 'P3', label: 'report', state: 'planned', note: '' },
+          { name: 'P4', label: 'background job', state: 'dropped', note: '**dropped** — the import takes 2 s, see [[BKLG-003]]' },
         ],
-        phaseCounts: { done: 1, active: 1, dropped: 0, planned: 1 },
+        phaseCounts: { done: 1, active: 1, dropped: 1, planned: 1 },
         waitsOn: [], cites: ['BKLG-003'], citedBy: [], unblocks: [],
         last: { date: '2026-10-08T10:00:00Z', sha: 'c2', subject: 'BKLG-002 P2: dedupe' },
         block: '## BKLG-002 — Import pipeline\n- **Status**: in-progress — P2 dedupe\n- **Summary**: see [[BKLG-003]]',
@@ -97,7 +98,7 @@ test('an entry opens with its phases, its docs and its links; its doc opens with
   await ui.press({ key: 'entry-BKLG-002' })
   expect(await ui.find({ key: 'back' })).toBeDefined()
   expect(await ui.find({ key: 'cite-BKLG-003' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: 'P2' })).toBeDefined()
+  expect(await ui.find({ key: 'phase-BKLG-002-P2' })).toBeDefined()
 
   await ui.press({ key: 'edoc-docs/implementations/features/import/spec.md' })
   const md = await ui.find({ key: 'doc-md' })
@@ -132,13 +133,60 @@ test('on the desktop the overview is drawn as vector cards and its rows stay pre
   expect(sources.every((s) => s.startsWith('<svg') && !s.includes('NaN'))).toBe(true)
   expect(sources.some((s) => s.includes('shop'))).toBe(true)
   expect(sources.some((s) => s.includes('stroke-dasharray'))).toBe(true)
-  // The entry worked on last (newest commit naming it) is a card with its phases and that commit.
+  // The entry worked on last (newest commit naming it) is a card with its phases, each pressable, and that commit.
   expect(await ui.find({ key: 'now-BKLG-002' })).toBeDefined()
-  expect(sources.some((s) => s.includes('BKLG-002 P2: dedupe') && s.includes('P3'))).toBe(true)
+  expect(await ui.find({ key: 'phase-BKLG-002-P3' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /BKLG-002 P2: dedupe/ })).toBeDefined()
   expect(await ui.find({ key: 'entry-BKLG-002' })).toBeDefined()
   expect(await ui.find({ key: 'next-BKLG-003' })).toBeDefined()
   await ui.press({ key: 'entry-BKLG-002' })
   expect(await ui.find({ key: 'back' })).toBeDefined()
+})
+
+test('a phase pressed shows its whole note under the phases, with pressable links; pressed again it closes', async ($, on) => {
+  stubs(on, [])
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  expect(await ui.find({ key: 'phase-md-BKLG-002-P4' })).toBeUndefined()
+
+  await ui.press({ key: 'phase-BKLG-002-P4' })
+  const detail = await ui.find({ key: 'phase-md-BKLG-002-P4' })
+  expect(detail).toBeDefined()
+  expect(detail.props.text).toContain('the import takes 2 s')
+  expect(detail.props.text).toContain('[BKLG-003](file:///work/docs/implementations/BACKLOG.md#BKLG-003)')
+  expect(await ui.find({ type: 'Text', text: /P4 · / })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'background job' })).toBeDefined()
+
+  await ui.press({ key: 'phase-BKLG-002-P4' })
+  expect(await ui.find({ key: 'phase-md-BKLG-002-P4' })).toBeUndefined()
+})
+
+test('on the entry page every phase is pressable and opens its detail in place', async ($, on) => {
+  stubs(on, [])
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  await ui.press({ key: 'entry-BKLG-002' })
+  await ui.press({ key: 'phase-BKLG-002-P2' })
+  expect(await ui.find({ key: 'phase-md-BKLG-002-P2' })).toBeUndefined() // P2 has no note: its label is the detail
+  expect(await ui.find({ type: 'Text', text: /P2 · / })).toBeDefined()
+  await ui.press({ key: 'phase-BKLG-002-P4' })
+  expect(await ui.find({ key: 'phase-md-BKLG-002-P4' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /P2 · / })).toBeUndefined()
+})
+
+test('a dropped phase is drawn apart from one not started: its own fill and its own mark', async ($, on) => {
+  stubs(on, [])
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const sources: string[] = (await ui.findAll({ type: 'Svg' })).map((d) => d.props.source)
+  const track = sources.find((s) => s.includes('dropped-hatch') && s.includes('url(#dropped-hatch)'))
+  expect(track).toBeDefined()
+  const fills = [...track.matchAll(/<rect x="[^"]+" y="26"[^>]*fill="([^"]+)"/g)].map((m) => m[1])
+  expect(fills.length).toBe(4)
+  expect(new Set(fills).size).toBe(4) // done, active, planned and dropped: four different fills
+  const p3 = await ui.find({ key: 'phase-BKLG-002-P3' })
+  const p4 = await ui.find({ key: 'phase-BKLG-002-P4' })
+  expect(p3.props.label.slice(0, 1)).not.toBe(p4.props.label.slice(0, 1))
 })
 
 test('a script that fails shows its message, not an empty pane', async ($, on) => {
