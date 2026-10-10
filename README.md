@@ -30,9 +30,10 @@ or cloud project keeps managed copies instead (see below).
 
 Plugins declared in a repository's `.claude/settings.json` are **not installed in Claude Code cloud sessions**: they
 need the folder's trust dialog, which a cloud session never shows. They also float: a project cannot pin each
-plugin's version. A managed copy is each skill copied byte for byte from its published tag `<skill>@<version>`,
-listed in `.claude/claude-skills.json` (names only; the version is the copy's `metadata.json`) and never edited in
-place:
+plugin's version. A managed copy is each skill copied byte for byte from its published tag `<skill>@<version>`
+(without its `.claude-plugin/` manifest: a folder with one under `.claude/skills/` is loaded as a second plugin of the
+same name and collides with the installed plugin), listed in `.claude/claude-skills.json` (names only; the version is
+the copy's `metadata.json`) and never edited in place:
 
 ```bash
 node scripts/claude-skills.mjs sync backlog@1.3.0 review-backlog   # no version: the latest tag; prints the diff

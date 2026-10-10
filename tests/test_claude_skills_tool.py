@@ -83,7 +83,8 @@ class TestClaudeSkillsTool(unittest.TestCase):
         self._commit_and_tag(src, ["plain@1.0.0", "hooked@1.0.0", "plainer@9.0.0"])
         (plain / "OLD.md").unlink()
         self._skill(plain, "plain", "1.1.0", {"SKILL.md": "plain two\n", "NEW.md": "new\n",
-                                              f"bootstrap/{LAUNCHER}": _launcher("1.1.0")})
+                                              f"bootstrap/{LAUNCHER}": _launcher("1.1.0"),
+                                              ".claude-plugin/plugin.json": json.dumps({"name": "plain"}) + "\n"})
         self._commit_and_tag(src, ["plain@1.1.0"])
         _git(src, "push", "-q", "origin", "HEAD:refs/heads/main", "--tags")
 
@@ -206,6 +207,21 @@ class TestClaudeSkillsTool(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("changed SKILL.md", result.stdout)
         self.assertIn("added   extra.md", result.stdout)
+
+    def test_sync_leaves_out_the_plugin_manifest(self) -> None:
+        # A copy carrying .claude-plugin/ is loaded as a second plugin of the same name, which collides with the
+        # installed one: managed copies are skills, never plugins.
+        out = self._ok("sync", "plain@1.1.0")
+        self.assertFalse((self._copy("plain") / ".claude-plugin").exists())
+        self.assertNotIn(".claude-plugin", out)
+        self.assertTrue((self._copy("plain") / "NEW.md").is_file())
+
+    def test_check_ignores_and_sync_removes_a_plugin_manifest_left_by_an_older_tool(self) -> None:
+        self._ok("sync", "plain@1.1.0")
+        _write(self._copy("plain") / ".claude-plugin" / "plugin.json", json.dumps({"name": "plain"}) + "\n")
+        self._ok("check")
+        self._ok("sync", "plain@1.1.0")
+        self.assertFalse((self._copy("plain") / ".claude-plugin").exists())
 
     def test_check_passes_when_only_line_endings_differ(self) -> None:
         self._ok("sync", "plain@1.1.0")

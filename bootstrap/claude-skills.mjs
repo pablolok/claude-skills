@@ -48,6 +48,13 @@ const LAUNCHER_VERSION = /^const VERSION = "([^"]+)";/m;
 const NO_VERSION = "(no VERSION)";
 /** Never copied, never compared: a copy may install its dependencies in place. */
 const IGNORED_DIR = "node_modules";
+/**
+ * Never copied, never compared, removed from a copy: a folder with a plugin manifest under `.claude/skills/` is loaded
+ * as a second plugin of the same name, which collides with the installed plugin. A managed copy is a skill, never a
+ * plugin; a mod's pane comes from the installed plugin.
+ */
+const PLUGIN_MANIFEST_DIR = ".claude-plugin";
+const NOT_COPIED = new Set([IGNORED_DIR, PLUGIN_MANIFEST_DIR]);
 const PLUGIN_ROOT = "${CLAUDE_PLUGIN_ROOT}";
 const PROJECT_DIR = "$CLAUDE_PROJECT_DIR";
 const SKILL_NAME = /^[a-z0-9][a-z0-9-]*$/;
@@ -64,7 +71,7 @@ const USAGE = `usage: node scripts/claude-skills.mjs <command>
         replaced by the published one; one the project lacks is only offered, never created.
         --adopt replaces a folder that exists but is not managed
   check
-        every managed copy equals its published tag (line endings and ${IGNORED_DIR} aside), the project's launchers
+        every managed copy equals its published tag (line endings, ${IGNORED_DIR} and ${PLUGIN_MANIFEST_DIR} aside), the project's launchers
         in ${LAUNCHER_DIR}/ equal the skill's published ones at the copy's version, and its plugin hooks are wired in
         .claude/settings.json; exit 1 otherwise. Newer published versions are reported as info.
   list
@@ -298,7 +305,7 @@ function fetchPublished(repo, cache, skill, version) {
   return folder;
 }
 
-/** Every file under `dir` (none of `node_modules`), relative path with `/` → content (bytes as latin1). */
+/** Every file under `dir` (none of `node_modules` or `.claude-plugin`), relative path with `/` → content (latin1). */
 function readTree(dir) {
   const tree = new Map();
   if (!existsSync(dir)) return tree;
@@ -306,7 +313,7 @@ function readTree(dir) {
     for (const entry of readdirSync(path.join(dir, rel), { withFileTypes: true })) {
       const child = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
-        if (entry.name !== IGNORED_DIR) walk(child);
+        if (!NOT_COPIED.has(entry.name)) walk(child);
       } else {
         tree.set(child, readFileSync(path.join(dir, child), "latin1"));
       }
@@ -340,7 +347,10 @@ function copyFolder(root, skill) {
   return folder;
 }
 
-/** Replace the copy with the published folder; a `node_modules` the copy installed is kept, none is copied. */
+/**
+ * Replace the copy with the published folder; a `node_modules` the copy installed is kept, none is copied; the plugin
+ * manifest is neither copied nor kept.
+ */
 function replaceCopy(target, source) {
   mkdirSync(target, { recursive: true });
   for (const entry of readdirSync(target)) {
@@ -348,7 +358,7 @@ function replaceCopy(target, source) {
   }
   cpSync(source, target, {
     recursive: true,
-    filter: (src) => !path.relative(source, src).split(path.sep).includes(IGNORED_DIR),
+    filter: (src) => !path.relative(source, src).split(path.sep).some((part) => NOT_COPIED.has(part)),
   });
 }
 
