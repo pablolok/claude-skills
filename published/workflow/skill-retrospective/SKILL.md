@@ -19,7 +19,8 @@ to read and contradicting itself.
   steps redone, the user's corrections — quote them.
 - **The root cause of each waste**, not its symptom: a missing step, a wrong default, a method that was the wrong
   tool (many rounds hand-tuning an output that a different method got right in one), a check that measured the wrong
-  thing, two skills that disagree.
+  thing, two skills that disagree. A cause goes into a skill only when the evidence shows it (a re-run, a log, an
+  output); an explanation nothing confirmed is a hypothesis and stays out.
 
 ## 2. Rewrite each skill used
 
@@ -46,12 +47,18 @@ For every skill, open the whole file and edit it as its owner would:
     a managed copy (a folder under `.claude/skills/` that `.claude/claude-skills.json` lists, copied from the
     repository's tag): the source is the repository it comes from. Never edit a managed copy: its `check` fails on
     any hand edit; fix the source as below (a lesson is a patch), then the project runs its sync to the new
-    version and commits the diff. When a clone of it is on this machine (the `CLAUDE_SKILLS_REPO` environment variable names it) and the person working owns it, edit
-    the skill there, run its tests, publish a new version with the repository's own flow (patch for a lesson, minor
-    for a new step), commit, tag and push; then bring the projects up to it (`claude plugin update`, or the
-    version a project pins). Without a clone — a cloud session, a collaborator's machine — never edit the installed
-    copy: open an issue on the skill repository the plugin comes from, with the lesson as the instruction to add,
-    and say so in the report;
+    version and commits the diff.
+    - **Find the clone before concluding there is none**: `CLAUDE_SKILLS_REPO` names it when set; otherwise look
+      for a local repository whose `git remote` is the plugin's repository (its `plugin.json`, or the
+      marketplace's). When the person maintains it (a clone they push to), edit the skill there, run its tests,
+      publish a new version with the repository's own flow (patch for a lesson, minor for a new step), commit, tag
+      and push; then bring the projects up to it (`claude plugin update`, or the version a project pins).
+    - **A repository the person does not maintain** (another organisation's plugin, a marketplace they only
+      install from), or a maintained one with no clone here (a cloud session, a collaborator's machine): never
+      edit the installed copy, and open no issue or pull request unasked — an issue is a public action in the
+      person's name. Report the general lesson in the summary; file it only when the person asks.
+  - **built into the host** (a skill that ships with the agent itself, with no repository to edit): no edit; a
+    project-specific lesson goes in the project's own skills, a general one is reported.
   - **user-level** (`~/.claude/skills`) kept in a versioned repo: edit it, then copy it back there and push.
 - **Scripts follow the skill**: a script the skill no longer calls is deleted; a fix that recurs becomes a script
   option, not a paragraph.

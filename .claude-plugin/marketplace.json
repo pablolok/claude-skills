@@ -77,7 +77,7 @@
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
       "description": "Use when a piece of work closes — a backlog entry archived, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method — or when a hook asks for it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
-      "version": "1.5.2",
+      "version": "1.5.3",
       "category": "workflow",
       "strict": false,
       "skills": [

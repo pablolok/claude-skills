@@ -42,7 +42,9 @@ test("a general lesson goes to the skill's source — for a plugin, the skill re
   "committed the project's way", () => {
   const text = retroText("Done.", ["backlog"]);
   assert.match(text, /skill repository the plugin comes from/);
-  assert.match(text, /an issue there/);
+  assert.match(text, /look for its clone/);
+  assert.doesNotMatch(text, /an issue there/, "an issue on someone else's repository is never asked for");
+  assert.match(text, /report the lesson/);
   assert.match(text, /project's commit conventions/);
   assert.doesNotMatch(text, /user-level skills/, "a collaborator's lessons on a plugin do not go to their own ~/.claude");
 });

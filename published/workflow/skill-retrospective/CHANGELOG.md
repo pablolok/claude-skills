@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.3] - 2026-10-10
+- A clone is looked for before concluding there is none (CLAUDE_SKILLS_REPO, or a local repository with the plugin's remote); no issue or pull request on a repository the person does not maintain unless asked, the lesson is reported instead; skills built into the host get no edit; a cause enters a skill only when the evidence shows it. The Stop hook's request says the same.
+
+
 ## [1.5.2] - 2026-10-09
 - a hook started through a symbolic link runs instead of exiting silently (entry point compared as real paths)
 

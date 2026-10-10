@@ -63,8 +63,9 @@ export function retroText(reason, skills) {
   return `${reason} Before the next piece of work, run the skill-retrospective skill on: ${list}. ` +
     "Rewrite those skills in place with what this work taught — fix the step, delete what proved wrong or useless, " +
     "keep them short — never append a lessons log. Project lessons go in the project's skills; general ones stay " +
-    "generic and go to the skill's source — for a plugin, the skill repository the plugin comes from (its clone, or " +
-    "an issue there without one), never the installed copy. Commit following the project's commit conventions.";
+    "generic and go to the skill's source — for a plugin, the skill repository the plugin comes from: look for its clone " +
+    "(CLAUDE_SKILLS_REPO, or a local repository with that remote) and edit there if the person maintains it; otherwise " +
+    "report the lesson and open nothing unasked. Never the installed copy. Commit following the project's commit conventions.";
 }
 
 /** The reason to hold the stop, or null: an archived entry, or enough commits since the last retrospective. */
