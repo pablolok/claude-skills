@@ -63,7 +63,9 @@ unit, the refactor isn't done.
     every "nothing bad" check — one such check stayed green for a day on output that did nothing. A lower bound
     ("more than N results") passes on duplicated output too: bound it on both sides or assert what must not be
     there (a split that cut every part twice still passed "more than 10 pieces"). Write the assertion first and
-    watch it fail on the current code: a test that was never red proves nothing about the fix.
+    watch it fail on the current code: a test that was never red proves nothing about the fix. Code that tells
+    states apart (present / missing / broken) is tested on each state built for real, the broken one included: a
+    platform's existence check can report a broken link as present.
 11. **Leave borrowed state as found.** Code that changes shared state to do its work (a mode, a setting, a
     selection, a global) records every property it touches and restores each one — not only the values it
     measured with: a probe that switched a mode and reset just the values left everything after it inert.

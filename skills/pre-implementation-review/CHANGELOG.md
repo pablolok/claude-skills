@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.9] - 2026-10-10
+- a fallback reports the error it caught before trying the next way: swallowed, the next attempt's failure is all that shows
+
+
 ## [1.1.8] - 2026-10-10
 - a rule that lists observed values states how many independent instances it saw and keys on what every instance shares; consumers derive from one fragment
 

@@ -175,6 +175,8 @@ These are not soft smells to mention — if the change would introduce one, the 
   stuck first try left produced a broken shape that passed its own count.
   A retry or fallback that **did not measure** never replaces an outcome that did (the verdict is the last attempt that
   produced an answer, the others are kept beside it), and a retry the remaining budget cannot finish is not started.
+  A fallback **reports the error it caught** before trying the next way: swallowed, the next attempt's failure is all
+  that shows (a loader that missed a local file for one reason surfaced only the remote lookup's "not found").
 - **A write decided from reads that refresh independently is conditioned where it lands.** When client code
   decides to write by combining reads that come back separately (a summary and a settings record, two cached
   queries), one can be newer than the other, and the decision can undo a change the user just made (an automatic
