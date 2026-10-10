@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.6] - 2026-10-10
+- A pending-state claim written in the present tense expires when the thing lands, even inside a log of shipped work.
+
+
 ## [1.0.5] - 2026-10-10
 - Block moves find headings at the start of a line; a per-item claim is checked per item, and a re-measured number is searched for in the stable docs; a proposed manual step follows the backlog skill's Manual rule.
 

@@ -59,8 +59,9 @@ that needs re-measuring, which is Act 2.
 Every pending ledger the project keeps (verification, deploy, migration…) answers *what has been committed but not
 yet checked / shipped?*. The defect that grows there: lines whose check **already passed** or whose deploy already
 landed, ✅ lines left behind — the ledger becomes a graveyard nobody reads. Verify each line **against the thing**
-(run the check, look at the deploy) before removing it. A line with a **relative date** ("waits for tomorrow",
-"today's batch") expires at midnight: rewrite it with the real date.
+(run the check, look at the deploy) before removing it. A line with a **relative date** ("waits for tomorrow", "today's batch") or a present-tense claim about what is still
+pending ("stays in the pending ledger") expires when the day turns or the thing lands, **including inside a log of what
+already shipped**: rewrite it with the real date and the true state.
 
 A **dated** section (a log of today's deploys or releases) whose date is not today is **moved** to the top of its
 history file and reopened with today's date. ⛔ **Move, never delete**: what shipped, what it cost, what was
