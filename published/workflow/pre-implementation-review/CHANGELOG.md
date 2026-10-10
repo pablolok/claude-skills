@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.10] - 2026-10-10
+- A new writer checks the constraints already on the fields it writes
+
+
 ## [1.1.9] - 2026-10-10
 - a fallback reports the error it caught before trying the next way: swallowed, the next attempt's failure is all that shows
 

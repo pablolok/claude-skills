@@ -191,7 +191,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   edge of the allowed range (a generator writing "the first date after the series", past the last allowed one). Each
   path already respects the constraint, is fixed in the same change, or the constraint waits until it is. Aligned
   with the forms only, a new check on a schedule missed four writers and a generator stepping past the bound — each
-  would have failed only once the constraint was live, with a generic error.
+  would have failed only once the constraint was live, with a generic error. The same holds the other way: a **new
+  writer** checks every constraint already on the fields it writes, through the project's shared limits if it has
+  them, so a value out of range is refused with the field's message, not by the store with a generic error.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.
