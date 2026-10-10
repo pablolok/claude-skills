@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.0] - 2026-10-10
+- The dashboard pane draws vector cards on the desktop app: progress rings, tiles, rounded phase bars and a title bar; the terminal keeps its text view
+
+
 ## [1.5.2] - 2026-10-09
 - next-id counts the ids the register CLAIMS (a card heading, a history line, an activity folder's name), not every mention: a history line citing another project's entries no longer hands out a number past them; mentions above the highest claim are a warning on stderr. Bootstrap VERSION 1.5.2.
 

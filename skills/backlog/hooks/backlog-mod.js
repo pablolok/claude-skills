@@ -224,6 +224,116 @@ async function openDoc($, path) {
   go($, { name: 'doc', path, text })
 }
 
+// ─── vector drawing ──────────────────────────────────────────────────────────────────────────────────────────────
+// Surfaces that draw `Svg` (the desktop app) get rings, rounded bars and tiles instead of runs of block characters. The
+// drawing is an image: rows that must be pressed stay `Button`s around it, and the colours follow the system's light or
+// dark scheme through the stylesheet inside the image.
+/** Fills of the phase states and of the status tiles. */
+const INK = { green: '#3fb950', amber: '#d29922', grey: '#6e7681', red: '#f85149', blue: '#58a6ff', dropped: '#484f58' }
+const STATE_INK = { done: INK.green, active: INK.amber, planned: INK.grey, dropped: INK.dropped }
+/** Width of every drawing, in CSS pixels; the surface shrinks it to the pane. */
+const SVG_WIDTH = 540
+
+const hasSvg = (el) => typeof el.Svg === 'function'
+const xml = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+/** One SVG document: the shared stylesheet (text, muted text, card and track colours, light and dark) and a body. */
+function svgDocument(height, body) {
+  const style =
+    '.t{fill:#e6edf3}.m{fill:#8b949e}.c{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.12)}.k{stroke:rgba(255,255,255,.14)}' +
+    '@media (prefers-color-scheme: light){.t{fill:#1f2328}.m{fill:#656d76}.c{fill:rgba(0,0,0,.03);stroke:rgba(0,0,0,.12)}.k{stroke:rgba(0,0,0,.14)}}'
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SVG_WIDTH} ${height}" width="${SVG_WIDTH}" height="${height}" ` +
+    `font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"><style>${style}</style>${body}</svg>`
+  )
+}
+
+/** A rounded bar split into one segment per phase state; an empty track when there is nothing to count. */
+function segmentedBar(x, y, width, height, counts, clipId) {
+  const total = phaseTotal(counts)
+  const track = `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}" fill="none" class="k"/>`
+  if (!total) return track
+  let at = 0
+  const segments = PHASES.map((p) => {
+    const n = counts[p.state] ?? 0
+    if (!n) return ''
+    const w = (n / total) * width
+    const rect = `<rect x="${(x + at).toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${height}" fill="${STATE_INK[p.state]}"/>`
+    at += w
+    return rect
+  }).join('')
+  return (
+    `<clipPath id="${clipId}"><rect x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}"/></clipPath>` +
+    `<g clip-path="url(#${clipId})">${segments}</g>${track}`
+  )
+}
+
+/** A progress ring with its percentage in the middle and a caption under it. */
+function progressRing(cx, cy, radius, pct, color, caption, detail) {
+  const circle = 2 * Math.PI * radius
+  const arc = (circle * Math.max(0, Math.min(100, pct))) / 100
+  return (
+    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" class="k" stroke-width="9"/>` +
+    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" ` +
+    `stroke-dasharray="${arc.toFixed(1)} ${circle.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>` +
+    `<text x="${cx}" y="${cy + 7}" text-anchor="middle" font-size="21" font-weight="700" class="t">${pct}%</text>` +
+    `<text x="${cx}" y="${cy + radius + 24}" text-anchor="middle" font-size="13" font-weight="600" class="t">${xml(caption)}</text>` +
+    `<text x="${cx}" y="${cy + radius + 41}" text-anchor="middle" font-size="12" class="m">${xml(detail)}</text>`
+  )
+}
+
+/** A big number with its label under it. */
+const statTile = (x, y, value, label, color) =>
+  `<text x="${x}" y="${y}" font-size="28" font-weight="700" fill="${color}">${value}</text>` +
+  `<text x="${x}" y="${y + 19}" font-size="12" class="m">${xml(label)}</text>`
+
+/** The overview's header card: two rings and the four counts. */
+function overviewCard(t) {
+  const all = t.open + t.closed
+  const counted = phaseTotal(t.phases) - (t.phases.dropped ?? 0)
+  const body =
+    `<rect x="0.5" y="0.5" width="${SVG_WIDTH - 1}" height="177" rx="14" class="c"/>` +
+    progressRing(78, 66, 40, percent(t.closed, all), INK.green, T.closed, T.of(t.closed, all)) +
+    progressRing(222, 66, 40, percent(t.phases.done, counted), INK.amber, T.phases, T.of(t.phases.done, counted)) +
+    `<line x1="302" y1="24" x2="302" y2="154" class="k"/>` +
+    statTile(330, 56, t.inProgress, T.statuses['in-progress'], INK.amber) +
+    statTile(440, 56, t.notStarted, T.states.planned, '#8b949e') +
+    statTile(330, 124, t.blocked, T.statuses.blocked, t.blocked ? INK.red : '#8b949e') +
+    statTile(440, 124, t.pending, T.pending, INK.blue)
+  return svgDocument(178, body)
+}
+
+/** The strip under an entry's title: its phase bar, the facts, the priority at the right edge. */
+function entryStrip(e, facts) {
+  const priority = e.priority ? T.priorities[e.priority] ?? e.priority : ''
+  const body =
+    segmentedBar(2, 9, 150, 8, e.phaseCounts, 'strip') +
+    `<text x="168" y="17" font-size="12" class="m">${xml(clip(facts, 52))}</text>` +
+    (priority
+      ? `<text x="${SVG_WIDTH - 4}" y="17" font-size="12" font-weight="600" text-anchor="end" fill="${{ high: INK.red, medium: INK.amber, low: INK.grey }[e.priority] ?? INK.grey}">${xml(priority)}</text>`
+      : '')
+  return svgDocument(26, body)
+}
+
+/** The pane's title bar: the project, the register's path, and when the board was read. */
+function titleBar(name, register, when) {
+  const body =
+    `<text x="4" y="22" font-size="18" font-weight="700" class="t">${xml(name)}</text>` +
+    `<text x="4" y="40" font-size="12" class="m">${xml(register)}</text>` +
+    `<text x="${SVG_WIDTH - 4}" y="22" font-size="12" text-anchor="end" class="m">${xml(when)}</text>`
+  return svgDocument(48, body)
+}
+
+/** An entry's phase bar with its count, on the entry's own page. */
+function phaseSummary(counts, label) {
+  const body = segmentedBar(2, 9, 300, 8, counts, 'phases') + `<text x="318" y="17" font-size="12" class="m">${xml(label)}</text>`
+  return svgDocument(26, body)
+}
+
+/** A bordered card around an entry's rows, on the surfaces that draw a border as a box. */
+const card = (el, children) =>
+  el.Box({ flexDirection: 'column', borderStyle: 'round', borderColor: 'inactive', paddingX: 1, children })
+
 // ─── drawing ─────────────────────────────────────────────────────────────────────────────────────────────────────
 /** A progress bar: one coloured run of cells per state. */
 function bar(el, counts, width) {
@@ -259,10 +369,12 @@ function entryRow($, el, e, width, now) {
     active ? `${active.name} ${plain(active.label)}` : '',
     e.last ? ago(e.last.date, now) : T.noCommit,
   ].filter(Boolean).join(' · ')
+  const title = el.Button({ key: 'entry-' + e.id, label: clip(`${e.id}  ${plain(e.title)}`, width - 2), plain: true, onPress: () => go($, { name: 'entry', id: e.id }) })
+  if (hasSvg(el)) return card(el, [title, el.Svg({ source: entryStrip(e, facts), alt: `${e.id}: ${facts}` })])
   return el.Box({
     flexDirection: 'column',
     children: [
-      el.Button({ key: 'entry-' + e.id, label: clip(`${e.id}  ${plain(e.title)}`, width - 2), plain: true, onPress: () => go($, { name: 'entry', id: e.id }) }),
+      title,
       el.Box({
         flexDirection: 'row',
         columnGap: 1,
@@ -281,18 +393,23 @@ function overview($, el, width, now) {
   const counted = phaseTotal(t.phases) - (t.phases.dropped ?? 0)
   const barWidth = Math.max(10, Math.min(48, width - 30))
   const inProgress = b.inProgress.map(entryOf)
+  const summary = hasSvg(el)
+    ? [el.Svg({ source: overviewCard(t), alt: `${T.closed} ${percent(t.closed, all)}%, ${T.phases} ${percent(t.phases.done, counted)}%, ${T.counts(t)}` })]
+    : [
+        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.closed} ${percent(t.closed, all)}%`), dim(el, T.of(t.closed, all))] }),
+        bar(el, { done: t.closed, active: t.inProgress, planned: t.notStarted, dropped: t.blocked }, barWidth),
+        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.phases} ${percent(t.phases.done, counted)}%`), dim(el, T.of(t.phases.done, counted))] }),
+        bar(el, t.phases, barWidth),
+        dim(el, T.counts(t)),
+      ]
   return [
-    el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.closed} ${percent(t.closed, all)}%`), dim(el, T.of(t.closed, all))] }),
-    bar(el, { done: t.closed, active: t.inProgress, planned: t.notStarted, dropped: t.blocked }, barWidth),
-    el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.phases} ${percent(t.phases.done, counted)}%`), dim(el, T.of(t.phases.done, counted))] }),
-    bar(el, t.phases, barWidth),
-    dim(el, T.counts(t)),
+    ...summary,
     blank(el),
-    heading(el, T.inProgress),
+    heading(el, `${T.inProgress} · ${inProgress.length}`),
     ...inProgress.slice(0, LIST_LIMIT.overview).map((e) => entryRow($, el, e, width, now)),
     ...(inProgress.length > LIST_LIMIT.overview ? [dim(el, T.more(inProgress.length - LIST_LIMIT.overview))] : []),
     blank(el),
-    heading(el, T.next),
+    heading(el, `${T.next} · ${b.next.length}`),
     ...b.next.slice(0, LIST_LIMIT.overview).map((n) => nextRow($, el, n, width)),
   ]
 }
@@ -300,20 +417,18 @@ function overview($, el, width, now) {
 function nextRow($, el, n, width) {
   const e = entryOf(n.id)
   const why = [n.unblocks ? T.unblocks(n.unblocks) : '', n.citedBy ? T.citedBy(n.citedBy) : '', n.added ?? ''].filter(Boolean).join(' · ')
-  return el.Box({
-    flexDirection: 'column',
-    children: [
-      el.Box({
-        flexDirection: 'row',
-        columnGap: 2,
-        children: [
-          el.Button({ key: 'next-' + n.id, label: clip(`${n.id}  ${plain(e.title)}`, width - 10), plain: true, onPress: () => go($, { name: 'entry', id: n.id }) }),
-          el.Text({ color: PRIORITY_COLOR[n.priority] ?? 'subtle', children: [T.priorities[n.priority] ?? ''] }),
-        ],
-      }),
-      dim(el, '   ' + why),
-    ],
-  })
+  const rows = [
+    el.Box({
+      flexDirection: 'row',
+      columnGap: 2,
+      children: [
+        el.Button({ key: 'next-' + n.id, label: clip(`${n.id}  ${plain(e.title)}`, width - 10), plain: true, onPress: () => go($, { name: 'entry', id: n.id }) }),
+        el.Text({ color: PRIORITY_COLOR[n.priority] ?? 'subtle', bold: true, children: [T.priorities[n.priority] ?? ''] }),
+      ],
+    }),
+    dim(el, why),
+  ]
+  return hasSvg(el) ? card(el, rows) : el.Box({ flexDirection: 'column', children: [rows[0], dim(el, '   ' + why)] })
 }
 
 function progressView($, el, width, now) {
@@ -428,7 +543,10 @@ function entryView($, el, width, now) {
     blank(el),
   ]
   if (total) {
-    rows.push(el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, T.phases), bar(el, e.phaseCounts, 24), dim(el, T.phasesOf(e.phaseCounts.done, total - (e.phaseCounts.dropped ?? 0)))] }))
+    const phasesOf = T.phasesOf(e.phaseCounts.done, total - (e.phaseCounts.dropped ?? 0))
+    rows.push(hasSvg(el)
+      ? el.Svg({ source: phaseSummary(e.phaseCounts, `${T.phases} · ${phasesOf}`), alt: `${T.phases}: ${phasesOf}` })
+      : el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, T.phases), bar(el, e.phaseCounts, 24), dim(el, phasesOf)] }))
     for (const p of e.phases) {
       const color = PHASES.find((x) => x.state === p.state)?.color ?? 'subtle'
       rows.push(el.Box({
@@ -493,8 +611,11 @@ function header($, el, width, now) {
   if (!active) actions.unshift(el.Button({ key: 'back', label: T.back, hotkey: 'b', plain: true, onPress: () => goBack($) }))
   const project = snapshot ? `${snapshot.board.project.name} · ${snapshot.board.project.backlog}` : ''
   const when = loading ? T.loading : loadedAt ? `${T.updated} ${ago(new Date(loadedAt).toISOString(), now)}` : ''
+  const title = hasSvg(el) && snapshot
+    ? el.Svg({ source: titleBar(snapshot.board.project.name, snapshot.board.project.backlog, when), alt: `${project} ${when}` })
+    : el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, clip(project, width - 24)), dim(el, when)] })
   return [
-    el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, clip(project, width - 24)), dim(el, when)] }),
+    title,
     el.Box({ flexDirection: 'row', columnGap: 2, flexWrap: 'wrap', children: [...tabs, ...actions] }),
     blank(el),
   ]

@@ -121,6 +121,22 @@ test('the documents tab lists every document and filters them by path', async ($
   expect(await ui.find({ key: 'doc-docs/implementations/features/import/spec.md' })).toBeDefined()
 })
 
+test('on the desktop the overview is drawn as vector cards and its rows stay pressable', async ($, on) => {
+  stubs(on, [])
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const drawings = await ui.findAll({ type: 'Svg' })
+  expect(drawings.length).toBeGreaterThan(1)
+  const sources: string[] = drawings.map((d) => d.props.source)
+  expect(sources.every((s) => s.startsWith('<svg') && !s.includes('NaN'))).toBe(true)
+  expect(sources.some((s) => s.includes('shop'))).toBe(true)
+  expect(sources.some((s) => s.includes('stroke-dasharray'))).toBe(true)
+  expect(await ui.find({ key: 'entry-BKLG-002' })).toBeDefined()
+  expect(await ui.find({ key: 'next-BKLG-003' })).toBeDefined()
+  await ui.press({ key: 'entry-BKLG-002' })
+  expect(await ui.find({ key: 'back' })).toBeDefined()
+})
+
 test('a script that fails shows its message, not an empty pane', async ($, on) => {
   stubs(on, [], { exitCode: 2, stdout: '', stderr: 'dashboard: no register at docs/implementations/BACKLOG.md' })
   await $.command.run({ command: 'backlog-dashboard', args: '' })
