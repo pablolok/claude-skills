@@ -159,7 +159,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   state (an automatic remesher would not go below ~30× the budget of the smallest parts, whatever its settings).
   The same before a long run judged by one total (a sum under a cap, a full rebuild): try each part's target with
   the real tool first — a table of budgets written on paper failed a 3-minute build three times on parts the tool
-  could not bring that low.
+  could not bring that low. And run the step that **consumes** a result on a rough version of it before polishing it:
+  a defect the consumer finds reshapes the work upstream (a rough model rigged and posed showed one limb dragging the
+  body — found before any assembly polish, not after).
 - **Never read an input back from what the operation itself writes.** If a job decides which records
   to process by a field it then overwrites (e.g. "unprocessed = status is empty", then it sets the
   status), its second run reads its own output and skips or reprocesses the wrong ones. Take the input

@@ -55,7 +55,7 @@
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
-      "version": "1.1.10",
+      "version": "1.1.11",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -66,7 +66,7 @@
       "name": "review-backlog",
       "source": "./published/workflow/review-backlog",
       "description": "Periodic review of a project's backlog (the backlog skill's BACKLOG.md) — run the document gates, clean up what has rotted, and close with ONE proposal of what to do next. Use when the user says \"review the backlog\", \"what's next\", \"review del backlog\", \"cosa facciamo adesso\", \"controlla che i documenti siano a posto\", or at the start of a session with no work in progress. Read-only until the cleanup, and the cleanup touches ONLY documents.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "category": "workflow",
       "strict": false,
       "skills": [

@@ -81,7 +81,9 @@ Search for them **in this order** — the first ones invalidate the later ones.
    proposed again tomorrow.
 2. **The work moved and the `Status` didn't.** `open` on an entry half in production wastes a round of conversation
    for whoever reads it and **gets work repeated**. Rewrite it with the true position, never better than it is — and
-   the phase-table rows whose open items that work closed.
+   the phase-table rows whose open items that work closed. The same for an untouched entry's other fields: a tool or
+   method it names that the project has since withdrawn (a generator dropped for its licence) gets the work started
+   the wrong way.
 3. **The wait is dead.** `blocked — on [[BKLG-NNN]]` where that entry is closed, "waiting for the deploy" where it
    landed days ago. ⛔ **A blocker is verified in the CODE, not in the plan.** A wait for the first live data (a
    column never written, a job never seen running) is closed with **one query**, not by reading the document.

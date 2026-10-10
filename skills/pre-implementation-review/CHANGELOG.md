@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.11] - 2026-10-10
+- Run the step that consumes a result on a rough version before polishing it: a defect it finds reshapes the work upstream
+
+
 ## [1.1.10] - 2026-10-10
 - A new writer checks the constraints already on the fields it writes
 

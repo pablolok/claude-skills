@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.7] - 2026-10-10
+- An untouched entry's other fields rot too: a tool or method it names that the project has since withdrawn
+
+
 ## [1.0.6] - 2026-10-10
 - A pending-state claim written in the present tense expires when the thing lands, even inside a log of shipped work.
 
