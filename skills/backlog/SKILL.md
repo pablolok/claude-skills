@@ -56,7 +56,10 @@ use); the English ones above are the defaults. Each field on **its own line** (t
 that start with `- **Field**:`; a value appended after a `·` is not seen).
 
 - **Manual**: anything the AI **cannot do** — an action in a tool only a person runs, a judgement, a login, a
-  purchase. ⚠️ Write it **and say it** in the reply: a manual step only written down degrades into "nobody did it".
+  purchase. Before writing a step as Manual, check whether a connected tool (an MCP connector, a CLI already
+  authenticated) can do it, or could once the person enables it — then the Manual part shrinks to the irreducible
+  consent (a sign-in, an app authorization) and the rest is done for them. ⚠️ Write it **and say it** in the reply:
+  a manual step only written down degrades into "nobody did it".
   Write it as the **path the person follows**, in the words on their screen (page › tab › the heading they look
   for), read from the UI's text — never a component's or file's name, which they cannot find; and say what to bring
   back (the numbers, a screenshot), so the step closes in one round.

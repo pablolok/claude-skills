@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.3] - 2026-10-10
+- Manual: check connected tools before writing a step as Manual; leave only the irreducible consent to the person.
+
+
 ## [1.8.2] - 2026-10-10
 - The dashboard mod loads again: a parameter named register in titleBar counted as a second declaration of the module's register entry point, and the hooks loader refused the module
 
