@@ -24,7 +24,11 @@ below make it idiomatic TypeScript and React.
    new case is a compile error, not a silent fallthrough.
 3. **Errors as values where it aids control flow.** A `Result<T, E>` / tagged union for *expected*
    failures; throw only for the truly exceptional. Never swallow — no empty `catch {}`, no
-   discarding a rejected promise. Handle or propagate intentfully.
+   discarding a rejected promise. Handle or propagate intentfully. An error meant for a caller
+   across a framework boundary (a tool handler, an RPC, an API route) is thrown as the type the
+   framework forwards — many pass on only their own error class and redact the rest — and its test
+   asserts that class, not only the message. Tell "no longer authorized" (401/403, a session that is
+   gone) from a transient failure: the caller's next step differs.
 4. **Immutability by default.** `readonly` fields, `ReadonlyArray`, `as const` for literal tables;
    don't mutate props, arguments, or shared state. Return new values.
 5. **Casts and `!` are assertions that bypass the checker — avoid them.** No non-null `!` to silence
@@ -74,7 +78,9 @@ The numbered rules below are the specifics of that separation.
 12. **Derive, don't duplicate, state.** Compute from source state/props (or `useMemo`) instead of
     mirroring it into extra state kept in sync by effects. Synced-copy state is a bug magnet.
 13. **Accessible, correct primitives by default.** Stable list keys (never array index on dynamic
-    lists), controlled inputs, labelled interactive elements.
+    lists), controlled inputs, labelled interactive elements. A URL that comes from outside (another
+    user, a third-party client, an import) becomes an `href` only after its protocol is checked
+    (`http:`/`https:`); anything else stays text.
 
 ## Quality gates (TS/React)
 

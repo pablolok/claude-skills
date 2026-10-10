@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3] - 2026-10-10
+- An error for a caller across a framework boundary uses the forwarded error type and is tested by class; revoked vs transient told apart; an outside URL becomes an href only with an http(s) protocol
+
+
 ## [1.1.2] - 2026-10-09
 - Before the full suite, update the tests that double a seam whose shape changed
 
