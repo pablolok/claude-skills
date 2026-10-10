@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.8] - 2026-10-10
+- a rule that lists observed values states how many independent instances it saw and keys on what every instance shares; consumers derive from one fragment
+
+
 ## [1.1.7] - 2026-10-10
 - A feature that shows existing data looks at every displayed field on the real producer's output before the design.
 

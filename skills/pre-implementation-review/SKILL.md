@@ -222,6 +222,13 @@ These are not soft smells to mention — if the change would introduce one, the 
   *named* is not being *done* either: a trigger read from free text (a shell command, a log line) matches only the
   part that acts — a quoted message or a here-document that names the command runs nothing (a hook matching the
   whole command text fired on a commit message that quoted it).
+- **A rule that lists observed values (hosts, labels, ids, formats) states how many independent instances it saw
+  and along which axis they differ — one instance cannot tell a closed set from a per-item token.** Before
+  choosing between listing and a structural property, sample the axis that could vary (another item at the same
+  moment, the same item later): if the value changed between items, key the rule on what every instance shares
+  (a path shape, a response behaviour, a field) and list nothing: a list widened one value at a time fails on the
+  next item, and only after a deploy. When several consumers read the same rule (a harvest, a direct read, an
+  allowlist), derive all of them from one fragment, or widening one leaves the others refusing.
 - **Find by name only with the owner's name for it.** A shared helper that looks something up by a conventional name
   (a part called "main", a field called "id") takes the name from the member that owns that vocabulary, and says so
   when it finds nothing — a lookup that silently did nothing hid that one member names the part differently.
