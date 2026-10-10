@@ -31,7 +31,7 @@ const WORDS = {
     refresh: 'Refresh', back: 'Back', loading: 'Reading the register…', updated: 'updated',
     closed: 'Entries closed', phases: 'Phases done', of: (a, b) => `${a} of ${b}`,
     counts: (t) => `${t.inProgress} in progress · ${t.notStarted} not started · ${t.blocked} blocked · ${t.pending} to verify`,
-    inProgress: 'In progress', next: 'Next up', pending: 'To verify', activity: 'Recent commits', recentClosed: 'Recently closed',
+    now: 'Working on now', inProgress: 'In progress', next: 'Next up', pending: 'To verify', activity: 'Recent commits', recentClosed: 'Recently closed',
     nextHint: 'What blocked entries wait on first, then the written priority, then the oldest. A hint: the move is the backlog review\'s call.',
     phasesOf: (d, n) => `${d}/${n} phases`, unblocks: (n) => `unblocks ${n}`, citedBy: (n) => `cited by ${n}`,
     noCommit: 'no commit names it yet', more: (n) => `… ${n} more`, nothing: 'Nothing here.',
@@ -49,7 +49,7 @@ const WORDS = {
     refresh: 'Aggiorna', back: 'Indietro', loading: 'Leggo il registro…', updated: 'aggiornato',
     closed: 'Voci chiuse', phases: 'Fasi completate', of: (a, b) => `${a} su ${b}`,
     counts: (t) => `${t.inProgress} in corso · ${t.notStarted} da iniziare · ${t.blocked} bloccate · ${t.pending} da verificare`,
-    inProgress: 'In corso', next: 'Prossimi', pending: 'Da verificare', activity: 'Commit recenti', recentClosed: 'Chiuse di recente',
+    now: 'Ci si sta lavorando', inProgress: 'In corso', next: 'Prossimi', pending: 'Da verificare', activity: 'Commit recenti', recentClosed: 'Chiuse di recente',
     nextHint: 'Prima ciò che le voci bloccate aspettano, poi la priorità scritta, poi la più vecchia. È un suggerimento: la mossa la decide la revisione del backlog.',
     phasesOf: (d, n) => `${d}/${n} fasi`, unblocks: (n) => `sblocca ${n}`, citedBy: (n) => `citata da ${n}`,
     noCommit: 'nessun commit la nomina ancora', more: (n) => `… altre ${n}`, nothing: 'Niente qui.',
@@ -315,6 +315,61 @@ function entryStrip(e, facts) {
   return svgDocument(26, body)
 }
 
+/**
+ * The entry worked on last: the newest commit that names an entry of the register, whatever the entry's status says
+ * (work is often committed under an entry still marked open).
+ */
+function currentWork() {
+  const b = snapshot.board
+  for (const commit of b.activity) {
+    const entry = commit.ids.map((id) => b.entries.find((x) => x.id === id)).find(Boolean)
+    if (entry) return { entry, commit }
+  }
+  return null
+}
+
+/** The current entry's phases as one rounded block each, named under it, with the live phase and the last commit. */
+function phaseTrack(e, commit, now) {
+  const phases = e.phases
+  const gap = 4
+  const inner = SVG_WIDTH - 8
+  const w = phases.length ? (inner - gap * (phases.length - 1)) / phases.length : inner
+  const done = e.phaseCounts.done ?? 0
+  const counted = phaseTotal(e.phaseCounts) - (e.phaseCounts.dropped ?? 0)
+  const blocks = phases
+    .map((p, i) => {
+      const x = 4 + i * (w + gap)
+      const fill = STATE_INK[p.state] ?? INK.grey
+      const bold = p.state === 'active' ? ' font-weight="700" class="t"' : ' class="m"'
+      return (
+        `<rect x="${x.toFixed(1)}" y="26" width="${w.toFixed(1)}" height="10" rx="5" fill="${fill}" opacity="${p.state === 'planned' ? 0.45 : 1}"/>` +
+        `<text x="${(x + w / 2).toFixed(1)}" y="52" font-size="10.5" text-anchor="middle"${bold}>${xml(clip(p.name, Math.max(2, Math.floor(w / 6))))}</text>`
+      )
+    })
+    .join('')
+  const active = phases.find((p) => p.state === 'active')
+  const live = active ? `${active.name} · ${plain(active.label)}` : ''
+  const body =
+    `<text x="4" y="16" font-size="12" font-weight="600" class="t">${xml(T.phasesOf(done, counted))}</text>` +
+    blocks +
+    (live ? `<text x="4" y="74" font-size="12.5" font-weight="600" fill="${INK.amber}">${xml(clip(live, 78))}</text>` : '') +
+    `<text x="4" y="94" font-size="12" class="m">${xml(clip(`${ago(commit.date, now)} · ${commit.subject}`, 82))}</text>`
+  return svgDocument(104, body)
+}
+
+/** "Now": the entry worked on last, as a card on the surfaces that draw one and a short text elsewhere. */
+function nowCard($, el, width, now) {
+  const current = currentWork()
+  if (!current) return []
+  const { entry: e, commit } = current
+  const title = el.Button({ key: 'now-' + e.id, label: clip(`${e.id}  ${plain(e.title)}`, width - 2), plain: true, onPress: () => go($, { name: 'entry', id: e.id }) })
+  if (hasSvg(el) && e.phases.length) {
+    return [heading(el, T.now), card(el, [title, el.Svg({ source: phaseTrack(e, commit, now), alt: `${e.id}: ${commit.subject}` })]), blank(el)]
+  }
+  const marks = e.phases.map((p) => (p.state === 'done' ? '●' : p.state === 'active' ? '◐' : '○')).join('')
+  return [heading(el, T.now), title, dim(el, clip(`${marks}  ${ago(commit.date, now)} · ${commit.subject}`, width)), blank(el)]
+}
+
 /** The pane's title bar: the project, the register's path, and when the board was read. */
 function titleBar(name, register, when) {
   const body =
@@ -405,6 +460,7 @@ function overview($, el, width, now) {
   return [
     ...summary,
     blank(el),
+    ...nowCard($, el, width, now),
     heading(el, `${T.inProgress} · ${inProgress.length}`),
     ...inProgress.slice(0, LIST_LIMIT.overview).map((e) => entryRow($, el, e, width, now)),
     ...(inProgress.length > LIST_LIMIT.overview ? [dim(el, T.more(inProgress.length - LIST_LIMIT.overview))] : []),

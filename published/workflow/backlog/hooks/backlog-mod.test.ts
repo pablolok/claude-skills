@@ -85,6 +85,7 @@ test('the command opens the pane and reads the register through the skill script
   const ui = await $.ui.mount(PANE)
   expect(await ui.find({ key: 'entry-BKLG-002' })).toBeDefined()
   expect(await ui.find({ key: 'next-BKLG-003' })).toBeDefined()
+  expect(await ui.find({ key: 'now-BKLG-002' })).toBeDefined()
   expect(await ui.find({ key: 'tab-docs' })).toBeDefined()
   expect(await ui.find({ key: 'back' })).toBeUndefined()
 })
@@ -131,6 +132,9 @@ test('on the desktop the overview is drawn as vector cards and its rows stay pre
   expect(sources.every((s) => s.startsWith('<svg') && !s.includes('NaN'))).toBe(true)
   expect(sources.some((s) => s.includes('shop'))).toBe(true)
   expect(sources.some((s) => s.includes('stroke-dasharray'))).toBe(true)
+  // The entry worked on last (newest commit naming it) is a card with its phases and that commit.
+  expect(await ui.find({ key: 'now-BKLG-002' })).toBeDefined()
+  expect(sources.some((s) => s.includes('BKLG-002 P2: dedupe') && s.includes('P3'))).toBe(true)
   expect(await ui.find({ key: 'entry-BKLG-002' })).toBeDefined()
   expect(await ui.find({ key: 'next-BKLG-003' })).toBeDefined()
   await ui.press({ key: 'entry-BKLG-002' })

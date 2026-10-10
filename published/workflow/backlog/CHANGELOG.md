@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.0] - 2026-10-10
+- The dashboard overview opens with a Working-on-now card: the entry whose commit is newest, whatever its status, with every phase as a block, the live phase and that commit
+
+
 ## [1.6.0] - 2026-10-10
 - The dashboard pane draws vector cards on the desktop app: progress rings, tiles, rounded phase bars and a title bar; the terminal keeps its text view
 
