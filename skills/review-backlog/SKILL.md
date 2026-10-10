@@ -66,8 +66,10 @@ A **dated** section (a log of today's deploys or releases) whose date is not tod
 history file and reopened with today's date. ⛔ **Move, never delete**: what shipped, what it cost, what was
 verified live — the things looked for months later, which `git log` only finds if you already know the commit.
 
-Moving blocks between files is done with a script that reads the file's own line separator (some docs are CRLF),
-then `git diff --stat`: if the changed lines are not the expected ones, restore and redo.
+Moving blocks between files is done with a script that reads the file's own line separator (some docs are CRLF) and
+finds each heading **at the start of a line** (separator + heading + separator) — a bare search also matches the
+heading named in a comment or in prose, which comes first. Then `git diff --stat`: if the changed lines are not the
+expected ones, restore and redo.
 
 ### The six ways an entry rots
 
@@ -100,6 +102,9 @@ checked in `git log` and the deploy log; "zero rows" with a query; "that file no
 ⚠️ **Against the real input, not a stand-in**: an entry opened from a reproduction is checked to have every field
 the real input has — reproductions built on inputs the product never produces have opened entries for defects that
 did not exist.
+⚠️ **A claim about each item is checked per item**: an aggregate (a max, a count per group) says nothing about any
+one row of the group. And **a number re-measured here is searched for in the stable docs too** — the old value is
+usually also written in the area's document, which the gates cannot judge and the next reader believes.
 
 ⚠️ **Never back-filled.** A `Status` deduced from memory for an entry nobody has looked at in weeks is invented
 data, and it would be believed. A bare `open` is honest. Touch only what was **verified** this session.
@@ -115,7 +120,7 @@ for the review, and is how a review produces no work.
 |---|---|
 | **what** | the work, in one line, and which entry (or roadmap item) it belongs to |
 | **why now** | the criterion — one of those below, never "it's important" |
-| **what it costs** | documents only / code / a deploy or migration / a manual step / credits (say **how many**) |
+| **what it costs** | documents only / code / a deploy or migration / a manual step / credits (say **how many**). A manual step is written as the backlog skill's `Manual` field says: the path the person follows |
 | **the alternatives** | two or three, **one line each** saying why they're not first |
 
 Criteria that make a real "now", strongest first:

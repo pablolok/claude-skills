@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-10-10
+- Block moves find headings at the start of a line; a per-item claim is checked per item, and a re-measured number is searched for in the stable docs; a proposed manual step follows the backlog skill's Manual rule.
+
+
 ## [1.0.4] - 2026-10-10
 - The proposed move starts in the register: its entry's Status in progress and its step an active phase row, in a commit naming only that entry, so the dashboard shows it as the work in progress.
 

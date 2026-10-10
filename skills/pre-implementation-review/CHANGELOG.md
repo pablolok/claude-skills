@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.7] - 2026-10-10
+- A feature that shows existing data looks at every displayed field on the real producer's output before the design.
+
+
 ## [1.1.6] - 2026-10-09
 - a constraint added to stored data binds every writer: list each path that writes a constrained field, and the values the system generates at the edge of the range, before adding it
 

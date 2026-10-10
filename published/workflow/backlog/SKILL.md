@@ -57,6 +57,9 @@ that start with `- **Field**:`; a value appended after a `·` is not seen).
 
 - **Manual**: anything the AI **cannot do** — an action in a tool only a person runs, a judgement, a login, a
   purchase. ⚠️ Write it **and say it** in the reply: a manual step only written down degrades into "nobody did it".
+  Write it as the **path the person follows**, in the words on their screen (page › tab › the heading they look
+  for), read from the UI's text — never a component's or file's name, which they cannot find; and say what to bring
+  back (the numbers, a screenshot), so the step closes in one round.
 - **Architecture** (only when the project keeps stable docs in `architectureDir`, default `docs/architecture`):
   the documents this work changes, comma-separated, then in prose what changes. `—` is a statement ("changes
   none"), not a blank. It may carry a structural defect's marker (`billing.md#D3`), checked **both ways** by

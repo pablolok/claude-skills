@@ -1,5 +1,5 @@
 {
   "name": "verification-gates",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Use before declaring code work done / handing it back \u2014 verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards."
 }

@@ -145,6 +145,9 @@ These are not soft smells to mention — if the change would introduce one, the 
 - **Before rebuilding or replacing something, find who uses it and look at it there.** Search for every reader of
   it; nothing reads it → remove it, don't rebuild it. Something does → inspect it in that context first: a defect
   that only shows where it is used (wrong orientation, an overlap) belongs in the rebuild's scope.
+  The same for a feature that **shows** existing data: run the real producer on real input and look at every field
+  the feature will display before designing it — a field that comes back empty there (a parser reading one layout
+  of a table and not another) is a defect inside the feature's scope, not after it.
 - **The field's standard method before your own.** When the change enters a problem the project has not solved before
   and the industry solves a known way (a rendering or modelling technique, a sync protocol, a scheduling algorithm),
   find that method first — a short research with sources — and design from it. Home-made attempts fail one at a time

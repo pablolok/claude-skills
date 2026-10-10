@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.1] - 2026-10-10
+- A Manual step is written as the path the person follows on screen, in the UI's words, with what to bring back. Bootstrap VERSION 1.8.1.
+
+
 ## [1.8.0] - 2026-10-10
 - The dashboard draws a dropped phase apart from one not started (its own colour, a hatch and a ✕ mark, with a key of the states), and every phase is pressable: it opens its detail in place, the label and the whole note of its state cell. A phase whose name stands alone in its cell takes its label from the cells before its state. Bootstrap VERSION 1.8.0.
 

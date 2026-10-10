@@ -47,6 +47,10 @@ Where you *are* expected to run gates, run them and read the output before decla
 - Derive the expected commands from project docs, scripts, CI conventions, or explicit instructions.
 - Treat **missing evidence as a violation** — don't assume a check passed because no failure was
   mentioned.
+- **Evidence is the runner's totals, read whole**: the count of tests run, passed, failed and skipped, compared with
+  the suite's known size. A count far off means the runner ran something else (a folder taken as a single file, a
+  filter, a skipped module) — a false red or a false green. Never through `| tail`/`| head`: they cut the totals off
+  and report their own exit status. Each skip is named and justified, or it is a gap.
 - Treat warnings in required build/compile/bundle/lint/static-analysis output as violations unless
   explicitly allowed.
 - Treat suppressions that hide required diagnostics as violations (except the EF `Migrations/` case

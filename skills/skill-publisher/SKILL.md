@@ -30,8 +30,13 @@ below. A change is done when the plugin users get has it — not when the source
   --json` shows no `errors`, and its command answers under `claude -p` (from PowerShell: Git Bash turns `/name` into a
   path). Develop it with `claude --plugin-dir`; the `.claude-plugin/types/` and `tsconfig.json` Claude Code writes
   there are git-ignored and `automate_publish.py` skips them.
+  An `Svg` is an image, never pressable: what must be pressed is a `Button` beside it. **Look at a drawing before
+  publishing it**, on real data: a throwaway test with the real snapshot inlined (a test cannot import a file from
+  outside the plugin) prints the `Svg` source; serve it from a local http server and look at it in the browser, in
+  both colour schemes — the browser refuses `data:` URLs and shows a local file only as a static snapshot.
 - **A launcher** a project copies (`bootstrap/<name>.mjs`, e.g. backlog's `backlog-gate.mjs`, mermaid's `mermaid.mjs`)
-  pins the skill's version in its `VERSION` line: bump it to the new version in the same change (a test checks).
+  pins the skill's version in its `VERSION` line: bump it to the new version **before** running
+  `automate_publish.py` (a test checks) — the script copies the skill as it finds it, and has no copy-only run.
 
 ## 2. A new skill
 
