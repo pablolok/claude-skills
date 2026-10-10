@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.12] - 2026-10-10
+- Derivability: a state replayed from a seed is derived only while the rules stay fixed; evolving rules need stored state with migrations.
+
+
 ## [1.1.11] - 2026-10-10
 - Run the step that consumes a result on a rough version before polishing it: a defect it finds reshapes the work upstream
 

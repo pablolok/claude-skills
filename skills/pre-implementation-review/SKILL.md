@@ -87,6 +87,10 @@ Answer with a **query against real data**, not an estimate. Then:
   store **only the exceptions**, never the whole state. A stored full state that is 99% derivable is
   the same defect with a smaller blast radius.
 - **"A lot"** → store it, and say in the note what keeps the two copies from diverging.
+- **"Derived only while the rules stay fixed"** (a state replayed from a seed, a log or a recipe) → ask whether the
+  rules will keep changing while the derived state must survive (a system still being built, a migration ahead). If
+  yes, a rule change rewrites the derived past: store the state as the truth and move it forward with versioned
+  migrations; keep the replay only as a test or a cold start.
 
 This is the highest-leverage question in the review, because a stored derivable value is **a second
 place where the truth can differ**. The cost never appears at the moment of the choice; it appears

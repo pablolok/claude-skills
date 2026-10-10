@@ -55,7 +55,7 @@
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
-      "version": "1.1.11",
+      "version": "1.1.12",
       "category": "workflow",
       "strict": false,
       "skills": [
