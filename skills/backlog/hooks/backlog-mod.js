@@ -432,10 +432,10 @@ function nowCard($, el, width, now) {
 }
 
 /** The pane's title bar: the project, the register's path, and when the board was read. */
-function titleBar(name, register, when) {
+function titleBar(name, registerPath, when) {
   const body =
     `<text x="4" y="22" font-size="18" font-weight="700" class="t">${xml(name)}</text>` +
-    `<text x="4" y="40" font-size="12" class="m">${xml(register)}</text>` +
+    `<text x="4" y="40" font-size="12" class="m">${xml(registerPath)}</text>` +
     `<text x="${SVG_WIDTH - 4}" y="22" font-size="12" text-anchor="end" class="m">${xml(when)}</text>`
   return svgDocument(48, body)
 }

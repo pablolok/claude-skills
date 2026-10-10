@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.2] - 2026-10-10
+- The dashboard mod loads again: a parameter named register in titleBar counted as a second declaration of the module's register entry point, and the hooks loader refused the module
+
+
 ## [1.8.1] - 2026-10-10
 - A Manual step is written as the path the person follows on screen, in the UI's words, with what to bring back. Bootstrap VERSION 1.8.1.
 
