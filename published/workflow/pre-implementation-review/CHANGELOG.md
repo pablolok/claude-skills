@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.13] - 2026-10-11
+- A gap listed as uncovered is checked for whether its path can produce the failure, and the existing record is checked before a new place is proposed.
+
+
 ## [1.1.12] - 2026-10-10
 - Derivability: a state replayed from a seed is derived only while the rules stay fixed; evolving rules need stored state with migrations.
 

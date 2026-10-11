@@ -149,6 +149,9 @@ These are not soft smells to mention — if the change would introduce one, the 
 - **Before rebuilding or replacing something, find who uses it and look at it there.** Search for every reader of
   it; nothing reads it → remove it, don't rebuild it. Something does → inspect it in that context first: a defect
   that only shows where it is used (wrong orientation, an overlap) belongs in the rebuild's scope.
+  The same for a **gap a document lists as uncovered**: read whether that path can produce the failure at all (a call that
+  never crosses the layer being fixed has nothing to carry) before scheduling work for it, and look in the existing
+  record for where the missing fact could already be stored before proposing a new place.
   The same for a feature that **shows** existing data: run the real producer on real input and look at every field
   the feature will display before designing it — a field that comes back empty there (a parser reading one layout
   of a table and not another) is a defect inside the feature's scope, not after it.
