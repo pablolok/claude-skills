@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.8] - 2026-10-11
+- The bootstrap pins the version it ships with (1.8.7 had shipped with 1.8.6)
+
+
 ## [1.8.7] - 2026-10-11
 - Doc links always point to a file: a folder link breaks the dashboard (EISDIR)
 
