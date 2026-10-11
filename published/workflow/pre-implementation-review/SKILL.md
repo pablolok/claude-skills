@@ -210,6 +210,8 @@ These are not soft smells to mention — if the change would introduce one, the 
   A cleanup that removes whatever a test touches (near a moving part, matching a filter) finds far more than the
   case it was written for when the inputs change: unbounded, one removed half of an unrelated part and left its end
   floating. Name the region or set it may act on, and show what it removed before keeping the result.
+  A **scripted bulk edit is an edit**: the review comes before the script, not after it, and the script's own output
+  (files changed, what it rewrote) is looked at before it is kept.
 - **A check, computation or export whose result depends on an ambient mode establishes that mode itself.** A global
   setting (a display or preview mode, a simulation state, a locale, a flag) is set for the run and restored after,
   never inherited from whatever the caller left: inherited, a validator ran against the inert state and passed

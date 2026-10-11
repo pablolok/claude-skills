@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.8] - 2026-10-11
+- A cleanup stages the files it touched by name, never a blanket add.
+
+
 ## [1.0.7] - 2026-10-10
 - An untouched entry's other fields rot too: a tool or method it names that the project has since withdrawn
 

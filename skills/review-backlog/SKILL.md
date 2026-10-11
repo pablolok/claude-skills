@@ -168,4 +168,5 @@ Four things and nothing else:
 - **what was cleaned**, one line each, and **what it was verified against**;
 - **the proposal**, in the Act 3 form, already started in the register;
 - the **commits**: the cleanup's, if it touched files — repaired documents are committed in the same session, or the
-  next review finds them identical — and the one that starts the move.
+  next review finds them identical — and the one that starts the move. Stage the files the cleanup touched **by name**:
+  a working tree often holds edits that are not the review's, and a blanket add commits them.

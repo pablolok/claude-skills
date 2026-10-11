@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.14] - 2026-10-11
+- A scripted bulk edit is an edit: the review precedes the script and its output is looked at.
+
+
 ## [1.1.13] - 2026-10-11
 - A gap listed as uncovered is checked for whether its path can produce the failure, and the existing record is checked before a new place is proposed.
 
