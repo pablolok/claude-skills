@@ -77,7 +77,7 @@
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
       "description": "Orchestrated delivery flow. The session model plans, owns design, delegates implementation to tiered worker subagents (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "category": "workflow",
       "strict": false,
       "skills": [

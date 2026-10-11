@@ -86,6 +86,11 @@ Heuristics:
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run independent tasks in parallel in one message; chain dependent ones.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
 - Keep briefs tight. Do not paste the whole plan; paste this task.
+- Before delegating a task, check that nobody else already holds it — other people's open pull requests, branches and
+  coordination notes when the work is shared; a duplicate is found only after both copies are done.
+- Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
+  worker runs only the tests of what it touched — the full suite runs once, by the orchestrator, before merging.
+  Parallel full runs turn correct timing-sensitive tests into timeouts.
 - Do not implement in parallel with workers. While they run, prepare the next briefs or the review checklist.
 
 ## 5. Adversarial review (orchestrator only)
