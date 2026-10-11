@@ -91,6 +91,13 @@ Heuristics:
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
   worker runs only the tests of what it touched — the full suite runs once, by the orchestrator, before merging.
   Parallel full runs turn correct timing-sensitive tests into timeouts.
+- **Resume a worker or start a fresh one by cost.** Every step a worker takes re-reads its whole context (cheaper while
+  cached; full price again once the cache expires after a pause). Resume it (SendMessage) for a follow-up that needs
+  what it has already read and takes few steps. Start a fresh one when the next task is long and needs little of the
+  old context: worth it only when the steps it will take, times the context they no longer carry, outweigh what the
+  new worker spends reading its way in. Make that cheap: before letting a worker with a large context go, ask it for a
+  short handoff note (state, decisions, how to rebuild, traps, open issues — facts, no history) and point the next
+  brief at it. A worker near its context limit is compacted mid-task and loses detail: switch before that.
 - Do not implement in parallel with workers. While they run, prepare the next briefs or the review checklist.
 
 ## 5. Adversarial review (orchestrator only)

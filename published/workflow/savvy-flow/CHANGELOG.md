@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.2] - 2026-10-12
+- resume a worker or start a fresh one by cost, with a handoff note
+
+
 ## [1.2.1] - 2026-10-11
 - Delegation checks that nobody else holds a task; timing work runs alone and workers run targeted tests
 
