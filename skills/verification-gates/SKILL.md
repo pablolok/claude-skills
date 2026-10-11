@@ -75,7 +75,9 @@ Where you *are* expected to run gates, run them and read the output before decla
   conflict. First check each started from the integration branch's head (an isolated copy can start from the remote's
   default branch instead) and take its diff against its own starting commit; then, for every piece of data a change
   reads or interprets, list what else writes it after that base (the other changes included) and re-read the change
-  against those writers.
+  against those writers. Applied as patches with `git apply --3way --index`, they land **staged**: `git diff` shows
+  nothing and `git diff --cached` is the diff to read; a second apply reported clean is checked for a hunk that
+  landed twice.
 - **A test proves only what it compares against.** Where a value the code writes crosses a constraint enforced
   elsewhere (a database trigger or CHECK, a range bound inclusive or exclusive), the expected value comes from that
   constraint or its twin in the code, never from a literal the test's author chose; a double of that boundary that

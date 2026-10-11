@@ -77,7 +77,14 @@ The numbered rules below are the specifics of that separation.
     dozen props is doing too much; compose smaller components.
 12. **Derive, don't duplicate, state.** Compute from source state/props (or `useMemo`) instead of
     mirroring it into extra state kept in sync by effects. Synced-copy state is a bug magnet.
-13. **Accessible, correct primitives by default.** Stable list keys (never array index on dynamic
+    `useState(initial)` keeps the value of the first render: a form that copies a prop into local state when it
+    opens loses the value when the data arrives after (an edit dialog opening with an empty field). Derive from the
+    prop until the user changes the field, and keep in state only what the user typed.
+13. **A submit that writes is guarded synchronously.** The data library's pending flag (`isPending`) reaches the
+    handler one render late, so a fast double click sends the write twice. Hold a ref set in the handler (or a
+    mutation hook that runs one call at a time) and release it when the call settles; the pending flag only drives
+    the disabled look.
+14. **Accessible, correct primitives by default.** Stable list keys (never array index on dynamic
     lists), controlled inputs, labelled interactive elements. The accessible name sits on the interactive element
     itself, not on a wrapper that forwards it: a component taking an optional trigger names its default one too.
     A URL that comes from outside (another user, a third-party client, an import) becomes an `href` only after its
@@ -85,7 +92,7 @@ The numbered rules below are the specifics of that separation.
 
 ## Quality gates (TS/React)
 
-14. **TDD with Vitest** (+ Testing Library for components). Deterministic tests for new logic; test
+15. **TDD with Vitest** (+ Testing Library for components). Deterministic tests for new logic; test
     doubles for injected collaborators/hooks; assert **behavior**, not implementation. Pure logic
     extracted to libs is tested directly — favor that over testing through the DOM.
     A test helper with a default (`open(average = SAMPLE)`, `({ average = SAMPLE } = {})`) turns an explicit
@@ -98,9 +105,9 @@ The numbered rules below are the specifics of that separation.
     In a component's test, a third-party composite widget it merely uses (a searchable list in a popover, a date
     picker) is doubled with a native control: under test a choice made on it with one click is lost intermittently,
     and the widget has its own tests.
-15. **Typecheck + lint clean.** The project's TS build (e.g. `tsc -b`, *not* `tsc --noEmit` if the
+16. **Typecheck + lint clean.** The project's TS build (e.g. `tsc -b`, *not* `tsc --noEmit` if the
     build uses project references) and ESLint pass with **no** errors or warnings.
-16. **No warning suppression.** No `@ts-ignore`, no bare `@ts-expect-error`, no `eslint-disable`, no
+17. **No warning suppression.** No `@ts-ignore`, no bare `@ts-expect-error`, no `eslint-disable`, no
     `any`-cast to dodge a diagnostic. Fix the underlying type/lint issue. The one allowed exception is
     a justified, **commented**, locally-scoped `// @ts-expect-error <reason>` at a real external
     boundary.

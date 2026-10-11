@@ -207,6 +207,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   would have failed only once the constraint was live, with a generic error. The same holds the other way: a **new
   writer** checks every constraint already on the fields it writes, through the project's shared limits if it has
   them, so a value out of range is refused with the field's message, not by the store with a generic error.
+  A new **automatic** writer (one row per period of a schedule, per item of an import) also reopens, in the same
+  change, every exemption or assumption justified by how the data used to be written — small, by hand, one per
+  user: an unpaginated read exempted from a guard because the data was small truncates silently once a generator
+  fills it.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.

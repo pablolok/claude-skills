@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5] - 2026-10-11
+- Derive state copied from a prop that arrives late; guard a writing submit synchronously against double clicks
+
+
 ## [1.1.4] - 2026-10-11
 - The accessible name sits on the interactive element itself, default trigger included; a third-party composite widget is doubled with a native control in a component's test
 

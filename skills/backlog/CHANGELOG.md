@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.6] - 2026-10-11
+- Phase table: the exact row form the dashboard counts, and the --json check after editing a table
+
+
 ## [1.8.5] - 2026-10-11
 - A project with no register yet: the dashboard pane says where one would start instead of a red error; the browser page still refuses to start there
 
