@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2026-10-11
+- The accessible name sits on the interactive element itself, default trigger included; a third-party composite widget is doubled with a native control in a component's test
+
+
 ## [1.1.3] - 2026-10-10
 - An error for a caller across a framework boundary uses the forwarded error type and is tested by class; revoked vs transient told apart; an outside URL becomes an href only with an http(s) protocol
 

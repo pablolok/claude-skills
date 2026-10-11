@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - 2026-10-11
+- A timeout is read at the failure before it is raised; parallel changes are checked for their starting commit and re-read against the other writers of the data they read; a value crossing a constraint enforced elsewhere is tested against that constraint, not a chosen literal
+
+
 ## [1.0.2] - 2026-10-11
 - A timeout red in an untouched file is re-run alone and with a longer timeout before it is called pre-existing
 

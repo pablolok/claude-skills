@@ -78,9 +78,10 @@ The numbered rules below are the specifics of that separation.
 12. **Derive, don't duplicate, state.** Compute from source state/props (or `useMemo`) instead of
     mirroring it into extra state kept in sync by effects. Synced-copy state is a bug magnet.
 13. **Accessible, correct primitives by default.** Stable list keys (never array index on dynamic
-    lists), controlled inputs, labelled interactive elements. A URL that comes from outside (another
-    user, a third-party client, an import) becomes an `href` only after its protocol is checked
-    (`http:`/`https:`); anything else stays text.
+    lists), controlled inputs, labelled interactive elements. The accessible name sits on the interactive element
+    itself, not on a wrapper that forwards it: a component taking an optional trigger names its default one too.
+    A URL that comes from outside (another user, a third-party client, an import) becomes an `href` only after its
+    protocol is checked (`http:`/`https:`); anything else stays text.
 
 ## Quality gates (TS/React)
 
@@ -94,6 +95,9 @@ The numbered rules below are the specifics of that separation.
     a field), first find the tests that double that seam or assert that call — mocks that invoke it the old way,
     `toHaveBeenCalledWith` expectations, tests that read the source text — and update them in the same change; run
     those before the full suite, where each one found late costs a whole run.
+    In a component's test, a third-party composite widget it merely uses (a searchable list in a popover, a date
+    picker) is doubled with a native control: under test a choice made on it with one click is lost intermittently,
+    and the widget has its own tests.
 15. **Typecheck + lint clean.** The project's TS build (e.g. `tsc -b`, *not* `tsc --noEmit` if the
     build uses project references) and ESLint pass with **no** errors or warnings.
 16. **No warning suppression.** No `@ts-ignore`, no bare `@ts-expect-error`, no `eslint-disable`, no

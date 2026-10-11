@@ -68,6 +68,18 @@ Where you *are* expected to run gates, run them and read the output before decla
 - A red that is a **timeout in a file the change does not touch** is re-run alone and with a longer timeout, the
   machine's load noted: passing that way, it is load and is reported as such — never called pre-existing, nor caused
   by the change, without that run.
+- **Before raising a timeout in the code, read the state at the failure**: print the rendered output, or the object the wait
+  polls, untruncated — it names the cause. A failure that moves to the new timeout means the awaited condition never
+  arrives, and no longer wait will fix it.
+- Changes prepared in parallel and applied together are not compatible just because they apply without a textual
+  conflict. First check each started from the integration branch's head (an isolated copy can start from the remote's
+  default branch instead) and take its diff against its own starting commit; then, for every piece of data a change
+  reads or interprets, list what else writes it after that base (the other changes included) and re-read the change
+  against those writers.
+- **A test proves only what it compares against.** Where a value the code writes crosses a constraint enforced
+  elsewhere (a database trigger or CHECK, a range bound inclusive or exclusive), the expected value comes from that
+  constraint or its twin in the code, never from a literal the test's author chose; a double of that boundary that
+  does not model the guard cannot see the mismatch.
 
 ### Expected gates by stack (examples)
 
