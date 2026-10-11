@@ -107,6 +107,11 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const where = project(options.root ? { ...process.env, CLAUDE_PROJECT_DIR: options.root } : process.env);
   if (!existsSync(path.join(where.root, where.backlog))) {
+    if (options.json) {
+      // A project with no register yet is a state, not a failure: the pane says where one would start.
+      process.stdout.write(JSON.stringify({ root: where.root, missing: where.backlog }));
+      return;
+    }
     console.error(`dashboard: no register at ${where.backlog} under ${where.root}`);
     process.exit(2);
   }

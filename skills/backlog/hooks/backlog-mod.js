@@ -49,6 +49,8 @@ const WORDS = {
     filter: 'Filter', filterHint: 'part of a path, Enter', docsOf: 'Documents', waitsOn: 'Waits on', unblocksL: 'Unblocks',
     cites: 'Cites', citedByL: 'Cited by', usedBy: 'Entries linking it', linksIn: 'Links in this document',
     notFound: 'Not found', failed: 'The dashboard could not read the register:',
+    noRegister: 'This project has no backlog yet.',
+    startOne: (p) => `No register at ${p}. Ask for "/backlog add …" to start one; if the register lives elsewhere, set "docsDir" in .claude/backlog.json.`,
     groups: { register: 'Register', work: 'Work docs', architecture: 'Architecture', archive: 'Archive', other: 'Other' },
     states: { done: 'done', active: 'in progress', planned: 'not started', dropped: 'dropped' },
     statuses: { 'in-progress': 'in progress', open: 'open', blocked: 'blocked' },
@@ -67,6 +69,8 @@ const WORDS = {
     filter: 'Filtro', filterHint: 'parte di un percorso, Invio', docsOf: 'Documenti', waitsOn: 'Aspetta', unblocksL: 'Sblocca',
     cites: 'Cita', citedByL: 'Citata da', usedBy: 'Voci che lo collegano', linksIn: 'Link nel documento',
     notFound: 'Non trovato', failed: 'La dashboard non è riuscita a leggere il registro:',
+    noRegister: 'Questo progetto non ha ancora un backlog.',
+    startOne: (p) => `Nessun registro in ${p}. Chiedi "/backlog add …" per iniziarne uno; se il registro sta altrove, imposta "docsDir" in .claude/backlog.json.`,
     groups: { register: 'Registro', work: 'Documenti di lavoro', architecture: 'Architettura', archive: 'Archivio', other: 'Altri' },
     states: { done: 'fatta', active: 'in corso', planned: 'da iniziare', dropped: 'annullata' },
     statuses: { 'in-progress': 'in corso', open: 'aperta', blocked: 'bloccata' },
@@ -89,6 +93,7 @@ const T = WORDS[LANG]
 
 // ─── what the pane shows ─────────────────────────────────────────────────────────────────────────────────────────
 let snapshot = null // { root, board, tree } from dashboard.mjs --json
+let missing = '' // the register's path when the project has none yet ({ root, missing } from dashboard.mjs --json)
 let failure = ''
 let loading = false
 let loadedAt = 0
@@ -201,7 +206,9 @@ async function load($) {
       timeoutMs: LOAD_TIMEOUT_MS,
     })
     if (run.exitCode !== 0) throw new Error((run.stderr || run.stdout || `exit ${run.exitCode}`).trim())
-    snapshot = JSON.parse(run.stdout)
+    const answer = JSON.parse(run.stdout)
+    missing = answer.missing ?? ''
+    snapshot = missing ? null : answer
     loadedAt = await $.clock.now()
     failure = ''
   } catch (error) {
@@ -786,6 +793,7 @@ export function register(on) {
     const head = header($, el, width, now)
     let body
     if (failure && !snapshot) body = [el.Text({ color: 'error', children: [T.failed] }), dim(el, failure)]
+    else if (missing) body = [el.Box({ key: 'no-register', flexDirection: 'column', children: [heading(el, T.noRegister), dim(el, T.startOne(missing))] })]
     else if (!snapshot) body = [dim(el, T.loading)]
     else body = viewBody($, el, width, now)
     if (failure && snapshot) body = [el.Text({ color: 'error', children: [clip(`${T.failed} ${failure}`, width)] }), ...body]

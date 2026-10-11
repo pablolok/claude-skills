@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.5] - 2026-10-11
+- A project with no register yet: the dashboard pane says where one would start instead of a red error; the browser page still refuses to start there
+
+
 ## [1.8.4] - 2026-10-11
 - The dashboard shows only what the register writes in its forms: write a plan there before building a second view; a step partly done is ⏳, never ✅ with a count
 

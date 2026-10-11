@@ -190,9 +190,21 @@ test('a dropped phase is drawn apart from one not started: its own fill and its 
 })
 
 test('a script that fails shows its message, not an empty pane', async ($, on) => {
-  stubs(on, [], { exitCode: 2, stdout: '', stderr: 'dashboard: no register at docs/implementations/BACKLOG.md' })
+  stubs(on, [], { exitCode: 1, stdout: '', stderr: 'dashboard: EACCES: permission denied, open BACKLOG.md' })
   await $.command.run({ command: 'backlog-dashboard', args: '' })
   const ui = await $.ui.mount(PANE)
-  expect(await ui.find({ type: 'Text', text: /no register at/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /permission denied/ })).toBeDefined()
   expect(await ui.find({ key: 'entry-BKLG-002' })).toBeUndefined()
+})
+
+test('a project with no register shows where one would start, not an error', async ($, on) => {
+  const missing = JSON.stringify({ root: '/work', missing: 'docs/implementations/BACKLOG.md' })
+  stubs(on, [], { exitCode: 0, stdout: missing, stderr: '' })
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  expect(await ui.find({ key: 'no-register' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /docs\/implementations\/BACKLOG\.md/ })).toBeDefined()
+  const colors = (await ui.findAll({ type: 'Text' })).map((t) => t.props.color)
+  expect(colors.length).toBeGreaterThan(0)
+  expect(colors).not.toContain('error')
 })
