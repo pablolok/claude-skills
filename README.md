@@ -18,6 +18,8 @@ or cloud project keeps managed copies instead (see below).
 | **[Verification Gates](./skills/verification-gates/)** | Before handing work back: the required gates (tests, builds, compilers, linters, static analysis) are green on real evidence and nothing was silently removed. |
 | **[Writing Architecture Docs](./skills/writing-architecture-docs/)** | The design doc of a piece of work and the stable "how it is now" doc of an area: three questions, the skeleton, nine rules, one diagram per question. |
 | **[Mermaid Diagrams](./skills/mermaid-diagrams/)** | Mermaid diagrams that really render in the VS Code preview and on GitHub: when to pre-render to SVG, a validator and a renderer behind one stable project command (`node scripts/mermaid.mjs check` / `render`), the dead ends. |
+| **[Savvy Flow](./skills/savvy-flow/)** | An orchestrated delivery flow (`/savvy-flow:savvy-flow <task>`): the session model plans, owns the design and reviews adversarially; five tiered worker agents (`savvy-flow:savvy-light` … `savvy-fable`) implement. Imported from johnnyvizz/claude-kit (MIT). |
+| **[Savvy Progress](./skills/savvy-progress/)** | A mod with no skill: a progress bar above the prompt and a live agents panel (`/agents-info`), fed by its two tools `progress` and `step` — savvy-flow drives them. Imported from johnnyvizz/claude-kit (MIT). |
 
 ## Two ways to use the skills
 

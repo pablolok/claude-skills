@@ -87,12 +87,17 @@ class TestSkillsAreGeneric(unittest.TestCase):
     def test_every_published_skill_describes_itself_with_its_own_trigger(self) -> None:
         skills = json.loads(INSTALL_CONFIG.read_text(encoding="utf-8"))["skills"]
         self.assertTrue(skills, "control: install.config.json lists the published skills")
-        for name in skills:
+        for name, config in skills.items():
             with self.subTest(skill=name):
                 folder = ROOT / "skills" / name
-                description = frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")).get("description", "")
                 metadata = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
-                self.assertEqual(metadata["description"], description, "metadata.json repeats the frontmatter")
+                if config.get("skill", True):
+                    description = frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")).get("description", "")
+                    self.assertEqual(metadata["description"], description, "metadata.json repeats the frontmatter")
+                else:
+                    # A mod with no skill: metadata.json alone describes it.
+                    description = metadata["description"]
+                    self.assertTrue(description, "describe the mod in its metadata.json")
                 self.assertLessEqual(len(description), MAX_DESCRIPTION)
                 self.assertNotRegex(description, r"^[|>]", "a one-line description: the marketplace reads it as is")
 

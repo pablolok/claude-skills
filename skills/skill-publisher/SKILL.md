@@ -23,13 +23,16 @@ below. A change is done when the plugin users get has it — not when the source
 - **Hooks or commands** a skill needs as a plugin are declared in its own `plugin-entry.json` (paths through
   `${CLAUDE_PLUGIN_ROOT}`); a hook finds the project through `CLAUDE_PROJECT_DIR`, never through its own folder.
 - **A mod** (a plugin with a hooks module that draws panes or adds commands) keeps its `.claude-plugin/plugin.json`
-  (the name only) and `hooks/hooks.json` (`"modules": [...]`) in the skill, and declares `{"strict": true}` in
-  `plugin-entry.json`: under the default `strict: false` Claude Code refuses it at install ("conflicting manifests"),
+  (the name, plus what a marketplace entry cannot carry, such as `userConfig` or `types`) and `hooks/hooks.json`
+  (`"modules": [...]`) in the skill, and declares `{"strict": true}` in `plugin-entry.json`: under the default `strict: false` Claude Code refuses it at install ("conflicting manifests"),
   and a marketplace entry cannot carry `modules`. Check it installed, not only validated: a scratch local marketplace
   holding the published folder, `claude plugin install … --scope project` in a scratch repo, `claude plugin list
   --json` shows no `errors`, and its command answers under `claude -p` (from PowerShell: Git Bash turns `/name` into a
   path). Develop it with `claude --plugin-dir`; the `.claude-plugin/types/` and `tsconfig.json` Claude Code writes
   there are git-ignored and `automate_publish.py` skips them.
+  A mod with no skill (no `SKILL.md`) is listed with `"skill": false` in `install.config.json`: its entry names no
+  skills and its `metadata.json` holds the description. A `version` in a mod's `plugin.json` wins over the
+  marketplace's, so a stale one hides every update: `automate_publish.py` moves it with `metadata.json`.
   An `Svg` is an image, never pressable: what must be pressed is a `Button` beside it. **Look at a drawing before
   publishing it**, on real data: a throwaway test with the real snapshot inlined (a test cannot import a file from
   outside the plugin) prints the `Svg` source; serve it from a local http server and look at it in the browser, in
@@ -45,6 +48,10 @@ below. A change is done when the plugin users get has it — not when the source
 2. Register it in `install.config.json` (`{"category": "workflow"}`; the category is its folder under `published/`).
 3. Add `tests/test_<skill>_skill.py` (the shared checks live in `tests/published_skill_checks.py`).
 4. Publish with `--bump major`: 0.9.0 becomes 1.0.0.
+
+A plugin imported from elsewhere keeps its upstream version (seed `metadata.json` one bump below it, e.g. `1.1.0` and
+`--bump minor` for `1.2.0`) and its licence's terms: the upstream `LICENSE` in its folder and the attribution in its
+README, never in `SKILL.md`.
 
 ## 3. Publish
 

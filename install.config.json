@@ -30,6 +30,13 @@
     },
     "mermaid-diagrams": {
       "category": "workflow"
+    },
+    "savvy-flow": {
+      "category": "workflow"
+    },
+    "savvy-progress": {
+      "category": "workflow",
+      "skill": false
     }
   }
 }

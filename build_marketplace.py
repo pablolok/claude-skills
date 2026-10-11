@@ -9,7 +9,8 @@ Python, in a cloud session too:
 The marketplace is derived, never edited by hand: its list is install.config.json (the categories) and each
 published skill's metadata.json (version, description). A skill that needs more than its own folder as a plugin
 (hooks, slash commands) declares it in its own ``plugin-entry.json``; a skill that makes no sense as a plugin says
-``"plugin": false`` in install.config.json. This file names no skill.
+``"plugin": false`` in install.config.json; a mod that carries no skill (its own manifest and hooks module alone) says
+``"skill": false`` there. This file names no skill.
 
     python build_marketplace.py          # write the marketplace
     python build_marketplace.py --check  # exit 1 when the committed marketplace differs from the published skills
@@ -28,6 +29,8 @@ INSTALL_CONFIG = "install.config.json"
 PUBLISHED = "published"
 MARKETPLACE = pathlib.Path(".claude-plugin") / "marketplace.json"
 PLUGIN_ENTRY = "plugin-entry.json"
+#: A mod's own manifest, inside its folder.
+MOD_MANIFEST = pathlib.Path(".claude-plugin") / "plugin.json"
 
 MARKETPLACE_NAME = "pablolok-skills"
 OWNER = {"name": "pablolok"}
@@ -53,11 +56,20 @@ def _read_json(path: pathlib.Path) -> typing.Any:
         raise MarketplaceError(f"{path}: {exc}") from exc
 
 
-def plugin_entry(repo: pathlib.Path, name: str, category: str) -> typing.Dict[str, typing.Any]:
-    """The marketplace entry of one published skill: the skill's folder is the plugin, its root is the skill."""
+def plugin_entry(
+    repo: pathlib.Path, name: str, category: str, has_skill: bool = True
+) -> typing.Dict[str, typing.Any]:
+    """The marketplace entry of one published skill: the skill's folder is the plugin, its root is the skill.
+
+    A mod with no skill (``has_skill`` false) is its folder alone: its own manifest, no ``skills``, and ``strict``
+    declared so Claude Code reads that manifest.
+    """
     folder = repo / PUBLISHED / category / name
-    if not (folder / "SKILL.md").is_file():
-        raise MarketplaceError(f"{name}: no published skill at {folder.relative_to(repo).as_posix()}")
+    where = folder.relative_to(repo).as_posix()
+    if has_skill and not (folder / "SKILL.md").is_file():
+        raise MarketplaceError(f"{name}: no published skill at {where}")
+    if not has_skill and not (folder / MOD_MANIFEST).is_file():
+        raise MarketplaceError(f"{name}: a plugin with no skill is a mod, and {where} has no {MOD_MANIFEST.as_posix()}")
     metadata = _read_json(folder / "metadata.json")
     if len(metadata["description"]) > MAX_DESCRIPTION:
         raise MarketplaceError(
@@ -70,8 +82,9 @@ def plugin_entry(repo: pathlib.Path, name: str, category: str) -> typing.Dict[st
         "version": metadata["version"],
         "category": category,
         "strict": False,
-        "skills": ["./"],
     }
+    if has_skill:
+        entry["skills"] = ["./"]
     declared_path = folder / PLUGIN_ENTRY
     if declared_path.is_file():
         declared = _read_json(declared_path)
@@ -81,6 +94,8 @@ def plugin_entry(repo: pathlib.Path, name: str, category: str) -> typing.Dict[st
         if "strict" in declared and not isinstance(declared["strict"], bool):
             raise MarketplaceError(f"{name}/{PLUGIN_ENTRY}: \"strict\" is true or false, not {declared['strict']!r}")
         entry.update(declared)
+    if not has_skill and entry["strict"] is not True:
+        raise MarketplaceError(f"{name}: a mod with no skill declares {{\"strict\": true}} in its {PLUGIN_ENTRY}")
     return entry
 
 
@@ -88,7 +103,7 @@ def build(repo: pathlib.Path = REPO) -> typing.Dict[str, typing.Any]:
     """The whole marketplace, plugins in name order so the file only changes when a skill does."""
     skills = _read_json(repo / INSTALL_CONFIG).get("skills", {})
     plugins = [
-        plugin_entry(repo, name, config["category"])
+        plugin_entry(repo, name, config["category"], config.get("skill", True))
         for name, config in sorted(skills.items())
         if config.get("plugin", True)
     ]

@@ -18,6 +18,9 @@ import build_marketplace
 PLUGIN_FOLDER = ".claude-plugin"
 GENERATED_TYPES = "types"
 GENERATED_TSCONFIG = "tsconfig.json"
+#: A mod's own manifest. When it declares a version, Claude Code takes that one over the marketplace entry's, so a
+#: stale one hides every later publish from `claude plugin update`.
+PLUGIN_MANIFEST = pathlib.Path(PLUGIN_FOLDER) / "plugin.json"
 
 
 def _skip_generated(folder: str, names: typing.List[str]) -> typing.Set[str]:
@@ -36,6 +39,18 @@ def update_json_file(path: pathlib.Path, updates: dict) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     data.update(updates)
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
+def sync_manifest_version(source_path: pathlib.Path, version: str) -> bool:
+    """Give the skill's own manifest the published version when it declares one; True when the file changed."""
+    manifest = source_path / PLUGIN_MANIFEST
+    if not manifest.is_file():
+        return False
+    declared = json.loads(manifest.read_text(encoding="utf-8")).get("version")
+    if declared is None or declared == version:
+        return False
+    update_json_file(manifest, {"version": version})
+    return True
 
 
 def bump_version(version: str, part: str = "patch") -> str:
@@ -98,7 +113,9 @@ def publish_skill(
     new_version = bump_version(old_version, bump)
     update_json_file(metadata_path, {"version": new_version})
     print(f"Bumped version: {old_version} -> {new_version}")
-    
+    if sync_manifest_version(source_path, new_version):
+        print(f"Set {PLUGIN_MANIFEST.as_posix()} version: {new_version}")
+
     # 2. Update changelog in source
     update_changelog(source_path / "CHANGELOG.md", new_version, summary)
     

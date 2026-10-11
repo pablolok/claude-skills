@@ -69,6 +69,31 @@ class TestBuild(unittest.TestCase):
         with self.assertRaisesRegex(build_marketplace.MarketplaceError, "strict"):
             build_marketplace.build(self.root)
 
+    def test_a_mod_with_no_skill_is_its_own_manifest_alone(self) -> None:
+        _skill(self.root, "workflow", "alpha", {"strict": True})
+        folder = self.root / "published" / "workflow" / "alpha"
+        (folder / "SKILL.md").unlink()
+        (folder / build_marketplace.MOD_MANIFEST).parent.mkdir()
+        (folder / build_marketplace.MOD_MANIFEST).write_text(json.dumps({"name": "alpha"}), encoding="utf-8")
+        self._config({"alpha": {"category": "workflow", "skill": False}})
+        [plugin] = build_marketplace.build(self.root)["plugins"]
+        self.assertNotIn("skills", plugin)
+        self.assertIs(plugin["strict"], True)
+        self.assertEqual((plugin["version"], plugin["description"]), ("1.2.3", "alpha does x"))
+
+    def test_a_mod_with_no_skill_needs_its_manifest_and_strict(self) -> None:
+        _skill(self.root, "workflow", "alpha", {"strict": True})
+        self._config({"alpha": {"category": "workflow", "skill": False}})
+        with self.assertRaisesRegex(build_marketplace.MarketplaceError, "no .claude-plugin/plugin.json"):
+            build_marketplace.build(self.root)
+        _skill(self.root, "workflow", "beta")
+        folder = self.root / "published" / "workflow" / "beta"
+        (folder / build_marketplace.MOD_MANIFEST).parent.mkdir()
+        (folder / build_marketplace.MOD_MANIFEST).write_text(json.dumps({"name": "beta"}), encoding="utf-8")
+        self._config({"beta": {"category": "workflow", "skill": False}})
+        with self.assertRaisesRegex(build_marketplace.MarketplaceError, "strict"):
+            build_marketplace.build(self.root)
+
     def test_an_unknown_declared_field_fails(self) -> None:
         _skill(self.root, "workflow", "alpha", {"source": "./elsewhere"})
         self._config({"alpha": {"category": "workflow"}})
@@ -104,10 +129,21 @@ class TestCommittedMarketplace(unittest.TestCase):
         self.assertEqual(build_marketplace.main(["--check"]), 0, "run `python build_marketplace.py`")
 
     def test_every_plugin_source_is_a_published_skill(self) -> None:
+        # ... or a mod with no skill: then the entry names no skills and the folder carries its own manifest.
         marketplace = json.loads((REPO / build_marketplace.MARKETPLACE).read_text(encoding="utf-8"))
         self.assertGreater(len(marketplace["plugins"]), 0)
         for plugin in marketplace["plugins"]:
-            self.assertTrue((REPO / plugin["source"] / "SKILL.md").is_file(), plugin["name"])
+            carries = "SKILL.md" if "skills" in plugin else build_marketplace.MOD_MANIFEST
+            self.assertTrue((REPO / plugin["source"] / carries).is_file(), plugin["name"])
+
+    def test_a_published_manifest_that_declares_a_version_declares_the_published_one(self) -> None:
+        # Claude Code takes the manifest's version over the marketplace entry's: a stale one hides every update.
+        marketplace = json.loads((REPO / build_marketplace.MARKETPLACE).read_text(encoding="utf-8"))
+        for plugin in marketplace["plugins"]:
+            manifest = REPO / plugin["source"] / build_marketplace.MOD_MANIFEST
+            if manifest.is_file():
+                declared = json.loads(manifest.read_text(encoding="utf-8")).get("version", plugin["version"])
+                self.assertEqual(declared, plugin["version"], plugin["name"])
 
 
 if __name__ == "__main__":
