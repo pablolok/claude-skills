@@ -238,7 +238,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   seen; calibrated against a transformed view (a tone-mapped image) instead of the source values, a correction
   distorted what it was meant to fix. State in the note, per input, where it was measured and where it is used.
   The same for what a moving thing accumulates over time (a trail, a history, a running sum): keep it in the frame
-  that moves with it — kept in the outer frame, a jump of its owner is drawn as a streak.
+  that moves with it — kept in the outer frame, a jump of its owner is drawn as a streak. A value measured on one of
+  a pair and mirrored to the other assumes the pair is symmetric: measure the second one's difference before
+  mirroring (copied from one side of an asymmetric model, joints lay 3-6 cm off the other side's own parts).
 - **Select by the property that defines the role, never by position.** "The first item / the first
   config entry / `items[0]`" holds only while the order does; when the collection changes, the code
   silently picks something else. Name the property that makes it the right one (its type, a key, the

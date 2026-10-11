@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.17] - 2026-10-11
+- a value measured on one of a pair is checked on the other before mirroring
+
+
 ## [1.1.16] - 2026-10-11
 - A new automatic writer reopens every exemption justified by how the data used to be written
 
