@@ -226,7 +226,9 @@ in another language declares them in **.claude/backlog.json** (`fieldNames`, `wo
    progress go in the **Doc**. From a one-liner, infer the rest from the code and the conversation and write a
    concrete plan — no placeholders. A temporary patch just shipped: its commit and why it isn't the real fix.
 3. **Doc folder**: pick the type, create `<type>/<name>/<file>.md` in the backlog folder with the plan, link it
-   from `- **Doc**:`. A shape change carries its target shape and acceptance from the start.
+   from `- **Doc**:` — always a **file**, never the folder: the dashboard reads every Doc link as a file, and one
+   folder link breaks the whole register (`EISDIR`). A shape change carries its target shape and acceptance from
+   the start.
 4. Insert the entry at the TOP of `## Open` (the project's `words.open`). Don't touch other entries.
 5. Confirm the new id + one-line summary; **say the Manual step out loud**. Commit only in a commit flow or when
    asked, in the project's commit format (its CLAUDE.md or AGENTS.md, its recent `git log`); with none,

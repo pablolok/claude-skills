@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.7] - 2026-10-11
+- Doc links always point to a file: a folder link breaks the dashboard (EISDIR)
+
+
 ## [1.8.6] - 2026-10-11
 - Phase table: the exact row form the dashboard counts, and the --json check after editing a table
 
