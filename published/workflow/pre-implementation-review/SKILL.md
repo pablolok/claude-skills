@@ -158,7 +158,9 @@ These are not soft smells to mention — if the change would introduce one, the 
 - **The field's standard method before your own.** When the change enters a problem the project has not solved before
   and the industry solves a known way (a rendering or modelling technique, a sync protocol, a scheduling algorithm),
   find that method first — a short research with sources — and design from it. Home-made attempts fail one at a time
-  for reasons the standard method already answers; three tries were spent that way before one search named it.
+  for reasons the standard method already answers. The same research is due **when an approach stops converging** (two
+  rounds without a measured gain), however established the approach is in the project: past that point each round
+  tunes the wrong method.
   Then list what the method assumes about the thing it is applied to and check each against this project: a
   method written for a whole object, applied to one of its separately built pieces, breaks where the pieces meet
   (a motion meant to bend the whole moved one piece off the static one it stood on). **Probe the chosen tool on the
@@ -180,6 +182,8 @@ These are not soft smells to mention — if the change would introduce one, the 
   older version failed a setup that walked its own map) — drop what it owns, then rebuild from the source. A
   builder that names what it makes drops its earlier output first too: where a name clash renames the newcomer
   silently (a `.001`, a `(1)`), the next steps found the old outputs by name and shipped them.
+  A **correction's target** is measured on the reference it must match, never on the output being corrected: measured
+  on a generated draft, every fix kept the draft's own error (its proportions) and only tuned around it.
   A **fallback** runs on the original input too, never on the failed attempt's output: a repair applied to what the
   stuck first try left produced a broken shape that passed its own count.
   A retry or fallback that **did not measure** never replaces an outcome that did (the verdict is the last attempt that
@@ -206,6 +210,8 @@ These are not soft smells to mention — if the change would introduce one, the 
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.
+  A number **read once** (by eye on an image, or by a delegate) that will set a target or be reported is read a second,
+  independent way first (another view, another method): one landmark mistaken for another set a target 30 % off.
 - **A step that deletes or rewrites by a rule is bounded to where the rule is meant, and its output looked at.**
   A cleanup that removes whatever a test touches (near a moving part, matching a filter) finds far more than the
   case it was written for when the inputs change: unbounded, one removed half of an unrelated part and left its end
@@ -222,7 +228,8 @@ These are not soft smells to mention — if the change would introduce one, the 
   importer's threshold, a library's limit): it is a choice made for you — measure it at the real use (left at its
   default, an importer drew the coarse model at the very distance the user sees it).
 - **Name the frame every measured input lives in.** A value measured in one frame — a pose, a coordinate space, a
-  colour space, a unit, a sample's conditions — and used in another gets one explicit conversion, in one place.
+  colour space, a unit, a sample's conditions, the projection an image was drawn with — and used in another gets one
+  explicit conversion, in one place (a perspective view read as orthographic placed its far parts high).
   Placed in the frame it was measured in, a piece was right in the reference and wrong wherever it is actually
   seen; calibrated against a transformed view (a tone-mapped image) instead of the source values, a correction
   distorted what it was meant to fix. State in the note, per input, where it was measured and where it is used.

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.15] - 2026-10-11
+- a stalled approach triggers the standard-method research; a correction's target measured on the reference; a number read once is read twice; an image's projection is a frame
+
+
 ## [1.1.14] - 2026-10-11
 - A scripted bulk edit is an edit: the review precedes the script and its output is looked at.
 
