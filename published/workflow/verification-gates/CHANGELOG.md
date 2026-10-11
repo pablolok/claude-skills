@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.2] - 2026-10-11
+- A timeout red in an untouched file is re-run alone and with a longer timeout before it is called pre-existing
+
+
 ## [1.0.1] - 2026-10-10
 - Evidence is the runner's totals read whole and compared with the suite's size; never through a pipe; every skip named.
 

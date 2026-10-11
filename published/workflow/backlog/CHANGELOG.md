@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.4] - 2026-10-11
+- The dashboard shows only what the register writes in its forms: write a plan there before building a second view; a step partly done is ⏳, never ✅ with a count
+
+
 ## [1.8.3] - 2026-10-10
 - Manual: check connected tools before writing a step as Manual; leave only the irreducible consent to the person.
 

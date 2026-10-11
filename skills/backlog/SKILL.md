@@ -99,7 +99,8 @@ More than two named steps → one row per step:
 
 - The state carries its **evidence** (`✅ — what was learned`), not just a tick.
 - A **dropped step STAYS, with the reason** — otherwise it is proposed again.
-- `✅` done · `⏳` in progress (name what blocks it) · `⛔` dropped · `📋` not started.
+- `✅` done · `⏳` in progress (name what blocks it) · `⛔` dropped · `📋` not started. A step partly done is `⏳` with
+  what is left, never `✅` with a count: `✅ 11 of 17` is read as done wherever the table is counted.
 - Edited in the same change that moves a step — **and every other row whose open item that change closed**: work
   recorded only on the row it was done under leaves the rows that listed it open stale, and the entry looks
   unclosable. The cell stays a short current state (done / open, with evidence); the story goes in the commit.
@@ -246,6 +247,13 @@ time. Two ways to open it:
   `node scripts/backlog-gate.mjs dashboard`; `--port N`, `--no-open`) and give the user the URL it prints.
 
 Its "next" is a hint; the move is `review-backlog`'s.
+
+**It shows only what the register writes in its own forms**: phase tables, pending ledgers, and the Status and
+Priority words — words in the register's language count only once mapped (`github.statusWords`,
+`github.priorityWords`; unmapped, every entry reads as having none). To show more of the project in it (a roadmap of
+groups, the checks still owed), write it in those forms before building a second view: one phase per group in the
+umbrella entry, that entry `in-progress` while it runs, a `## Pending verification` line per shipped change awaiting a
+check. A table that restates another document's counts gets a check against that source, or it drifts.
 
 ## process BKLG-NNN (implement the real fix)
 

@@ -65,6 +65,9 @@ Where you *are* expected to run gates, run them and read the output before decla
 - To learn whether a failing gate predates the change, run it on a separate checkout (a worktree, or the gate
   pointed at the base commit) — never by stashing the working tree: a plain stash and pop drops what was staged,
   and the next commit silently leaves files out. Before committing, read the staged list against the files changed.
+- A red that is a **timeout in a file the change does not touch** is re-run alone and with a longer timeout, the
+  machine's load noted: passing that way, it is load and is reported as such — never called pre-existing, nor caused
+  by the change, without that run.
 
 ### Expected gates by stack (examples)
 
