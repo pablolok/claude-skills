@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - 2026-10-11
+- a check failing on correct behaviour gets its rule fixed, never its threshold loosened
+
+
 ## [1.0.2] - 2026-10-10
 - code that tells states apart (present / missing / broken) is tested on each state built for real, the broken one included
 
