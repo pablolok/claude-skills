@@ -37,6 +37,15 @@
     "savvy-progress": {
       "category": "workflow",
       "skill": false
+    },
+    "test-design-standards": {
+      "category": "workflow"
+    },
+    "python-standards": {
+      "category": "workflow"
+    },
+    "diff-self-review": {
+      "category": "workflow"
     }
   }
 }

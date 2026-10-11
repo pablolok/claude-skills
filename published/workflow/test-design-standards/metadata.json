@@ -1,0 +1,5 @@
+{
+  "name": "test-design-standards",
+  "version": "1.0.0",
+  "description": "What a good test is made of, in any language. Use whenever writing, changing or reviewing tests \u2014 a bug fixed from a test that reproduces it, behaviour through the public seam, one behaviour per test, deterministic and isolated (no clock, sleep, run order or shared state), doubles only for what the unit does not own, every state and error path, the right level, timing tests run alone, flaky tests fixed or quarantined, never silenced. Layers on clean-code-standards; not the TDD loop."
+}

@@ -41,6 +41,17 @@
       ]
     },
     {
+      "name": "diff-self-review",
+      "source": "./published/workflow/diff-self-review",
+      "description": "Use before every commit and before declaring work done, and when accepting another agent's diff — read the REAL diff (staged, unstaged, untracked) and trace every hunk to the stated ask, so nothing changes behaviour that nobody asked for. Catches changed defaults, signatures, error text, ordering, conditions, swallowed errors, drive-by refactors and leftovers; each is reverted or declared in the hand-back. Intent tracing, not a bug hunt; verification-gates owns the gates and removals.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
       "name": "mermaid-diagrams",
       "source": "./published/workflow/mermaid-diagrams",
       "description": "Mermaid diagrams in the markdown docs of ANY project, so that they really RENDER in the VS Code preview and on GitHub. Use it before adding or changing a diagram in docs/ — layers, architecture, UML, sequence. Carries the rule for when to pre-render to SVG, the validator and the renderer behind one stable project command, the mechanism by which the preview leaves empty boxes with no error, and the dead ends already ruled out.",
@@ -56,6 +67,17 @@
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
       "version": "1.1.15",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    },
+    {
+      "name": "python-standards",
+      "source": "./published/workflow/python-standards",
+      "description": "The Python-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing Python — scripts, packages, services, tests. Assumes the language-agnostic core and adds only the Python idioms — injection without import-time side effects, type hints with Protocol/Enum/dataclass, narrow exceptions, no mutable defaults, pathlib and explicit encodings, safe subprocess, logging, and the project's own runner, minimum version and checkers — never tools it does not use.",
+      "version": "1.0.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -127,6 +149,17 @@
           }
         ]
       }
+    },
+    {
+      "name": "test-design-standards",
+      "source": "./published/workflow/test-design-standards",
+      "description": "What a good test is made of, in any language. Use whenever writing, changing or reviewing tests — a bug fixed from a test that reproduces it, behaviour through the public seam, one behaviour per test, deterministic and isolated (no clock, sleep, run order or shared state), doubles only for what the unit does not own, every state and error path, the right level, timing tests run alone, flaky tests fixed or quarantined, never silenced. Layers on clean-code-standards; not the TDD loop.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "strict": false,
+      "skills": [
+        "./"
+      ]
     },
     {
       "name": "typescript-react-standards",

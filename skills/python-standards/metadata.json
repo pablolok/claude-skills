@@ -1,0 +1,5 @@
+{
+  "name": "python-standards",
+  "version": "1.0.0",
+  "description": "The Python-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing Python \u2014 scripts, packages, services, tests. Assumes the language-agnostic core and adds only the Python idioms \u2014 injection without import-time side effects, type hints with Protocol/Enum/dataclass, narrow exceptions, no mutable defaults, pathlib and explicit encodings, safe subprocess, logging, and the project's own runner, minimum version and checkers \u2014 never tools it does not use."
+}

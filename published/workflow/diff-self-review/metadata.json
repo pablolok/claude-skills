@@ -1,0 +1,5 @@
+{
+  "name": "diff-self-review",
+  "version": "1.0.0",
+  "description": "Use before every commit and before declaring work done, and when accepting another agent's diff \u2014 read the REAL diff (staged, unstaged, untracked) and trace every hunk to the stated ask, so nothing changes behaviour that nobody asked for. Catches changed defaults, signatures, error text, ordering, conditions, swallowed errors, drive-by refactors and leftovers; each is reverted or declared in the hand-back. Intent tracing, not a bug hunt; verification-gates owns the gates and removals."
+}
