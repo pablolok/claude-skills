@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.16] - 2026-10-11
+- a value measured on one of a pair is checked on the other before mirroring
+
+
 ## [1.1.15] - 2026-10-11
 - a stalled approach triggers the standard-method research; a correction's target measured on the reference; a number read once is read twice; an image's projection is a frame
 
