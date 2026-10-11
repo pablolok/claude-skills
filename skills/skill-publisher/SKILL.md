@@ -18,7 +18,9 @@ below. A change is done when the plugin users get has it — not when the source
   examples (a job, a record, a config), in English. `tests/test_skills_are_generic.py` fails otherwise. Anything
   project-specific belongs in that project (`.claude/skills`, `.claude/rules`).
 - **The description** is the trigger: one line, ≤ 500 characters (claude.ai drops a longer one), the same text in the
-  `SKILL.md` frontmatter and in `metadata.json`.
+  `SKILL.md` frontmatter and in `metadata.json`. No colon followed by a space inside it: strict YAML reads `: ` in
+  an unquoted value as a nested key and rejects the frontmatter, and the tests' `frontmatter()` helper does not
+  notice — write a dash (` — `) instead.
 - **No link to another skill's folder** (`../other/SKILL.md`): a plugin holds one skill alone, so name the skill.
 - **Hooks or commands** a skill needs as a plugin are declared in its own `plugin-entry.json` (paths through
   `${CLAUDE_PLUGIN_ROOT}`); a hook finds the project through `CLAUDE_PROJECT_DIR`, never through its own folder.
@@ -65,7 +67,9 @@ claude plugin validate .
 - **Bump**: patch for a fix or a lesson in an existing step, minor for a new step or a removed section, major for a
   change that breaks how projects use it (a launcher's command, a hook's contract).
 - `automate_publish.py` bumps `metadata.json`, adds the summary to `CHANGELOG.md`, copies the skill to `published/`
-  and regenerates the marketplace. Several skills: run it once per skill, then the checks once.
+  and regenerates the marketplace. Several skills: run it once per skill, then the checks once. With several new
+  skills registered at once, every run but the last exits 2 (`no published skill at …` for one not copied yet):
+  that is expected, so separate the runs with `;`, not `&&`, and judge the last run and the checks.
 - Continue only on green. A skipped test is not a pass: the mermaid end-to-end test needs mermaid and jsdom
   installed — it finds them in `MERMAID_DEPS_DIR`, or in the launcher's cache under `CLAUDE_SKILLS_CACHE` after one
   `node scripts/mermaid.mjs check …` in any project.
@@ -74,10 +78,14 @@ claude plugin validate .
 
 ```bash
 git commit -m "feat(<skill>): <version> — <what changed>"   # fix(...) / docs(...) / chore(...); several: feat(a, b): 1.1.0 / 1.0.1 — …
+git fetch origin && git rebase origin/main                 # when main moved on GitHub: then the checks again
 git push origin HEAD
 python tag_published.py --push
 ```
 
+- Others publish here too: fetch before the push. When `origin/main` moved, rebase onto it and run
+  `build_marketplace.py --check` and the suite again on the rebased commit — both sides regenerate the marketplace,
+  and a push of the old commit is refused anyway.
 - The marketplace is read from `main` on GitHub: a commit not pushed is a version nobody gets.
 - `tag_published.py` tags `<skill>@<version>` for every published version and, with `--push`, pushes every one origin
   lacks. Projects pin launchers by those tags; a launcher whose tag is missing cannot fetch its skill.
