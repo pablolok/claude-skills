@@ -33,6 +33,8 @@ PHRASES = ("this user",)
 ALLOWED = ("pablolok/claude-skills", "pablolok-skills")
 #: The longest plugin description claude.ai accepts (build_marketplace.MAX_DESCRIPTION).
 MAX_DESCRIPTION = 500
+#: What ends an unquoted YAML value early: strict YAML reads a colon then a space (or a final colon) as a nested key.
+YAML_MAPPING_INDICATOR = ": "
 
 
 def _kept_by_git() -> typing.Optional[typing.Set[pathlib.Path]]:
@@ -63,6 +65,11 @@ def _forbidden_in(text: str) -> typing.List[str]:
     return [word for word in PEOPLE + PROJECTS + PHRASES if word in lowered]
 
 
+def _breaks_plain_yaml(value: str) -> bool:
+    """True when an unquoted frontmatter value is not one plain YAML scalar: strict parsers reject the frontmatter."""
+    return YAML_MAPPING_INDICATOR in value or value.endswith(":")
+
+
 class TestSkillsAreGeneric(unittest.TestCase):
     def test_the_scan_sees_the_skills(self) -> None:
         # Control: an empty scan would pass every check below.
@@ -74,6 +81,11 @@ class TestSkillsAreGeneric(unittest.TestCase):
         self.assertEqual(_forbidden_in("As Pablo wants it, for this user, in Deepborn"), ["pablo", "deepborn", "this user"])
         self.assertEqual(_forbidden_in("claude plugin install x@pablolok-skills from pablolok/claude-skills"), [])
         self.assertEqual(_forbidden_in("github.com/pablolok"), ["pablo"], "the bare handle is still a person")
+
+    def test_the_yaml_check_catches_a_colon_space_but_not_a_dash(self) -> None:
+        self.assertTrue(_breaks_plain_yaml("Use whenever writing tests: a bug fixed first"))
+        self.assertTrue(_breaks_plain_yaml("Trigger on:"))
+        self.assertFalse(_breaks_plain_yaml("Use whenever writing tests — a bug fixed first, see https://example.org"))
 
     def test_no_skill_names_a_person_a_project_or_this_user(self) -> None:
         offenders = [
@@ -94,6 +106,7 @@ class TestSkillsAreGeneric(unittest.TestCase):
                 if config.get("skill", True):
                     description = frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")).get("description", "")
                     self.assertEqual(metadata["description"], description, "metadata.json repeats the frontmatter")
+                    self.assertFalse(_breaks_plain_yaml(description), "no ': ' in the frontmatter: write ' — ' instead")
                 else:
                     # A mod with no skill: metadata.json alone describes it.
                     description = metadata["description"]

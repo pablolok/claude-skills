@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.1] - 2026-10-11
+- The description carries no colon followed by a space, which strict YAML rejects in the frontmatter
+
+
 ## [1.2.0] - 2026-10-07
 - The project's conventions first: the document in the project's language, sections named in its terms (declared to the backlog gates through words), entries cited in its format, the architecture folder the project's; the skill's names and formats are the defaults
 

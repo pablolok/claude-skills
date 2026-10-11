@@ -1,6 +1,6 @@
 ---
 name: writing-architecture-docs
-description: Use when a piece of work must be designed before it is written — a large feature, a rework, a defect that crosses several layers, a multi-phase job — or when the question is "how is it built today", "what shape must it take", "why this and not something else". Any project, any language. The diagram mechanics are NOT here: they are in the mermaid-diagrams skill.
+description: Use when a piece of work must be designed before it is written — a large feature, a rework, a defect that crosses several layers, a multi-phase job — or when the question is "how is it built today", "what shape must it take", "why this and not something else". Any project, any language. The diagram mechanics are NOT here — they are in the mermaid-diagrams skill.
 ---
 
 # Architecture documents
