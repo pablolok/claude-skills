@@ -50,7 +50,9 @@ Where you *are* expected to run gates, run them and read the output before decla
 - **Evidence is the runner's totals, read whole**: the count of tests run, passed, failed and skipped, compared with
   the suite's known size. A count far off means the runner ran something else (a folder taken as a single file, a
   filter, a skipped module) — a false red or a false green. Never through `| tail`/`| head`: they cut the totals off
-  and report their own exit status. Each skip is named and justified, or it is a gap.
+  and report their own exit status. Each skip is named and justified, or it is a gap. The same for a build or compile
+  gate: it shows what it compiled (files, targets) — a variant whose inputs were missing printed "compiles" having
+  compiled nothing, and was reported green.
 - Treat warnings in required build/compile/bundle/lint/static-analysis output as violations unless
   explicitly allowed.
 - Treat suppressions that hide required diagnostics as violations (except the EF `Migrations/` case

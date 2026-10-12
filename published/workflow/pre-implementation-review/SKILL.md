@@ -173,7 +173,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   adopted: a model at twice its budget carried its unwrap, rig, bake and paint before anyone counted; cut to the limit,
   its bake and every rig check ran again. And run the step that **consumes** a result on a rough version of it before polishing it:
   a defect the consumer finds reshapes the work upstream (a rough model rigged and posed showed one limb dragging the
-  body — found before any assembly polish, not after).
+  body — found before any assembly polish, not after). The same for a design's own **top-named risk**: the pieces are
+  ordered so the cheapest prototype that proves or kills it comes first — a physics feature whose design named
+  "it may never settle into the wanted pose" as its first risk was built in full, ten pieces, before its first run
+  showed exactly that.
 - **Never read an input back from what the operation itself writes.** If a job decides which records
   to process by a field it then overwrites (e.g. "unprocessed = status is empty", then it sets the
   status), its second run reads its own output and skips or reprocesses the wrong ones. Take the input

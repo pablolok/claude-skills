@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.22] - 2026-10-12
+- a design's top-named risk is proven first by the cheapest prototype
+
+
 ## [1.1.21] - 2026-10-12
 - a measured limit that forces a worse design is measured again by an independent method first
 

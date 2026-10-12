@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-10-12
+- a compile gate shows what it compiled: one that compiled nothing is not green
+
+
 ## [1.0.4] - 2026-10-11
 - Patches applied with --3way --index land staged: read git diff --cached, check a clean second apply for duplicates
 
