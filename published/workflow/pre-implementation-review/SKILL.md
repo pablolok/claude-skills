@@ -168,7 +168,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   state (an automatic remesher would not go below ~30× the budget of the smallest parts, whatever its settings).
   The same before a long run judged by one total (a sum under a cap, a full rebuild): try each part's target with
   the real tool first — a table of budgets written on paper failed a 3-minute build three times on parts the tool
-  could not bring that low. And run the step that **consumes** a result on a rough version of it before polishing it:
+  could not bring that low. **An input adopted from outside** (a generated asset, a vendor's output, an imported
+  dataset) is checked against every hard limit of where it ships (a budget, a size, a format) the moment it is
+  adopted: a model at twice its budget carried its unwrap, rig, bake and paint before anyone counted; cut to the limit,
+  its bake and every rig check ran again. And run the step that **consumes** a result on a rough version of it before polishing it:
   a defect the consumer finds reshapes the work upstream (a rough model rigged and posed showed one limb dragging the
   body — found before any assembly polish, not after).
 - **Never read an input back from what the operation itself writes.** If a job decides which records

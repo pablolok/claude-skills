@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.20] - 2026-10-12
+- an input adopted from outside is checked against every hard limit of where it ships when adopted
+
+
 ## [1.1.19] - 2026-10-12
 - variants failing alike point at what they share; a value set without measuring is handed on as a guess
 
