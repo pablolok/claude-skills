@@ -228,9 +228,13 @@ These are not soft smells to mention — if the change would introduce one, the 
   everything (0 % defects; forced to the real state, 16 %), an exporter would have written every animation as the
   rest pose, and a bake whose rays saw every visible object in the scene turned a map 83 % black — all without an
   error. A check that reports the same result for every variant it is given is measuring
-  nothing — treat that as a finding, not a pass. The same for a **tool's own default** the output passes through (an
-  importer's threshold, a library's limit): it is a choice made for you — measure it at the real use (left at its
-  default, an importer drew the coarse model at the very distance the user sees it).
+  nothing — treat that as a finding, not a pass; and variants that all fail one criterion alike point at what they
+  share, not at what differs between them (three paints scored 0 on material because all three wore one roughness).
+  The same for a **tool's own default** the output passes through (an importer's threshold, a library's limit): it is
+  a choice made for you — measure it at the real use (left at its default, an importer drew the coarse model at the
+  very distance the user sees it). And a value you set yourself without measuring is a guess: write it as one where
+  it is handed on (a brief, a spec), so evidence against it overrides it — kept as a constraint, an unmeasured "matte"
+  held through every round against the review asking for gloss.
 - **Name the frame every measured input lives in.** A value measured in one frame — a pose, a coordinate space, a
   colour space, a unit, a sample's conditions, the projection an image was drawn with — and used in another gets one
   explicit conversion, in one place (a perspective view read as orthographic placed its far parts high).

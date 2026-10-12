@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.19] - 2026-10-12
+- variants failing alike point at what they share; a value set without measuring is handed on as a guess
+
+
 ## [1.1.18] - 2026-10-12
 - a point from one projection fixes two coordinates; a centre bounded to the thing measured; nearest is biased by size
 
