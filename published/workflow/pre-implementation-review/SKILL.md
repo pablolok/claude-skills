@@ -240,7 +240,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   The same for what a moving thing accumulates over time (a trail, a history, a running sum): keep it in the frame
   that moves with it — kept in the outer frame, a jump of its owner is drawn as a streak. A value measured on one of
   a pair and mirrored to the other assumes the pair is symmetric: measure the second one's difference before
-  mirroring (copied from one side of an asymmetric model, joints lay 3-6 cm off the other side's own parts).
+  mirroring (copied from one side of an asymmetric model, joints lay 3-6 cm off the other side's own parts). A point
+  read off one projection fixes two of its three coordinates: place it from two views and check it in a third. A
+  centre averaged over a region takes in whatever is attached to it (hanging strips pulled a joint's centre 4-5 cm
+  off): bound the region to the thing measured.
 - **Select by the property that defines the role, never by position.** "The first item / the first
   config entry / `items[0]`" holds only while the order does; when the collection changes, the code
   silently picks something else. Name the property that makes it the right one (its type, a key, the
@@ -249,7 +252,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   select by what actually binds it to X (its weights, its owner field), and check the pick on real data. Being
   *named* is not being *done* either: a trigger read from free text (a shell command, a log line) matches only the
   part that acts — a quoted message or a here-document that names the command runs nothing (a hook matching the
-  whole command text fired on a commit message that quoted it).
+  whole command text fired on a commit message that quoted it). Being *nearest* is not it when the candidates differ
+  in size: by distance to each one's surface, the widest wins ground that belongs to its neighbours (a wide part took
+  the first 5 cm of every thin one beside it) — assign along each candidate's own axis.
 - **A rule that lists observed values (hosts, labels, ids, formats) states how many independent instances it saw
   and along which axis they differ — one instance cannot tell a closed set from a per-item token.** Before
   choosing between listing and a structural property, sample the axis that could vary (another item at the same

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.18] - 2026-10-12
+- a point from one projection fixes two coordinates; a centre bounded to the thing measured; nearest is biased by size
+
+
 ## [1.1.17] - 2026-10-11
 - a value measured on one of a pair is checked on the other before mirroring
 
