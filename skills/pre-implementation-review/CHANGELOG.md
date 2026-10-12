@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.21] - 2026-10-12
+- a measured limit that forces a worse design is measured again by an independent method first
+
+
 ## [1.1.20] - 2026-10-12
 - an input adopted from outside is checked against every hard limit of where it ships when adopted
 

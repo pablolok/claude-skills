@@ -237,7 +237,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   a choice made for you — measure it at the real use (left at its default, an importer drew the coarse model at the
   very distance the user sees it). And a value you set yourself without measuring is a guess: write it as one where
   it is handed on (a brief, a spec), so evidence against it overrides it — kept as a constraint, an unmeasured "matte"
-  held through every round against the review asking for gloss.
+  held through every round against the review asking for gloss. The other way round too: a **measured limit that
+  forces a worse design** (a smaller motion, a dropped feature, a workaround) is measured again by an independent
+  method before the design gives way to it — one probe read a joint's range at a third of what it had, and a whole
+  piece of work was built and rejected around that number.
 - **Name the frame every measured input lives in.** A value measured in one frame — a pose, a coordinate space, a
   colour space, a unit, a sample's conditions, the projection an image was drawn with — and used in another gets one
   explicit conversion, in one place (a perspective view read as orthographic placed its far parts high).
