@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.4] - 2026-10-12
+- a check driving its input by convention asserts it drove what it names
+
+
 ## [1.0.3] - 2026-10-11
 - a check failing on correct behaviour gets its rule fixed, never its threshold loosened
 

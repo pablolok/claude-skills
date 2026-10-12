@@ -69,6 +69,9 @@ unit, the refactor isn't done.
     A check that fails on behaviour that is correct gets its rule fixed — what it measures, on the right unit —
     never its threshold loosened, and the change says which: a rigid part riding its base read as a leak while it
     was judged by its tip; judged by its base, the same tolerance passed it and still caught a base that leaked.
+    A check that drives its input by a convention (a sign, an axis, a direction) asserts it drove what it names:
+    a bend test's "+" opened the joint it claimed to close, and its axis sat 17-76° off the joint's own — every
+    number it reported was about another motion.
 11. **Leave borrowed state as found.** Code that changes shared state to do its work (a mode, a setting, a
     selection, a global) records every property it touches and restores each one — not only the values it
     measured with: a probe that switched a mode and reset just the values left everything after it inert.
