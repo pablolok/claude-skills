@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2026-10-12
+- one persistent worker per topic, a registry on file, resume or rotate between tasks at 70% of the context window
+
+
 ## [1.2.2] - 2026-10-12
 - resume a worker or start a fresh one by cost, with a handoff note
 

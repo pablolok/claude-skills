@@ -83,7 +83,7 @@ Heuristics:
 
 ## 4. Delegate
 
-- Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run independent tasks in parallel in one message; chain dependent ones.
+- Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
 - Keep briefs tight. Do not paste the whole plan; paste this task.
 - Before delegating a task, check that nobody else already holds it — other people's open pull requests, branches and
@@ -91,13 +91,28 @@ Heuristics:
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
   worker runs only the tests of what it touched — the full suite runs once, by the orchestrator, before merging.
   Parallel full runs turn correct timing-sensitive tests into timeouts.
-- **Resume a worker or start a fresh one by cost.** Every step a worker takes re-reads its whole context (cheaper while
-  cached; full price again once the cache expires after a pause). Resume it (SendMessage) for a follow-up that needs
-  what it has already read and takes few steps. Start a fresh one when the next task is long and needs little of the
-  old context: worth it only when the steps it will take, times the context they no longer carry, outweigh what the
-  new worker spends reading its way in. Make that cheap: before letting a worker with a large context go, ask it for a
-  short handoff note (state, decisions, how to rebuild, traps, open issues — facts, no history) and point the next
-  brief at it. A worker near its context limit is compacted mid-task and loses detail: switch before that.
+- **Answer quick questions yourself.** One that needs no file work gets no worker.
+- **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
+  one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a
+  different worker (model and effort are fixed when an agent starts); a new topic gets a new worker. A worker left
+  behind stays registered, so a return to its topic resumes it.
+- **Keep the registry on file**, so it survives a compaction of your own context: in the session scratchpad directory
+  when there is one, otherwise in a file outside version control. One row per worker: topic, tier, agent id, context
+  tokens at its last return, handoff file, time of last use. Agent ids hold only within the session; in a new session
+  workers restart from their handoff files.
+- **Resume or rotate between tasks, never during one.** A working worker finishes its task; it is never interrupted to
+  hand off. The token count a worker reports on return is its context size now, not a running total: judge by it. A
+  fresh worker already starts with a large fixed context (system prompt, project instructions, tool and skill
+  listings), which is why a worker per task is expensive and the threshold is a share of the window. Before its next
+  task:
+  - below 70% of its model's context window → resume it;
+  - at or above 70% → ask it for a handoff note and give the task to a fresh worker pointed at that note;
+  - below 70%, but the next task is long enough to push it toward the limit, or needs little of what it has read →
+    rotate now.
+
+  Resuming within the prompt-cache lifetime is cheap; after a long pause every step re-reads the whole context at full
+  price, so a large worker whose next task needs little of it is rotated too. The handoff note is short — state,
+  decisions, how to rebuild, traps, open issues; facts, no history — and goes to the handoff file of its registry row.
 - Do not implement in parallel with workers. While they run, prepare the next briefs or the review checklist.
 
 ## 5. Adversarial review (orchestrator only)

@@ -21,7 +21,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 
 | File | Role |
 | :--- | :--- |
-| `SKILL.md` | The orchestrator's playbook: plan, design (never delegated), tiering, delegation, adversarial review, close. |
+| `SKILL.md` | The orchestrator's playbook: plan, design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
