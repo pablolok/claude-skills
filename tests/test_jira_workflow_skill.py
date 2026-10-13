@@ -88,6 +88,11 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("An Epic never goes into a sprint", self.text)
         self.assertNotIn("An Epic sums its children", self.text, "the board counts an Epic's points twice")
 
+    def test_worklog_clock_and_review_script(self) -> None:
+        self.assertIn("The finish is the clock, read when logging", self.text)
+        self.assertIn("what a query cannot check runs from a script the project keeps", self.text)
+        self.assertIn("a hook enforces it", self.text)
+
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)
         self.assertIn("is blocked by", self.text)

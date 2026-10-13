@@ -107,6 +107,8 @@ The project playbook fixes these; the skill never assumes them.
 - Log work while working: at every step and when a task is declared complete, never rebuilt at the end of the day.
 - Real hours, not the estimate: `started` is when the work began, `timeSpent` runs from start to finish. Short
   operations (creating tickets, fixing a status, linking two tickets) get their worklog too.
+- **The finish is the clock, read when logging** (`date`), never a guessed end: a worklog written with an end in the
+  future, or an end reckoned from memory, overstated short tasks two to three times.
 - No task moves to a completed status without a worklog.
 - If a worklog cannot be recorded (rate limit, an error, uncertain hours), tell the user at once with the ticket,
   start, end and hours, so they can log it.
@@ -137,6 +139,10 @@ opened by hand:
 - `issuetype = Epic AND (` the points field `is not EMPTY OR sprint in openSprints())`;
 - the board's `estimation.field` (`getJiraBoardConfig`) is the field the playbook names;
 - key result counts equal to their Epics' counts;
+- **what a query cannot check runs from a script the project keeps**, read-only, that returns the differences and
+  must return none: every sprint report, burndown, version report and Epic report against the sum of its own tickets
+  (never a sample — a check on one sprint left another counting points twice), a parent against the sum of its
+  sub-tasks, no Epic with points or in an open sprint, every done ticket with a worklog, version and resolution;
 - **dependencies** (group 12): every dependency written in a description or in the plan has its Blocks link, and no
   ticket blocked by an open one is in progress or beyond without a comment that says why.
 
@@ -146,6 +152,11 @@ opened by hand:
 - `discover` an operation you do not know, then run it with `executeRead`, `executeWrite` or `executeDestructive`.
 - **One call at a time.** Parallel calls — several agents, or one batch — hit the rate limit (HTTP 429; on a free site
   past 4–5 agents, and an hourly cap after about 1000 calls). On a 429, stop and tell the user; never wait in a loop.
+  A written rule was still broken under load: where the project can, a hook enforces it (a lock taken atomically
+  before each connector call and released after it, with an expiry for a call that never returns).
+- Taking a field off a screen does not stop the API writing it, on a locked field and on a plain one alike; and a
+  field's global context cannot be narrowed to some issue types. Guard such a field with the review script, not with
+  the screen alone.
 - `timetracking` is not accepted at creation: set it right after with `editJiraIssue`. The same for sub-tasks.
 - A transition to a done status does not accept `resolution` (400 `TRANSITION_FAILED`): transition first, then
   `editJiraIssue` with the resolution.

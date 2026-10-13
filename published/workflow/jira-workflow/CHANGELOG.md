@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.5] - 2026-10-13
+- A worklog's finish is the clock read when logging, never a guessed end; what a query cannot check (every report against the sum of its tickets, parents against their sub-tasks, Epics) runs from a script the project keeps; a hook can enforce one connector call at a time; a field off a screen is still writable through the API
+
 ## [1.0.4] - 2026-10-13
 - An Epic has no points in the board's field and never goes into a sprint — the board counts it as one more ticket, so its points added to its children's (a burndown at 68 instead of 18.5, a version report at 352 instead of 198); the total review checks both
 
