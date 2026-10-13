@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.9] - 2026-10-13
+- The dashboard reads a closed entry whole: its title inside the bold (`- **BKLG-NNN — Title** — …`), the lines it wraps onto (lazy lines included) and a card up to the next heading, so its title, its close day (the project's Done field, then Obsolete, then the first date) and its links are no longer lost below the first line
+
+
 ## [1.8.8] - 2026-10-11
 - The bootstrap pins the version it ships with (1.8.7 had shipped with 1.8.6)
 

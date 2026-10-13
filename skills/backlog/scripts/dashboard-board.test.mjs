@@ -163,12 +163,69 @@ test("pending ledgers: one item per list line, wrapped lines joined, ids cited",
 });
 
 test("closed lines: a fenced example is not an entry; a phase line closes its phase only", () => {
-  const closed = closedEntries(HISTORY, "docs/implementations");
+  const closed = closedEntries(HISTORY, { ...config, docsDir: "docs/implementations" });
   assert.deepEqual(closed.map((c) => [c.id, c.phase]), [["BKLG-002", "P0"], ["BKLG-000", ""]]);
   assert.equal(closed[1].title, "First entry");
   assert.equal(closed[1].day, "2026-09-29");
   assert.deepEqual(closed[1].docs, [{ label: "doc", path: "docs/implementations/archive/first/report.md" }]);
   assert.equal(withoutFences("a\n```\nb\n```\nc"), "a\n\n\n\nc");
+});
+
+test("⭐ a closed entry is read whole: the title in the bold, its wrapped lines, the close field's day, a link below", () => {
+  const history = [
+    "- **BKLG-211 — A deferred account starts as an asset and its rows are refused** —",
+    "  closed, outside the roadmap. Shipped with 3.70.2 (online since 2026-10-11 at 22:15).",
+    "  **Chiusa**: 2026-10-12 · [docs/releases/3.70.2.md](../releases/3.70.2.md)",
+    "",
+    "- **BKLG-006 — Shared expenses with real users** — **Scartata** il 2026-09-27, kept local",
+    "- **BKLG-005 — Released 2026-09-01, no close field** — the first day stands",
+    "- **BKLG-000** First entry — shipped",
+    "  on two lines,",
+    "a lazy line at the margin · **Done**: 2026-09-29",
+    "### Closed on 2026-01-01",
+  ].join("\n");
+  const italian = parseConfig(JSON.stringify({ fieldNames: { Done: "Chiusa", Obsolete: "Scartata" } }));
+  const [deferred, dropped, noField, plain] = closedEntries(history, { ...italian, docsDir: "docs/implementations" });
+  assert.equal(deferred.title, "A deferred account starts as an asset and its rows are refused");
+  assert.equal(
+    deferred.text,
+    "closed, outside the roadmap. Shipped with 3.70.2 (online since 2026-10-11 at 22:15). " +
+      "**Chiusa**: 2026-10-12 · [docs/releases/3.70.2.md](../releases/3.70.2.md)",
+  );
+  assert.equal(deferred.day, "2026-10-12", "the close field's day, not the release day the body mentions first");
+  assert.deepEqual(deferred.docs, [{ label: "docs/releases/3.70.2.md", path: "docs/releases/3.70.2.md" }]);
+  assert.deepEqual([dropped.title, dropped.day], ["Shared expenses with real users", "2026-09-27"]);
+  assert.equal(noField.day, "2026-09-01", "no close field: the first day of the entry");
+  assert.equal(plain.title, "First entry");
+  assert.equal(
+    plain.text,
+    "First entry — shipped on two lines, a lazy line at the margin · **Done**: 2026-09-29",
+    "a lazy line goes on the entry, a heading ends it",
+  );
+});
+
+test("· a whole card kept in the history is read to the next heading, its lines kept", () => {
+  const history = [
+    "### BKLG-006 — Shared expenses with real users",
+    "",
+    "**Scartata** il 2026-09-27, during a comparison: the participants stay local",
+    "([report](archive/split/report.md)).",
+    "",
+    "- **Status**: dropped",
+    "",
+    "### BKLG-004 — The next card",
+  ].join("\n");
+  const italian = parseConfig(JSON.stringify({ fieldNames: { Obsolete: "Scartata" } }));
+  const [card, next] = closedEntries(history, { ...italian, docsDir: "docs/implementations" });
+  assert.equal(card.title, "Shared expenses with real users");
+  assert.equal(
+    card.text,
+    "Shared expenses with real users\n\n**Scartata** il 2026-09-27, during a comparison: the participants stay local\n" +
+      "([report](archive/split/report.md)).\n\n- **Status**: dropped",
+  );
+  assert.equal(card.day, "2026-09-27");
+  assert.deepEqual(card.docs, [{ label: "report", path: "docs/implementations/archive/split/report.md" }]);
+  assert.deepEqual([next.id, next.text, next.day], ["BKLG-004", "The next card", null]);
 });
 
 test("an empty register gives an empty board, not an error", () => {

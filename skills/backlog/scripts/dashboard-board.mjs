@@ -20,7 +20,7 @@ import { lastTouched } from "./dashboard-activity.mjs";
 import { canonicalField } from "./backlog-github-sync.mjs";
 import { citedEntries } from "./docIndex.mjs";
 import { DEFAULTS, PRIORITIES } from "./project.mjs";
-import { closedLines, isOpenHeading, openEntries } from "./register.mjs";
+import { ISO_DAY, closeDayOf, closedLines, isOpenHeading, openEntries } from "./register.mjs";
 
 /** A phase row's state, by the mark its state cell opens with (the backlog skill's set, and 🔨 for "building"). */
 export const PHASE_MARKS = Object.freeze({
@@ -40,8 +40,6 @@ export const ACTIVITY_SIZE = 40;
 const PENDING_HEADING = /^## Pending\s+(.+?)\s*$/i;
 /** A markdown link: label and target. */
 const LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g;
-/** An ISO day. */
-const DAY = /\b(\d{4}-\d{2}-\d{2})\b/;
 
 /** A text with its fenced code blocks blanked: a fence shows the format by example, its lines are not entries. */
 export function withoutFences(text) {
@@ -157,22 +155,56 @@ export function pendingLedgers(text, config = DEFAULTS) {
   return ledgers;
 }
 
+/** A line that opens a block of its own (a list item, a heading, a fence, a quote): it cannot continue a paragraph. */
+const BLOCK_START = /^([-*+]\s|\d+[.)]\s|#{1,6}\s|>|```|~~~)/;
+
 /**
- * The closed lines of BACKLOG-HISTORY.md, newest first as the history keeps them: id, phase, title, day, docs.
- * @param {string} text
- * @param {string} docsDir
+ * The lines an entry wraps onto, trimmed: as in Markdown, its paragraph goes on — indented or not (a lazy
+ * continuation line) — until a blank line or a line at the margin that opens another block.
  */
-export function closedEntries(text, docsDir = DEFAULTS.docsDir) {
-  return closedLines(withoutFences(text)).map((c) => {
-    const afterId = c.text.replace(/^-\s+\*\*[^*]+\*\*\s*/, "").replace(/^#{2,3}\s+BKLG-\d+\s*[—–-]?\s*/, "");
-    const title = afterId.split(/\s+[—–]\s+/)[0].trim();
+function wrappedLines(lines, index) {
+  const wrapped = [];
+  for (let i = index + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim() || BLOCK_START.test(line)) break;
+    wrapped.push(line.trim());
+  }
+  return wrapped;
+}
+
+/** A card's body: its lines up to the next heading, kept as they are, the trailing blank ones dropped. */
+function cardBody(lines, index) {
+  const next = lines.findIndex((line, i) => i > index && /^#{1,6}\s/.test(line));
+  const body = lines.slice(index + 1, next < 0 ? undefined : next);
+  while (body.length && !body[body.length - 1].trim()) body.pop();
+  return body;
+}
+
+/**
+ * The closed entries of BACKLOG-HISTORY.md, newest first as the history keeps them: id, phase, title, text, day, docs.
+ * Each is read whole — a list line with the lines it wraps onto, a card to the next heading — so a title, a close
+ * day or a link written below the first line is still the entry's.
+ * @param {string} text
+ * @param {object} config
+ */
+export function closedEntries(text, config = DEFAULTS) {
+  const lines = withoutFences(text).split("\n");
+  return closedLines(lines.join("\n")).map((c) => {
+    const afterId = c.text
+      .replace(/^-\s+\*\*[^*]+\*\*\s*/, "")
+      .replace(/^#{2,3}\s+BKLG-\d+\s*[—–-]?\s*/, "")
+      .replace(/^[—–-]\s*/, "");
+    // A list line is one paragraph, its wrapped lines joined; a card keeps its lines: the detail draws Markdown.
+    const more = c.card ? cardBody(lines, c.index) : wrappedLines(lines, c.index);
+    const text = c.card ? [afterId, ...more].join("\n") : [afterId, ...more].filter(Boolean).join(" ");
+    const whole = [c.text, ...more].join("\n");
     return {
       id: c.id,
       phase: c.phase,
-      title,
-      text: afterId,
-      day: DAY.exec(c.text)?.[1] ?? null,
-      docs: docLinks(c.text, docsDir),
+      title: c.title,
+      text,
+      day: closeDayOf(whole, config),
+      docs: docLinks(whole, config.docsDir),
     };
   });
 }
@@ -203,7 +235,7 @@ function shapeEntries(entries, docTexts, touched, config) {
       status,
       statusText: e.fields.Status ?? "",
       priority: canonicalField(e.fields, "Priority", config),
-      added: DAY.exec(e.fields.Added ?? "")?.[1] ?? null,
+      added: ISO_DAY.exec(e.fields.Added ?? "")?.[1] ?? null,
       summary: e.fields.Summary ?? "",
       fields: e.fields,
       docs,
@@ -250,7 +282,7 @@ const byLastTouched = (a, b) => String(b.last?.date ?? "").localeCompare(String(
  */
 export function buildBoard({ backlog, history, config = DEFAULTS, docTexts = new Map(), commits = [] }) {
   const entries = shapeEntries(openEntries(backlog, config), docTexts, lastTouched(commits), config);
-  const closed = closedEntries(history, config.docsDir);
+  const closed = closedEntries(history, config);
   const closedWhole = closed.filter((c) => c.phase === "");
   const pending = pendingLedgers(backlog, config);
   const inProgress = entries.filter((e) => e.status === "in-progress").sort(byLastTouched);

@@ -19,6 +19,13 @@ import { DEFAULTS, WORDS, fieldName } from "./project.mjs";
 const OPEN_HEADING = /^(#{2,3}) (BKLG-\d+)\b(?:\s+[—–-]\s+(.*))?/;
 /** A closed line: the id in bold, optionally followed by a phase inside the same bold. */
 const CLOSED_LINE = /^- \*\*(BKLG-\d+)([^*\n]*)\*\*/;
+/** An ISO day (`2026-09-29`), captured. */
+export const ISO_DAY = /\b(\d{4}-\d{2}-\d{2})\b/;
+/** The dash that opens a title (`— Title`). */
+const LEADING_DASH = /^[—–-]\s*/;
+
+/** The title in the text after an entry's id: up to the first spaced dash, the dash that opens it dropped. */
+const titleOf = (after) => after.trim().replace(LEADING_DASH, "").split(/\s+[—–]\s+/)[0].trim();
 
 /**
  * Every entry number a text mentions, in any form (a heading, a citation, a folder name). A mention is not a claim:
@@ -51,25 +58,49 @@ export function openIds(text) {
 }
 
 /**
- * The closed entries of BACKLOG-HISTORY.md, each with its full label and its phase ("" when it closes the whole
- * entry). Both shapes a history keeps: the condensed list line, and the whole entry moved with its heading
- * (`## BKLG-NNN — title` — some projects archive the card as it was).
+ * The closed entries of BACKLOG-HISTORY.md, each with its full label, its phase ("" when it closes the whole
+ * entry), its title, the index of its line and whether it is a card. Both shapes a history keeps: the list line,
+ * and the whole entry moved with its heading (`## BKLG-NNN — title` — some projects archive the card as it was).
+ * The title sits inside the bold (`- **BKLG-NNN — Title** — …`) or after it (`- **BKLG-NNN** Title — …`).
+ * One line at a time: a gate reads the added lines of a diff with it, so the lines an entry wraps onto are the
+ * caller's to join.
  */
 export function closedLines(text) {
   const found = [];
-  for (const l of text.split(/\r?\n/)) {
+  text.split(/\r?\n/).forEach((l, index) => {
     const line = CLOSED_LINE.exec(l);
     if (line) {
       // After the id, inside the bold: a PHASE (`F1`, `T6`) — or the entry's TITLE (`— Title`), which closes it whole.
       const rest = line[2].trim();
-      const phase = /^[—–-]/.test(rest) ? "" : rest;
-      found.push({ id: line[1], phase, label: phase ? `${line[1]} ${phase}` : line[1], text: l });
-      continue;
+      const titled = LEADING_DASH.test(rest);
+      const phase = titled ? "" : rest;
+      const title = titled ? rest.replace(LEADING_DASH, "").trim() : titleOf(l.slice(line[0].length));
+      const label = phase ? `${line[1]} ${phase}` : line[1];
+      found.push({ id: line[1], phase, label, title, index, card: false, text: l });
+      return;
     }
     const heading = OPEN_HEADING.exec(l);
-    if (heading) found.push({ id: heading[2], phase: "", label: heading[2], text: l });
-  }
+    if (heading) {
+      const title = titleOf(heading[3] ?? "");
+      found.push({ id: heading[2], phase: "", label: heading[2], title, index, card: true, text: l });
+    }
+  });
   return found;
+}
+
+/**
+ * The day an entry closed on: the date its close field gives (`**Done**: 2026-09-29`, the project's name for it), else
+ * its obsolete field's (`**Obsolete** on 2026-09-27`), else the first date it mentions — or null.
+ * @param {string} text the entry, its wrapped lines included
+ * @param {object} config
+ */
+export function closeDayOf(text, config = DEFAULTS) {
+  for (const canonical of ["Done", "Obsolete"]) {
+    const name = fieldName(config, canonical).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const field = new RegExp(`\\*\\*${name}\\*\\*[^\\d\\n]{0,12}${ISO_DAY.source}`, "i").exec(text);
+    if (field) return field[1];
+  }
+  return ISO_DAY.exec(text)?.[1] ?? null;
 }
 
 /** The ids closed as a WHOLE — a closed phase leaves its entry open. */

@@ -71,6 +71,26 @@ test("· a title inside the bold is not a phase: `- **BKLG-085 — Title** — c
   assert.deepEqual(closedLines(history).map((c) => c.label), ["BKLG-085", "BKLG-077 F1"]);
 });
 
+test("· every closed line carries its title and its line: inside the bold, after it, a phase, a card, a wrapped one", () => {
+  const history = [
+    "# History",
+    "",
+    "- **BKLG-085 — Phone payments** — closed",
+    "- **BKLG-009** Import spike — shipped",
+    "- **BKLG-077 F1** Parser — a phase",
+    "## BKLG-274 — archived as a card",
+    "- **BKLG-090 — A title long enough to wrap the line** —",
+    "  closed on the next line",
+  ].join("\n");
+  assert.deepEqual(closedLines(history).map((c) => [c.label, c.title, c.index]), [
+    ["BKLG-085", "Phone payments", 2],
+    ["BKLG-009", "Import spike", 3],
+    ["BKLG-077 F1", "Parser", 4],
+    ["BKLG-274", "archived as a card", 5],
+    ["BKLG-090", "A title long enough to wrap the line", 6],
+  ]);
+});
+
 test("⭐ a history that keeps whole cards closes them by their heading too", () => {
   const history = "# History\n\n## BKLG-274 — archived as a card\n- **Status**: done\n\n- **BKLG-280** a one-liner\n";
   assert.deepEqual(closedIds(history), ["BKLG-274", "BKLG-280"]);
