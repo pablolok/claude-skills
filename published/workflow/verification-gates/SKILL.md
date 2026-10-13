@@ -84,6 +84,10 @@ Where you *are* expected to run gates, run them and read the output before decla
   against those writers. Applied as patches with `git apply --3way --index`, they land **staged**: `git diff` shows
   nothing and `git diff --cached` is the diff to read; a second apply reported clean is checked for a hunk that
   landed twice.
+- **A change aimed at one platform is verified on that platform**: a fix for a phone browser, touch input, the
+  on-screen keyboard or an installed web app is proven on a simulator or device with that input — an emulated
+  viewport, a desktop browser or a layout-only probe cannot show it. With none available, the change ships with the
+  platform check named as pending, never as verified; a fix that passed every desktop gate shipped with the defect.
 - **A test proves only what it compares against.** Where a value the code writes crosses a constraint enforced
   elsewhere (a database trigger or CHECK, a range bound inclusive or exclusive), the expected value comes from that
   constraint or its twin in the code, never from a literal the test's author chose; a double of that boundary that

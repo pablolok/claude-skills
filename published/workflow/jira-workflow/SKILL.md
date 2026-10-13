@@ -120,6 +120,9 @@ The project playbook fixes these; the skill never assumes them.
   with the score.
 - A released version holds only closed tickets. If the work is live but its verification is not, the verification
   becomes a ticket of its own.
+- A verification that fails becomes a new Bug that **blocks** the verification ticket: the verification stays open,
+  with a comment of what passed and what failed, gets no `fixVersion` until it passes, and is repeated after the
+  release that carries the fix — never a second verification ticket for the same check.
 - Every closed ticket has a `fixVersion` and a resolution.
 - At every release the version becomes released, with its date, and the next one opens at once.
 

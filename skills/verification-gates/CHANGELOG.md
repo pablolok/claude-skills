@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.7] - 2026-10-13
+- A change aimed at one platform (phone browser, touch, on-screen keyboard) is verified on a simulator or device with that input
+
+
 ## [1.0.6] - 2026-10-13
 - A change to shared data or configuration is verified on every view that reads it, each against an independent count from the store — never on a sample or on "shows a value"
 

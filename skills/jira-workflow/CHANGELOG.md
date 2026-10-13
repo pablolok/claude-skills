@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.7] - 2026-10-13
+- A failed verification becomes a Bug that blocks it; the verification stays open, no fixVersion, repeated after the fix's release
+
+
 ## [1.0.6] - 2026-10-13
 - The connector-call lock is released on every outcome (success, failure, permission denial): the after-call event fires on success only, and a failed call held the lock until it expired
 

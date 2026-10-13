@@ -55,7 +55,7 @@
       "name": "jira-workflow",
       "source": "./published/workflow/jira-workflow",
       "description": "Use whenever work is tracked in Jira — before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -187,7 +187,7 @@
       "name": "verification-gates",
       "source": "./published/workflow/verification-gates",
       "description": "Use before declaring code work done / handing it back — verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "category": "workflow",
       "strict": false,
       "skills": [
