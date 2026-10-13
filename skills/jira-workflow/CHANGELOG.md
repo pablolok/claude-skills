@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.8] - 2026-10-13
+- A sub-task type's display name may not match in JQL: filter with issuetype in subTaskIssueTypes()
+
+
 ## [1.0.7] - 2026-10-13
 - A failed verification becomes a Bug that blocks it; the verification stays open, no fixVersion, repeated after the fix's release
 
