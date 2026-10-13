@@ -24,7 +24,7 @@ The project playbook fixes these; the skill never assumes them.
 | Role labels | the label for the user's manual work and the one for the agent's work | `manual-user`, `agent` |
 | Plan labels and sprints | which sprint each plan's tickets go into, and the sprint for urgent work | `plan-1` → sprint "Plan 1", "Urgent" |
 | Points constant | how many minutes one story point is, and the size table | 1 point = 30 minutes; S 1h/2 · M 2h30/5 · L 4h/8 |
-| Story point field | the custom field id of "Story point estimate" on this site | `customfield_NNNNN` |
+| Story point field | the field the board measures (`getJiraBoardConfig` → `estimation.field`), the only one written | `customfield_NNNNN` |
 | Goals and key results | which goal tracks which Epic, and how its count is written | "Done and released: N of M" |
 | Title conventions | how a ticket title names its source | `[1.4] Title`, `[backlog 12] Title` |
 | Where dependencies are written | the plan or file whose dependencies must all be links | a dependency column in the plan |
@@ -71,6 +71,17 @@ The project playbook fixes these; the skill never assumes them.
 
 - Every ticket — Epics, sub-tasks and closed tickets included — has story points and an original estimate.
   Points = hours × the points constant.
+- **Points go in the field the board measures**, read with `getJiraBoardConfig` (`estimation.field`) before the first
+  point is written, never assumed from a field's name: a site can hold two point fields (a locked "Story point
+  estimate" and a plain "Story Points"), and every report — burndown, burnup, velocity, version report — reads only the
+  board's one. Points written elsewhere leave every report empty.
+- If the board measures another field, **move the points to the board's field once and write only that one from
+  then on**, never keep two fields in step. A company-managed board's estimation panel may offer only a method ("Story
+  points") with no field choice and bind it to a plain number field by name — never to the locked "Story point
+  estimate"; removing that field makes the board create a new one. So the board's field is the field: put it on the
+  project's screens, copy the values over in one bulk edit per value (by the site admin, with notifications off),
+  then clear the old field. Confirm every step with `getJiraBoardConfig` and JQL, never with the panel, which can show
+  a stale value; a field just added to a screen can be refused for a minute.
 - No sub-task goes below 15 minutes.
 - A parent with sub-tasks has original estimate `0m`; its points are the sum of its sub-tasks' points.
 - An Epic sums its children.
@@ -114,7 +125,8 @@ opened by hand:
 - `fixVersion in releasedVersions() AND statusCategory != Done`;
 - `statusCategory = Done AND fixVersion is EMPTY`;
 - `statusCategory = Done AND resolution is EMPTY`;
-- `"Story point estimate" is EMPTY` and `originalEstimate is EMPTY`;
+- the points field the playbook names `is EMPTY`, and `originalEstimate is EMPTY`;
+- the board's `estimation.field` (`getJiraBoardConfig`) is the field the playbook names;
 - key result counts equal to their Epics' counts;
 - **dependencies** (group 12): every dependency written in a description or in the plan has its Blocks link, and no
   ticket blocked by an open one is in progress or beyond without a comment that says why.
@@ -132,8 +144,11 @@ opened by hand:
 - A goal links to a ticket through `addConnectionsToGoals` with the goal's **ARI** (from `getGoal`). With the goal's
   key it answers `[]`, no error, and links nothing.
 - In JQL `0m` is not EMPTY, and there are no sub-queries (`parent in (labels = x)` fails): list the keys.
-- The story point field id differs on every site: take it from the playbook.
-- The board's statistic is "Story point estimate".
+- The story point field id differs on every site: take it from the playbook, which took it from the board.
+- **A report that shows nothing is a defect, not an absence of data.** After changing estimates, sprints or the board,
+  open the reports and look at them: an empty burnup ("no estimated issues") means the board reads another field.
+- A sprint's commitment is the points its tickets had when it started: points written after the start show as scope
+  added, and a closed sprint's history cannot be rewritten.
 - Automation on a free site has a monthly execution cap: prefer explicit calls to automation rules.
 - A very long description can fail in one call: if it does, rewrite it more compactly, without dropping content.
 

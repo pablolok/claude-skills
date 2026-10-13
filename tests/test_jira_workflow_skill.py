@@ -72,6 +72,12 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("An estimate must match the real hours", self.text)
         self.assertIn("a gap of more than twice, either way, is a defect", self.text)
 
+    def test_points_go_in_the_field_the_board_measures(self) -> None:
+        self.assertIn("Points go in the field the board measures", self.text)
+        self.assertIn("move the points to the board's field once", self.text)
+        self.assertIn("A report that shows nothing is a defect", self.text)
+        self.assertNotIn('statistic is "Story point estimate"', self.text, "the board's field is measured, not assumed")
+
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)
         self.assertIn("is blocked by", self.text)
