@@ -46,6 +46,9 @@
     },
     "diff-self-review": {
       "category": "workflow"
+    },
+    "jira-workflow": {
+      "category": "workflow"
     }
   }
 }
