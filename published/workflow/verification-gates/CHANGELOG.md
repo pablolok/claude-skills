@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.8] - 2026-10-13
+- Check that the type check covers test files; compile new tests once with a temporary config
+
+
 ## [1.0.7] - 2026-10-13
 - A change aimed at one platform (phone browser, touch, on-screen keyboard) is verified on a simulator or device with that input
 

@@ -25,6 +25,8 @@ here. The framework and the coverage bar come from the language layer or the pro
 4. **Arrange, act, assert, visibly.** The setup a reader needs to understand the case is in the test; shared fixtures
    carry only incidental setup (a connection, a clock, a temp folder). A fixture that hides the input under test is a
    defect: the reader cannot see why the expected value is right.
+   A parity test between a wrapper and the function it calls is tautological — it passes when both are wrong. Pin
+   literal expected values (computed by hand, with the reason) for each case instead.
 5. **Deterministic.** No dependence on wall-clock time, sleeps, real network, unpinned random seeds, locale or time
    zone, filesystem listing order, hash-map or set iteration order, or the order the tests run in. Time, randomness
    and generated IDs come in as injected collaborators (`clean-code-standards` item 3) and are fixed in the test.

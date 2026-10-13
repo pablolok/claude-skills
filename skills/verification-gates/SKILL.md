@@ -30,6 +30,8 @@ Where you *are* expected to run gates, run them and read the output before decla
 2. Each required gate was actually run (by you or the user), or its absence is called out.
 3. Required **tests** passed.
 4. Required **linting / type-checking / static analysis** passed.
+   Check that the type check covers test files; if the project's config includes only sources, new tests are never
+   type-checked — compile them once with a temporary config that includes them, then delete it.
 5. Any required **build / compile / bundle / package** step succeeded.
 6. Build/compile/bundle/lint/static-analysis output is **warning-free**, unless the repo or user
    documents an allowed warning exception.
