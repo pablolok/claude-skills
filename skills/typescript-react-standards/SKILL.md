@@ -39,6 +39,9 @@ below make it idiomatic TypeScript and React.
    call path. Reject missing/invalid config at startup.
 7. **ES modules + `import type`.** Type-only imports for types; no `namespace`, no CommonJS in app
    code. Export the types neighboring modules consume (the core's interface-seam rule in TS).
+   A platform function received as a dependency (`fetch`, a timer, `crypto`) is called detached
+   (`const { fetch: fetchFn } = deps`) or injected already bound (`fetch.bind(globalThis)`), never as
+   `deps.fetch(…)`: edge runtimes reject the wrong `this` ("Illegal invocation"), Node does not.
 
 ## React conventions
 
@@ -95,6 +98,8 @@ The numbered rules below are the specifics of that separation.
 15. **TDD with Vitest** (+ Testing Library for components). Deterministic tests for new logic; test
     doubles for injected collaborators/hooks; assert **behavior**, not implementation. Pure logic
     extracted to libs is tested directly — favor that over testing through the DOM.
+    A double of a platform API keeps the contract the runtime enforces — a fake `fetch` written as a `function` that
+    throws when `this` is neither `undefined` nor `globalThis` — or the test passes on code the runtime rejects.
     A test helper with a default (`open(average = SAMPLE)`, `({ average = SAMPLE } = {})`) turns an explicit
     `undefined` into the default, so a "still loading" / "missing" case silently tests the happy path: when
     `undefined` is a state under test, read it with `"average" in options ? options.average : SAMPLE`.

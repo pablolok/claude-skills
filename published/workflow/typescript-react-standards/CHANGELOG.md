@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.6] - 2026-10-13
+- A platform function received as a dependency (fetch, timers, crypto) is called detached or bound, never as a method of the deps object; a double of a platform API enforces the runtime's this check
+
+
 ## [1.1.5] - 2026-10-11
 - Derive state copied from a prop that arrives late; guard a writing submit synchronously against double clicks
 
