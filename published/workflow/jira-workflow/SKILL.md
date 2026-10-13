@@ -64,13 +64,15 @@ The project playbook fixes these; the skill never assumes them.
 ## 5. Sprints
 
 - A plan's ticket goes into its plan's sprint at creation (`assignToSprint`), with the plan's label.
+- **An Epic never goes into a sprint**: the board counts it as one more ticket, so its points would add to its
+  children's.
 - A separate sprint collects urgent work: production bugs and discoveries to fix now.
 - A Kanban board has no sprints: there only the status moves.
 
 ## 6. Estimates: points and hours on every ticket, at creation
 
-- Every ticket — Epics, sub-tasks and closed tickets included — has story points and an original estimate.
-  Points = hours × the points constant.
+- Every ticket — sub-tasks and closed tickets included — has story points and an original estimate. Points = hours ×
+  the points constant. Epics are the exception, below.
 - **Points go in the field the board measures**, read with `getJiraBoardConfig` (`estimation.field`) before the first
   point is written, never assumed from a field's name: a site can hold two point fields (a locked "Story point
   estimate" and a plain "Story Points"), and every report — burndown, burnup, velocity, version report — reads only the
@@ -87,7 +89,10 @@ The project playbook fixes these; the skill never assumes them.
   can show a stale value; a field just added to a screen can be refused for a minute.
 - No sub-task goes below 15 minutes.
 - A parent with sub-tasks has original estimate `0m`; its points are the sum of its sub-tasks' points.
-- An Epic sums its children.
+- **An Epic has no points in the board's field.** The board treats an Epic as one more ticket: wherever the Epic and
+  its children meet (a sprint, a version), its points count twice — measured: a burndown at 68 instead of 18.5, a
+  version report at 352 instead of 198. The Epic report already sums the children itself, and a sum written by hand
+  drifts from them.
 - A closed ticket has the estimate from its size, a worklog with the real hours, and remaining `0m` written on purpose.
 - When a ticket's scope changes, re-estimate it at once, with a comment.
 - **An estimate must match the real hours.** Estimate from the real hours of closed tickets of the same kind; a
@@ -128,7 +133,8 @@ opened by hand:
 - `fixVersion in releasedVersions() AND statusCategory != Done`;
 - `statusCategory = Done AND fixVersion is EMPTY`;
 - `statusCategory = Done AND resolution is EMPTY`;
-- the points field the playbook names `is EMPTY`, and `originalEstimate is EMPTY`;
+- `issuetype != Epic AND` the points field the playbook names `is EMPTY`, and `originalEstimate is EMPTY`;
+- `issuetype = Epic AND (` the points field `is not EMPTY OR sprint in openSprints())`;
 - the board's `estimation.field` (`getJiraBoardConfig`) is the field the playbook names;
 - key result counts equal to their Epics' counts;
 - **dependencies** (group 12): every dependency written in a description or in the plan has its Blocks link, and no

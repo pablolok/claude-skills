@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.4] - 2026-10-13
+- An Epic has no points in the board's field and never goes into a sprint — the board counts it as one more ticket, so its points added to its children's (a burndown at 68 instead of 18.5, a version report at 352 instead of 198); the total review checks both
+
 ## [1.0.3] - 2026-10-13
 - The old point field is taken off the project's screens, not cleared — check that nothing reads it first; a locked field stays writable through the API off every screen, so the agent never sends it again
 

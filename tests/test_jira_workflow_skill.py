@@ -83,6 +83,11 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("A locked field stays writable through the API even off every screen", self.text)
         self.assertNotIn("then clear the old field", self.text, "the old field is hidden, not cleared")
 
+    def test_an_epic_has_no_points_and_no_sprint(self) -> None:
+        self.assertIn("An Epic has no points in the board's field", self.text)
+        self.assertIn("An Epic never goes into a sprint", self.text)
+        self.assertNotIn("An Epic sums its children", self.text, "the board counts an Epic's points twice")
+
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)
         self.assertIn("is blocked by", self.text)
