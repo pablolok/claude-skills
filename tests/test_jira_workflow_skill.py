@@ -78,6 +78,11 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("A report that shows nothing is a defect", self.text)
         self.assertNotIn('statistic is "Story point estimate"', self.text, "the board's field is measured, not assumed")
 
+    def test_the_old_point_field_leaves_the_screens(self) -> None:
+        self.assertIn("take the old field off the project's screens", self.text)
+        self.assertIn("A locked field stays writable through the API even off every screen", self.text)
+        self.assertNotIn("then clear the old field", self.text, "the old field is hidden, not cleared")
+
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)
         self.assertIn("is blocked by", self.text)

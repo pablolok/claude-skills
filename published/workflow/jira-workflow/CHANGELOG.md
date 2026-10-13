@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.3] - 2026-10-13
+- The old point field is taken off the project's screens, not cleared — check that nothing reads it first; a locked field stays writable through the API off every screen, so the agent never sends it again
+
 ## [1.0.2] - 2026-10-13
 - Points go in the field the board measures — read it with getJiraBoardConfig, move the points there once and write only that field (a company-managed board binds its Story points method to a plain number field, never to the locked estimate); check it in the total review; an empty report is a defect; a sprint's commitment is the points at its start
 

@@ -80,8 +80,11 @@ The project playbook fixes these; the skill never assumes them.
   points") with no field choice and bind it to a plain number field by name — never to the locked "Story point
   estimate"; removing that field makes the board create a new one. So the board's field is the field: put it on the
   project's screens, copy the values over in one bulk edit per value (by the site admin, with notifications off),
-  then clear the old field. Confirm every step with `getJiraBoardConfig` and JQL, never with the panel, which can show
-  a stale value; a field just added to a screen can be refused for a minute.
+  then **take the old field off the project's screens** rather than clearing it: first check that nothing reads it
+  (boards, saved filters, automation rules), then its values may stay frozen, since clearing costs one write per
+  ticket and protects nothing. A locked field stays writable through the API even off every screen, so the agent
+  never sends the old field again. Confirm every step with `getJiraBoardConfig` and JQL, never with the panel, which
+  can show a stale value; a field just added to a screen can be refused for a minute.
 - No sub-task goes below 15 minutes.
 - A parent with sub-tasks has original estimate `0m`; its points are the sum of its sub-tasks' points.
 - An Epic sums its children.
