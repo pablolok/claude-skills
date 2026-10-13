@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.6] - 2026-10-13
+- The connector-call lock is released on every outcome (success, failure, permission denial): the after-call event fires on success only, and a failed call held the lock until it expired
+
 ## [1.0.5] - 2026-10-13
 - A worklog's finish is the clock read when logging, never a guessed end; what a query cannot check (every report against the sum of its tickets, parents against their sub-tasks, Epics) runs from a script the project keeps; a hook can enforce one connector call at a time; a field off a screen is still writable through the API
 

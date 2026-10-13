@@ -92,6 +92,7 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("The finish is the clock, read when logging", self.text)
         self.assertIn("what a query cannot check runs from a script the project keeps", self.text)
         self.assertIn("a hook enforces it", self.text)
+        self.assertIn("Release it on **every** outcome", self.text)
 
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)

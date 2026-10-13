@@ -153,7 +153,8 @@ opened by hand:
 - **One call at a time.** Parallel calls — several agents, or one batch — hit the rate limit (HTTP 429; on a free site
   past 4–5 agents, and an hourly cap after about 1000 calls). On a 429, stop and tell the user; never wait in a loop.
   A written rule was still broken under load: where the project can, a hook enforces it (a lock taken atomically
-  before each connector call and released after it, with an expiry for a call that never returns).
+  before each connector call, with an expiry). Release it on **every** outcome — success, failure and a permission
+  denial: the after-call event fires on success only, and a failed call held the lock until it expired.
 - Taking a field off a screen does not stop the API writing it, on a locked field and on a plain one alike; and a
   field's global context cannot be narrowed to some issue types. Guard such a field with the review script, not with
   the screen alone.
