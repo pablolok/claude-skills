@@ -76,6 +76,12 @@ The project playbook fixes these; the skill never assumes them.
 - An Epic sums its children.
 - A closed ticket has the estimate from its size, a worklog with the real hours, and remaining `0m` written on purpose.
 - When a ticket's scope changes, re-estimate it at once, with a comment.
+- **An estimate must match the real hours.** Estimate from the real hours of closed tickets of the same kind; a
+  size table calibrated on one kind of work (features with tests, migrations and several sessions) never sizes
+  another (documents, tracker operations, skill edits). A ticket whose description is already the full specification
+  costs less than one that still has to write it.
+- At close, compare the estimate with the logged hours: a gap of more than twice, either way, is a defect — find the
+  cause (the estimating method, a missing worklog) and write it in a comment.
 
 ## 7. Time tracking: continuous and precise, no exceptions
 

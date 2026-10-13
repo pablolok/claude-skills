@@ -68,6 +68,10 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
     def test_no_site_specific_field_id(self) -> None:
         self.assertNotRegex(self.text, r"customfield_\d+", "the field id is a parameter of the project")
 
+    def test_an_estimate_is_checked_against_the_real_hours(self) -> None:
+        self.assertIn("An estimate must match the real hours", self.text)
+        self.assertIn("a gap of more than twice, either way, is a defect", self.text)
+
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)
         self.assertIn("is blocked by", self.text)
