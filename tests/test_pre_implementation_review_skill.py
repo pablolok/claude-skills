@@ -49,6 +49,11 @@ class TestPreImplementationReviewSkill(unittest.TestCase):
         self.assertIn("at the edge of the allowed range", content)
         self.assertIn("or the constraint waits", content)
 
+    def test_a_stored_rollup_and_an_inherited_copy_are_named(self) -> None:
+        text = _read(SOURCE / "SKILL.md")
+        self.assertIn("A rollup stored on a parent", text)
+        self.assertIn("Retiring an inherited copy: cut its writers first, then count its readers", text)
+
     def test_readme_places_the_review_at_the_start_of_each_task(self) -> None:
         content = " ".join(_read(SOURCE / "README.md").split())
         self.assertIn("at the start of each task", content)

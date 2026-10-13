@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.1.23] - 2026-10-13
+- Derivability: a rollup stored on a parent is counted again by consumers that sum parents and children, and drifts; an inherited copy is retired by cutting its writers and counting its readers, not by clearing it row by row
+
 ## [1.1.22] - 2026-10-12
 - a design's top-named risk is proven first by the cheapest prototype
 

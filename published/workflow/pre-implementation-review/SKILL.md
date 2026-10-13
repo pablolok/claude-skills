@@ -101,7 +101,7 @@ big diff today and the cheapest path overall; patching around it is a small diff
 forever. Count the work that will not have to exist, not the lines you are about to touch. A change
 that removes a stored copy is *supposed* to look bigger than the patch it replaces.
 
-Three rules that make it bite:
+The rules that make it bite:
 
 - **It applies to mechanisms you INHERIT, not only ones you add.** Touching a snapshot without asking
   what it holds is the same mistake made standing still. "It was already like that" is the
@@ -117,6 +117,11 @@ Three rules that make it bite:
 - **It runs backwards too: ask it of what the code OVERWRITES** (an upserted row, a last-wins retry, a refreshed cache).
   If the replaced value is the only record of *why* something happened, every pass destroys evidence: keep the
   exception (what was discarded, with its duration and reason), not the whole history.
+- **A rollup stored on a parent** (a total of its children) is counted again by every consumer that sums parents and
+  children together (a report, a burndown), and drifts from the children it sums: let the consumer that needs the
+  total compute it.
+- **Retiring an inherited copy: cut its writers first, then count its readers.** A copy nothing reads and nothing can
+  write any more stays frozen where it is; clearing it row by row costs work and protects nothing.
 - **Measured example**: a table storing a schedule's history held 276 rows, none carrying a user decision, none the
   matching rule would not rebuild from the ledger — around it had grown a write path, a known defect, a panel and a
   repair button. **One query months earlier would have said it should be a query.**

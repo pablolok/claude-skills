@@ -1,5 +1,8 @@
 # Changelog
 
+## [1.0.6] - 2026-10-13
+- A change to shared data or configuration is verified on every view that reads it, each against an independent count from the store — never on a sample or on "shows a value"
+
 ## [1.0.5] - 2026-10-12
 - a compile gate shows what it compiled: one that compiled nothing is not green
 

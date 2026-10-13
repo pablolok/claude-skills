@@ -14,6 +14,13 @@ from published_skill_checks import PublishedSkillChecks  # noqa: E402  pylint: d
 class TestVerificationGatesSkill(PublishedSkillChecks, unittest.TestCase):
     SKILL = "verification-gates"
 
+    def test_shared_data_is_verified_on_every_view(self) -> None:
+        text = (pathlib.Path(__file__).resolve().parents[1] / "skills" / "verification-gates" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("A change to shared data or configuration is verified on every view that reads it", text)
+        self.assertIn("never on a sample", text)
+
 
 if __name__ == "__main__":
     unittest.main()

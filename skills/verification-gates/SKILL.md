@@ -47,6 +47,10 @@ Where you *are* expected to run gates, run them and read the output before decla
 - Derive the expected commands from project docs, scripts, CI conventions, or explicit instructions.
 - Treat **missing evidence as a violation** — don't assume a check passed because no failure was
   mentioned.
+- **A change to shared data or configuration is verified on every view that reads it** (each list, period, version
+  or report), each against an independent count taken from the store itself — never on a sample, and never as
+  "shows a value": a fix checked on one view and on "not empty" was declared done while other views still counted
+  the same records twice.
 - **Evidence is the runner's totals, read whole**: the count of tests run, passed, failed and skipped, compared with
   the suite's known size. A count far off means the runner ran something else (a folder taken as a single file, a
   filter, a skipped module) — a false red or a false green. Never through `| tail`/`| head`: they cut the totals off
