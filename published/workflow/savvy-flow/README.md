@@ -21,7 +21,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 
 | File | Role |
 | :--- | :--- |
-| `SKILL.md` | The orchestrator's playbook: plan, design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close. |
+| `SKILL.md` | The orchestrator's playbook: plan, design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
@@ -29,7 +29,9 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `agents/savvy-light.md` | Opus / low: mechanical edits, builds, tests. |
 | `LICENSE` | The upstream MIT licence. |
 
-`savvy-fable` runs on the Fable model (`model: fable` in its file).
+`savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
+session tools (`disallowedTools: [mcp__ccd_turn, mcp__ccd_session]`): it reports to the orchestrator only. Where the
+host has no such tools the deny does nothing.
 
 ## With savvy-progress
 

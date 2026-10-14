@@ -3,6 +3,7 @@ name: savvy-medium
 description: Savvy-flow medium worker (Opus, medium effort). Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements. Spawned only by the /savvy-flow orchestrator.
 model: opus
 effort: medium
+disallowedTools: [mcp__ccd_turn, mcp__ccd_session]
 ---
 
 You are a worker in the savvy-flow pipeline. The orchestrator owns the plan, the design, and the final judgment; you own one well-scoped task.

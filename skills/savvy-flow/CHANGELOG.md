@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0] - 2026-10-14
+- A host's own task list, turn summary and sessions run alongside the flow — the task list holds the tiered plan, workers stay Agent calls, a turn summary does not close the flow; workers deny the host's task-list and session tools
+
+
 ## [1.3.1] - 2026-10-14
 - Parallel workers share the index: stage by path and check the staged diff before a commit
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import typing
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -21,10 +22,23 @@ WORKERS = ("savvy-careful", "savvy-fable", "savvy-heavy", "savvy-light", "savvy-
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
 ATTRIBUTION = "Originally by johnnyvizz (github.com/johnnyvizz/claude-kit), MIT; imported from main on 2026-10-11."
+#: The host app's MCP servers for its task list and turn summary, and for separate sessions: a worker reports to the
+#: orchestrator, so it gets neither.
+HOST_ORCHESTRATION_SERVERS = {"mcp__ccd_turn", "mcp__ccd_session"}
 
 
 def _read(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _flat(text: str) -> str:
+    """The text with every run of whitespace as one space, so a rule reads the same however its lines wrap."""
+    return " ".join(text.split())
+
+
+def _flow_list(value: str) -> typing.Set[str]:
+    """The items of a one-line YAML flow sequence such as ``[a, b]``."""
+    return {item.strip() for item in value.strip().removeprefix("[").removesuffix("]").split(",") if item.strip()}
 
 
 class TestSavvyFlowSkill(PublishedSkillChecks, unittest.TestCase):
@@ -49,6 +63,12 @@ class TestWorkers(unittest.TestCase):
                 self.assertTrue(fields.get("model"), "a worker names its model")
                 self.assertTrue(fields.get("description"))
 
+    def test_each_worker_is_denied_the_host_task_list_and_session_tools(self) -> None:
+        for name in WORKERS:
+            with self.subTest(worker=name):
+                fields = frontmatter(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertEqual(_flow_list(fields.get("disallowedTools", "")), HOST_ORCHESTRATION_SERVERS)
+
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default
         # entry; declaring them too would register each worker twice, and an own manifest would conflict with it.
@@ -69,6 +89,28 @@ class TestSkill(unittest.TestCase):
         text = _read(PUBLISHED / "SKILL.md")
         for name in WORKERS:
             self.assertIn(f"`{name}`", text)
+
+
+class TestHostTools(unittest.TestCase):
+    """A host's own task list, turn summary and sessions run alongside the flow, never in place of it."""
+
+    def setUp(self) -> None:
+        self.text = _flat(_read(PUBLISHED / "SKILL.md"))
+
+    def test_the_host_task_list_holds_the_tiered_plan_and_the_progress_bar_stays(self) -> None:
+        self.assertIn("**The host's task list holds the plan.** Its steps are the worker tasks, in plan order, each led "
+                      "by its tier", self.text)
+        self.assertIn("a step is done when its task is accepted in review (section 5), not when the worker returns",
+                      self.text)
+        self.assertIn("The progress bar stays current as well.", self.text)
+
+    def test_workers_are_never_moved_to_a_separate_session(self) -> None:
+        self.assertIn("**Workers are always Agent tool calls.** Never move a worker task to a separate session",
+                      self.text)
+
+    def test_a_turn_summary_does_not_close_the_flow(self) -> None:
+        self.assertIn("**A turn summary closes a turn, not the flow.**", self.text)
+        self.assertIn("Section 6 runs once, after the last task is accepted.", self.text)
 
 
 class TestLicence(unittest.TestCase):
