@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.26] - 2026-10-14
+- a number a plan decides on is kept with the code that measured it
+
+
 ## [1.1.25] - 2026-10-14
 - an input set elsewhere that forces a worse result is put to its owner with its cost, not designed around
 

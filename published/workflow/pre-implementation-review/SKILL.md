@@ -252,7 +252,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   held through every round against the review asking for gloss. The other way round too: a **measured limit that
   forces a worse design** (a smaller motion, a dropped feature, a workaround) is measured again by an independent
   method before the design gives way to it — one probe read a joint's range at a third of what it had, and a whole
-  piece of work was built and rejected around that number.
+  piece of work was built and rejected around that number. A number a plan decides on is kept with the code that
+  measured it (committed, its parameters stated): a plan whose deciding windows were measured inline could not be
+  reproduced by the next worker, and half its cells disagreed with no way to tell which side was wrong.
 - **Name the frame every measured input lives in.** A value measured in one frame — a pose, a coordinate space, a
   colour space, a unit, a sample's conditions, the projection an image was drawn with — and used in another gets one
   explicit conversion, in one place (a perspective view read as orthographic placed its far parts high).
