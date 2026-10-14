@@ -289,6 +289,9 @@ These are not soft smells to mention — if the change would introduce one, the 
   declares itself the exception, and the default leaves it alone); and a value calibrated on one kind of member
   says nothing about another kind until it is measured there. The same check runs the other way when a **member
   joins** later: list the behaviours the family applies to every member and decide each for the newcomer.
+  A **condition that decides when something runs** (a trigger, a job filter, a flag) is a family too: list every way
+  of reaching it — each event, each input of a manual start — and decide each: a costly step narrowed to "manual
+  starts only" still ran in the manual failure drill, which needed only the step after it.
 - Prefer separating a rule/decision (pure, no IO) from the data access (repository) and the external
   call (gateway) — even inside "one" function. Mixed responsibilities are the smell, and splitting
   them is what makes each reusable.
