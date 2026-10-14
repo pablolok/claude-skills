@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.1] - 2026-10-14
+- A resource with one instance (visible browser, device simulator, dev server port) has one user at a time: run testing workers in sequence or have them all attach to one instance
+
+
 ## [1.4.0] - 2026-10-14
 - A host's own task list, turn summary and sessions run alongside the flow — the task list holds the tiered plan, workers stay Agent calls, a turn summary does not close the flow; workers deny the host's task-list and session tools
 
