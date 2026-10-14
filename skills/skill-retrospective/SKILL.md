@@ -17,6 +17,14 @@ to read and contradicting itself.
   skills whose scripts ran.
 - **Where time went**: the commits since `.claude/.state/last-retrospective`, the rounds and their scores, the
   steps redone, the user's corrections — quote them.
+- **What the agents actually did**, not what they reported: a worker's report tells its result and leaves out its
+  wasted loops. Run `node <this skill's folder>/scripts/transcript-signals.mjs <transcripts folder> --since <the last
+  retrospective commit's date>` over the session's transcripts (`~/.claude/projects/<project>/<session>/subagents/`
+  and the session's own `.jsonl`): per agent, the hooks that blocked it, its failed calls, the same call repeated, a
+  file edited again and again, work undone. Read that digest, never a transcript whole (they run to hundreds of
+  thousands of tokens); open one only at what a signal points to. Each signal is a question: a block retried
+  unchanged means the rule it enforces was missing from the brief or the skill; a knob edited dozens of times means
+  hand-tuning where a measurement or a search belonged.
 - **The root cause of each waste**, not its symptom: a missing step, a wrong default, a method that was the wrong
   tool (many rounds hand-tuning an output that a different method got right in one), a check that measured the wrong
   thing, two skills that disagree. A cause goes into a skill only when the evidence shows it (a re-run, a log, an

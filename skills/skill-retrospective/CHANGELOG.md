@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.0] - 2026-10-14
+- evidence from the agents' transcripts: transcript-signals.mjs distils hook blocks, failed calls, repeated calls, edit churn and undone work per agent
+
+
 ## [1.5.3] - 2026-10-10
 - A clone is looked for before concluding there is none (CLAUDE_SKILLS_REPO, or a local repository with the plugin's remote); no issue or pull request on a repository the person does not maintain unless asked, the lesson is reported instead; skills built into the host get no edit; a cause enters a skill only when the evidence shows it. The Stop hook's request says the same.
 

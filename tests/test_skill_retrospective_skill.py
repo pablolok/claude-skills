@@ -37,6 +37,14 @@ class TestNodeHooks(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_transcript_signals_suite_passes_and_ships(self) -> None:
+        result = subprocess.run(
+            ["node", "--test", str(SOURCE / "scripts" / "transcript-signals.test.mjs")],
+            capture_output=True, text=True, encoding="utf-8", check=False
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertTrue((PUBLISHED / "scripts" / "transcript-signals.mjs").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
