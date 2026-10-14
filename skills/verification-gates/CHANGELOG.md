@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.9] - 2026-10-14
+- a change judged by a threshold does not move it; report under the old rule beside the new
+
+
 ## [1.0.8] - 2026-10-13
 - Check that the type check covers test files; compile new tests once with a temporary config
 

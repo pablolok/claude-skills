@@ -94,6 +94,10 @@ Where you *are* expected to run gates, run them and read the output before decla
   elsewhere (a database trigger or CHECK, a range bound inclusive or exclusive), the expected value comes from that
   constraint or its twin in the code, never from a literal the test's author chose; a double of that boundary that
   does not model the guard cannot see the mismatch.
+- **A change judged by a threshold does not move that threshold.** When the work also loosens the rule its result is
+  measured by (what counts as "still", "close enough", "passing"), report the result under the old rule beside the new
+  one and name the loosening as a decision for the owner — a settle count read 11/16 under a rule loosened in the same
+  change, and fewer under the one the target was set with.
 
 ### Expected gates by stack (examples)
 
