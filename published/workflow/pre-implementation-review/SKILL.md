@@ -151,6 +151,10 @@ These are not soft smells to mention — if the change would introduce one, the 
 
 ## Decision rules
 
+- **An input set elsewhere that forces the work into a worse form is put to its owner, not designed around.** When a
+  value another component or person owns (a speed, a size, a budget, a timeout) is what makes the result fall short of
+  what was asked, show the owner the choice and its cost before building to fit it: an output tuned to a fixed input
+  inherits the defect silently (a motion authored to meet a fixed speed came out frantic; the fix was the speed).
 - **Before rebuilding or replacing something, find who uses it and look at it there.** Search for every reader of
   it; nothing reads it → remove it, don't rebuild it. Something does → inspect it in that context first: a defect
   that only shows where it is used (wrong orientation, an overlap) belongs in the rebuild's scope.

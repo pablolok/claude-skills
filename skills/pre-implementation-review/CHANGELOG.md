@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.25] - 2026-10-14
+- an input set elsewhere that forces a worse result is put to its owner with its cost, not designed around
+
+
 ## [1.1.24] - 2026-10-14
 - A condition that decides when something runs is checked against every way of reaching it
 
