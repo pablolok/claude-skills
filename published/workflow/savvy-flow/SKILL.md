@@ -91,6 +91,9 @@ Heuristics:
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
   worker runs only the tests of what it touched — the full suite runs once, by the orchestrator, before merging.
   Parallel full runs turn correct timing-sensitive tests into timeouts.
+- Workers in one working tree still share its index: a worker's `git mv` stages its files. When you commit one
+  task while another runs, stage by path and read `git diff --cached --stat` before committing; unstage what is
+  not this task's.
 - **Answer quick questions yourself.** One that needs no file work gets no worker.
 - **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
   one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a

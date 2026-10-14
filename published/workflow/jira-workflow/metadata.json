@@ -1,5 +1,5 @@
 {
   "name": "jira-workflow",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Use whenever work is tracked in Jira \u2014 before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook."
 }

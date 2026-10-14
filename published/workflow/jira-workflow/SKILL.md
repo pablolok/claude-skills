@@ -170,6 +170,9 @@ opened by hand:
 - In JQL `0m` is not EMPTY, and there are no sub-queries (`parent in (labels = x)` fails): list the keys.
 - A sub-task type's display name may not match in JQL (a localized name returned no rows while the type existed): filter with `issuetype in subTaskIssueTypes()`.
 - The story point field id differs on every site: take it from the playbook, which took it from the board.
+- A compact read (the default view, and a JQL search even when `fields` names them) can leave out `fixVersions` and
+  `timetracking` without saying so: read them with the full view and `responseFields`, and never conclude from a
+  compact read that a field is empty.
 - **A report that shows nothing is a defect, not an absence of data.** After changing estimates, sprints or the board,
   open the reports and look at them: an empty burnup ("no estimated issues") means the board reads another field.
 - A sprint's commitment is the points its tickets had when it started: points written after the start show as scope

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.9] - 2026-10-14
+- A compact read can omit fixVersions and timetracking: read them with the full view
+
+
 ## [1.0.8] - 2026-10-13
 - A sub-task type's display name may not match in JQL: filter with issuetype in subTaskIssueTypes()
 

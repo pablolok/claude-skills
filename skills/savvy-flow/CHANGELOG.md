@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.1] - 2026-10-14
+- Parallel workers share the index: stage by path and check the staged diff before a commit
+
+
 ## [1.3.0] - 2026-10-12
 - one persistent worker per topic, a registry on file, resume or rotate between tasks at 70% of the context window
 
