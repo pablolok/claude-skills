@@ -301,6 +301,7 @@ const PRICES: [RegExp, [number, number, number, number]][] = [
   [/opus-5-5/, [4, 20, 0.2, 5]],
   [/opus/, [5, 25, 0.5, 6.25]],
   [/sonnet/, [2, 10, 0.2, 2.5]],
+  [/haiku-5-5/, [0.1, 0.5, 0.01, 0.125]],
   [/haiku/, [1, 5, 0.1, 1.25]],
 ]
 
@@ -314,7 +315,7 @@ type Usage = {
 const priceOf = (model: string): [number, number, number, number] =>
   PRICES.find(([re]) => re.test(model.toLowerCase()))?.[1] ?? [4, 20, 0.2, 5]
 
-const costOf = (model: string, u: Usage): number => {
+export const costOf = (model: string, u: Usage): number => {
   const [i, o, r, w] = priceOf(model)
   return (
     ((u.input_tokens || 0) * i +
@@ -325,7 +326,8 @@ const costOf = (model: string, u: Usage): number => {
   )
 }
 
-const windowOf = (model: string): number => (/haiku/i.test(model) ? 200_000 : 1_000_000)
+// Haiku 4.5 and older have a 200k window; Haiku 5.5 and every other current model, 1M.
+export const windowOf = (model: string): number => (/haiku/i.test(model) && !/haiku-5-5/i.test(model) ? 200_000 : 1_000_000)
 
 // `savvy-careful`, or `savvy-flow:savvy-careful` when the agents ship in a plugin.
 const bareType = (type: string): string => type.replace(/^[^:]*:/, '')
@@ -346,8 +348,11 @@ const modelName = (id: string): string => {
 
 const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
-const fmtTokens = (n: number): string =>
-  n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${Math.round(n)}`
+// The unit is the one the value rounds to: 999_500 is 1.0M, not 1000k; 999.6 is 1k, not 1000.
+export const fmtTokens = (n: number): string => {
+  if (Math.round(n) < 1e3) return `${Math.round(n)}`
+  return Math.round(n / 1e3) < 1e3 ? `${Math.round(n / 1e3)}k` : `${(n / 1e6).toFixed(1)}M`
+}
 
 const fmtCost = (usd: number): string => `$${usd < 10 ? usd.toFixed(2) : usd.toFixed(1)}`
 

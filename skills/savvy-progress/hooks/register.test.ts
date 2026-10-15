@@ -3,6 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
+import { costOf, fmtTokens, windowOf } from './register'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
@@ -246,4 +247,21 @@ test('an Agent call for a plugin-prefixed savvy type starts the flow', async ($,
   await $.tool.call({ tool: 'Agent', description: 'w1', prompt: 'Do it.', subagent_type: 'savvy-flow:savvy-careful' })
 
   expect(state.flow()).toMatchObject({ title: 'savvy-flow', phase: 'delegate', running: 0 })
+})
+
+test('token counts show the unit they round to', () => {
+  expect(fmtTokens(950)).toBe('950')
+  expect(fmtTokens(999.6)).toBe('1k')
+  expect(fmtTokens(999_499)).toBe('999k')
+  expect(fmtTokens(999_500)).toBe('1.0M')
+  expect(fmtTokens(1_250_000)).toBe('1.3M')
+})
+
+test('Haiku 5.5 is priced and sized as itself, not as Haiku 4.5', () => {
+  const million = { input_tokens: 1e6, output_tokens: 1e6, cache_read_input_tokens: 1e6, cache_creation_input_tokens: 1e6 }
+  expect(Math.round(costOf('claude-haiku-5-5', million) * 1000)).toBe(735)
+  expect(Math.round(costOf('claude-haiku-4-5', million) * 1000)).toBe(7350)
+  expect(windowOf('claude-haiku-5-5')).toBe(1_000_000)
+  expect(windowOf('claude-haiku-4-5')).toBe(200_000)
+  expect(windowOf('claude-opus-5-5')).toBe(1_000_000)
 })

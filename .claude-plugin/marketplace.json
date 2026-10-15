@@ -121,7 +121,7 @@
       "name": "savvy-progress",
       "source": "./published/workflow/savvy-progress",
       "description": "Progress bar above the prompt for /savvy-flow, plus an agents panel (/agents-info): running, finished and planned subagents with model, task progress, context, cost and time.",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "category": "workflow",
       "strict": true
     },
