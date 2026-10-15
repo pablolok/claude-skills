@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CHURN_AT, REPEAT_AT, parse, render, signals } from "./transcript-signals.mjs";
+import { CHURN_AT, REPEAT_AT, after, parse, render, signals } from "./transcript-signals.mjs";
+
+test("since keeps only the records from that time on: a resumed agent's earlier tasks drop out", () => {
+  const early = use("a", "Edit", { file_path: "old.py" }, "2026-01-01T00:00:00Z");
+  const late = use("b", "Edit", { file_path: "new.py" }, "2026-01-02T00:00:00Z");
+  const kept = after([early, late], "2026-01-01T12:00:00Z");
+  assert.deepEqual(kept, [late]);
+  assert.equal(after([early, late]).length, 2);
+});
 
 const use = (id, name, input, at = "2026-01-01T00:00:00Z") =>
   ({ type: "assistant", timestamp: at, message: { content: [{ type: "tool_use", id, name, input }], usage: { output_tokens: 10 } } });

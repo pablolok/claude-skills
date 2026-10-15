@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.1] - 2026-10-15
+- transcript-signals --since filters a transcript's records by time: a resumed agent's earlier tasks drop out
+
+
 ## [1.6.0] - 2026-10-14
 - evidence from the agents' transcripts: transcript-signals.mjs distils hook blocks, failed calls, repeated calls, edit churn and undone work per agent
 

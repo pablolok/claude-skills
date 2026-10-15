@@ -36,6 +36,21 @@ const blocks = (record) => (Array.isArray(record?.message?.content) ? record.mes
 const firstLine = (value) => String(typeof value === "string" ? value : JSON.stringify(value ?? "")).split("\n")[0].slice(0, 200);
 const pathOf = (input) => input?.file_path ?? input?.path ?? input?.notebook_path;
 
+/**
+ * The records from `since` on (all of them without it). An agent resumed for several tasks keeps one transcript: its
+ * signals since the last retrospective are its records since then, not the whole file. A record with no time (a
+ * header) is kept only when the transcript has started inside the window.
+ */
+export function after(records, since) {
+  if (!since) return records;
+  const from = Date.parse(since);
+  let inside = false;
+  return records.filter((r) => {
+    if (r.timestamp) inside = Date.parse(r.timestamp) >= from;
+    return inside;
+  });
+}
+
 /** The signals of one transcript's records. Pure: no file access. */
 export function signals(records) {
   const uses = new Map();          // tool_use id -> { name, input }
@@ -111,8 +126,8 @@ function main(argv) {
   }
   const out = [];
   for (const file of transcripts(argv)) {
-    const s = signals(parse(readFileSync(file, "utf8")));
-    if (since && (!s.last || Date.parse(s.last) < Date.parse(since))) continue;
+    const s = signals(after(parse(readFileSync(file, "utf8")), since));
+    if (!s.toolCalls) continue;
     out.push({ file, s });
   }
   out.sort((a, b) => Date.parse(a.s.first ?? 0) - Date.parse(b.s.first ?? 0));
