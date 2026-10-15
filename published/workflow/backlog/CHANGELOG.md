@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.10] - 2026-10-15
+- A check that can pass only after a step the person owns (a default-branch scanner, a merge) keeps the entry open even when asked to close first: say so, report a prediction, close once it passes
+
+
 ## [1.8.9] - 2026-10-13
 - The dashboard reads a closed entry whole: its title inside the bold (`- **BKLG-NNN — Title** — …`), the lines it wraps onto (lazy lines included) and a card up to the next heading, so its title, its close day (the project's Done field, then Obsolete, then the first date) and its links are no longer lost below the first line
 

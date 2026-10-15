@@ -127,6 +127,9 @@ Committed but NOT yet verified. Remove a line the moment its check passes.
 - Appended in the **same change** that commits the unchecked work. Never from memory.
 - **Removed** as soon as the check passes (empty → `Nothing pending.`); no ✅ lines left behind.
 - A check that **fails** is not removed: it becomes the entry's Status.
+- A check that can only pass **after a step the person owns** (a scanner that reads only the default branch, a
+  deploy from it, a merge they decide) keeps its line and the entry open even when asked to close first: say so in
+  the reply, report what can be measured now as a prediction, and close once the check passes.
 - Read on session resume and before closing any entry.
 
 ⚠️ Inside `BACKLOG.md` every mention of an entry other than its own heading is a citation — `[[BKLG-NNN]]`, or the
