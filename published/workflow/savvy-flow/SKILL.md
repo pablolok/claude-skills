@@ -108,13 +108,18 @@ Heuristics:
   coordination notes when the work is shared; a duplicate is found only after both copies are done.
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
   worker runs only the tests of what it touched — the full suite runs once, by the orchestrator, before merging.
-  Parallel full runs turn correct timing-sensitive tests into timeouts.
+  Parallel full runs turn correct timing-sensitive tests into timeouts. That run also builds: if a live preview or
+  device test is serving the working tree's build output, run it in a copy of the final tree (a spare worktree with
+  the same diff, compared line by line) so the build does not swap the files under the test.
 - A resource with one instance — a visible browser, a device simulator, the dev server's port — has one user at a
   time: two testing workers in parallel each open their own and multiply them on the user's screen. Run them in
   sequence, or start the one instance yourself and tell every brief to attach to it and never open another.
 - Workers in one working tree still share its index: a worker's `git mv` stages its files. When you commit one
   task while another runs, stage by path and read `git diff --cached --stat` before committing; unstage what is
   not this task's.
+- A worker isolated in its own worktree may start from the repository's default branch, not from the branch you work
+  on: the brief names the base commit and makes resetting to it the worker's first step; on return, check the base
+  before taking the diff.
 - **Answer quick questions yourself.** One that needs no file work gets no worker.
 - **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
   one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a

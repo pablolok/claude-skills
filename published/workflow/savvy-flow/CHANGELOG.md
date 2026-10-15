@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.2] - 2026-10-15
+- Delegate: an isolated worker's worktree may start from the default branch — the brief names the base commit and the worker resets to it first, the base is checked on return; the orchestrator's full gate also builds, so with a live preview or device test on the working tree's output it runs in a copy of the final tree
+
+
 ## [1.4.1] - 2026-10-14
 - A resource with one instance (visible browser, device simulator, dev server port) has one user at a time: run testing workers in sequence or have them all attach to one instance
 
