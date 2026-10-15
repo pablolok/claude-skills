@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.27] - 2026-10-15
+- una guardia o un dedup per un input ipotetico parte da un conteggio sui dati veri
+
+
 ## [1.1.26] - 2026-10-14
 - a number a plan decides on is kept with the code that measured it
 

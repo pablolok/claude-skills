@@ -122,6 +122,9 @@ The rules that make it bite:
   total compute it.
 - **Retiring an inherited copy: cut its writers first, then count its readers.** A copy nothing reads and nothing can
   write any more stays frozen where it is; clearing it row by row costs work and protects nothing.
+- **A guard, dedup or normalisation for an input that "could" occur starts with a count of it in real data.** Zero
+  rows means the guard protects a population that does not exist and is dropped; a few rows are repaired once at the
+  source. A tolerance that guesses an identity from text is the same patch in another form.
 - **Measured example**: a table storing a schedule's history held 276 rows, none carrying a user decision, none the
   matching rule would not rebuild from the ledger — around it had grown a write path, a known defect, a panel and a
   repair button. **One query months earlier would have said it should be a query.**
