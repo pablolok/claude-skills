@@ -18,6 +18,8 @@ SOURCE = REPO / "skills" / SKILL
 PUBLISHED = REPO / "published" / "workflow" / SKILL
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 WORKERS = ("savvy-careful", "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
+#: The tiers that run with a tool allowlist rather than every tool the parent has.
+LEAN_WORKERS = ("savvy-light", "savvy-medium")
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
@@ -68,6 +70,18 @@ class TestWorkers(unittest.TestCase):
             with self.subTest(worker=name):
                 fields = frontmatter(_read(PUBLISHED / "agents" / f"{name}.md"))
                 self.assertEqual(_flow_list(fields.get("disallowedTools", "")), HOST_ORCHESTRATION_SERVERS)
+
+    def test_the_lean_workers_keep_files_shell_and_progress_and_nothing_else(self) -> None:
+        # Light and Medium start without the listing of every tool and skill, which is most of a fresh worker's
+        # context; they keep what their tasks use and the step tool the agents panel reads.
+        for name in LEAN_WORKERS:
+            with self.subTest(worker=name):
+                tools = _flow_list(frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")).get("tools", ""))
+                self.assertTrue({"Read", "Edit", "Write", "Bash", "ToolSearch", "mcp__savvy-progress"} <= tools)
+                self.assertFalse({"Skill", "Agent"} & tools, "a lean worker loads no skill and spawns no agent")
+        for name in set(WORKERS) - set(LEAN_WORKERS):
+            with self.subTest(worker=name):
+                self.assertNotIn("tools", frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")))
 
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default

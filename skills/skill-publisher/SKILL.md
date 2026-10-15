@@ -70,6 +70,10 @@ claude plugin validate .
   and regenerates the marketplace. Several skills: run it once per skill, then the checks once. With several new
   skills registered at once, every run but the last exits 2 (`no published skill at …` for one not copied yet):
   that is expected, so separate the runs with `;`, not `&&`, and judge the last run and the checks.
+- `claude plugin validate .` checks the marketplace with every plugin in it. Never validate a `strict: false`
+  plugin's folder alone: its manifest is its marketplace entry, so the folder has none by design and the check fails
+  with "No manifest found"; adding one would make the install refuse it. The warnings about a mod's `plugin.json`
+  with no version or description are deliberate too: a version there would hide the marketplace's.
 - Continue only on green. A skipped test is not a pass: the mermaid end-to-end test needs mermaid and jsdom
   installed — it finds them in `MERMAID_DEPS_DIR`, or in the launcher's cache under `CLAUDE_SKILLS_CACHE` after one
   `node scripts/mermaid.mjs check …` in any project.

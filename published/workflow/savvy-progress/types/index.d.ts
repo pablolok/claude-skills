@@ -34,6 +34,8 @@ export type AgentRun = {
   costUsd: number
   steps: number
   round: number
+  /** Started by a workflow script's `agent()`: `$.agent.list()` never lists it. */
+  isWorkflow?: boolean
   /** Self-reported by the worker through the `step` tool. */
   stepDone?: number
   stepTotal?: number

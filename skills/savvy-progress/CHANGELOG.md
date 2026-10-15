@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.1] - 2026-10-15
+- Dead runs and a stale bar are cleared — runs are reconciled with the engine's agents list (at start and every 5 s while one runs), the bar's running count is derived from the runs, a flow finished before a start or reload leaves no bar; plugin-prefixed worker types count as savvy; Light and Medium show as Sonnet; the module's own tests ship in hooks/register.test.ts
+
+
 ## [1.2.0] - 2026-10-11
 - Imported from johnnyvizz/claude-kit (main, MIT, upstream 1.2.0): the savvy-progress mod (progress bar above the prompt, /agents-info panel, tools progress and step, the language option), unchanged; a plugin with no skill; the upstream LICENSE travels with the plugin.
 

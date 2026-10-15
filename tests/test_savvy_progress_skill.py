@@ -17,7 +17,8 @@ SOURCE = REPO / "skills" / MOD
 PUBLISHED = REPO / "published" / "workflow" / MOD
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 MANIFEST = pathlib.Path(".claude-plugin") / "plugin.json"
-SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "types/index.d.ts", "plugin-entry.json",
+SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks/register.test.ts", "types/index.d.ts",
+           "plugin-entry.json",
            "metadata.json", "README.md", "LICENSE")
 #: What sessions and the savvy-flow skill call: the two tools (mcp__savvy-progress__<name>) and the command.
 REGISTERED = ("name: 'progress'", "name: 'step'", "name: 'agents-info'", "'mcp__savvy-progress__progress'",

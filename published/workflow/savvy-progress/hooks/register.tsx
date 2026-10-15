@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
@@ -290,8 +290,8 @@ const TIER_MODEL: Record<string, string> = {
   fable: 'Fable · high',
   heavy: 'Opus · xhigh',
   careful: 'Opus · high',
-  medium: 'Opus · medium',
-  light: 'Opus · low',
+  medium: 'Sonnet · medium',
+  light: 'Sonnet · low',
 }
 
 // USD per million tokens: input, output, cache read, cache write (5-minute TTL).
@@ -328,10 +328,13 @@ const costOf = (model: string, u: Usage): number => {
 const windowOf = (model: string): number => (/haiku/i.test(model) ? 200_000 : 1_000_000)
 
 // `savvy-careful`, or `savvy-flow:savvy-careful` when the agents ship in a plugin.
+const bareType = (type: string): string => type.replace(/^[^:]*:/, '')
+
+const isSavvy = (type: string): boolean => bareType(type).startsWith('savvy-')
+
 const tierOf = (type: string): string => {
-  const bare = type.replace(/^[^:]*:/, '')
-  const t = bare.replace(/^savvy-/, '').toLowerCase()
-  return t in TIER_COLOR && bare.startsWith('savvy-') ? t : 'other'
+  const t = bareType(type).replace(/^savvy-/, '').toLowerCase()
+  return t in TIER_COLOR && isSavvy(type) ? t : 'other'
 }
 
 const modelName = (id: string): string => {
@@ -640,6 +643,52 @@ async function autoOpen($: EngineInterface, key: string): Promise<void> {
   void $.ui.open({ id: PANE, title: tr().pane })
 }
 
+// ---------------------------------------------------------------------------
+// Reconcile: a run leaves `running` on its `turn.complete`, and one that never
+// comes (a killed agent, a loop lost to a reload or a resume) would leave a
+// ghost; the engine's own list of agent loops settles it.
+
+const LIST_EVERY_MS = 5000
+
+const ENDED: Partial<Record<AgentInfo['status'], AgentRun['status']>> = {
+  completed: 'done',
+  idle: 'done', // between turns: its turn ended; a later step marks it running again.
+  failed: 'failed',
+  killed: 'failed',
+}
+
+// `listedAt` is when the list was asked for: a run started since may not be in it yet.
+const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number): AgentRun[] => {
+  const statusOf = new Map(infos.map((i): [string, AgentInfo['status']] => [i.id, i.status]))
+  return list.map((a): AgentRun => {
+    if (a.status !== 'running') return a
+    if (!a.agentId) return { ...a, status: 'failed', endedAt: listedAt }
+    const listed = statusOf.get(a.agentId)
+    // A workflow's agents are never listed: only their turn.complete ends them.
+    if (listed === undefined) return a.isWorkflow || a.startedAt >= listedAt ? a : { ...a, status: 'failed', endedAt: listedAt }
+    const ended = ENDED[listed]
+    return ended ? { ...a, status: ended, endedAt: listedAt } : a
+  })
+}
+
+// The bar's faint layer: savvy workers running now, as the agents list says.
+async function syncRunning($: EngineInterface): Promise<void> {
+  const running = (await read($, agents)).filter(a => a.status === 'running' && isSavvy(a.type)).length
+  const f = await read($, flow)
+  if (f && f.running !== running) await update($, flow, prev => (prev ? { ...prev, running } : prev))
+}
+
+// Module scope is fine: a reload only makes the next tick reconcile at once.
+let lastListAt = 0
+
+async function reconcile($: EngineInterface): Promise<void> {
+  const listedAt = await $.clock.now()
+  lastListAt = listedAt
+  const infos = await $.agent.list()
+  await update($, agents, list => reconciled(list, infos, listedAt))
+  await syncRunning($)
+}
+
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -696,14 +745,24 @@ export const register: Register = (on, options) => {
       description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
     })
 
-    // Ticks the running agents' clocks; quiet when nothing runs.
+    // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
+    await update($, flow, f => (f?.isFinished ? null : f))
+    try {
+      await reconcile($)
+    } catch {
+      // No agents list here (a -p run, the SDK): the tick tries again.
+    }
+
+    // Ticks the running agents' clocks and, now and then, checks them against the
+    // engine's list; quiet when nothing runs.
     $.clock.every(1000, () => {
       void (async () => {
         const list = await read($, agents)
         if (!list.some(a => a.status === 'running')) return
         const at = await $.clock.now()
         await update($, now, () => at)
-      })()
+        if (at - lastListAt >= LIST_EVERY_MS) await reconcile($)
+      })().catch(() => undefined)
     })
     return started
   })
@@ -720,7 +779,9 @@ export const register: Register = (on, options) => {
       // A new flow starts with a clean list; agents still running stay.
       await update($, agents, list => list.filter(a => a.status === 'running'))
     }
-    const next = await update($, flow, p => merge(p, input))
+    await update($, flow, p => merge(p, input))
+    await syncRunning($)
+    const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
     return { result: `ok: ${label(next ?? blank())}` }
   })
@@ -744,17 +805,15 @@ export const register: Register = (on, options) => {
   // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     const type = String(e.subagent_type ?? '')
-    if (!type.startsWith('savvy-')) return next(e)
+    if (!isSavvy(type)) return next(e)
 
+    // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
     await update($, flow, prev => {
       const base = prev && !prev.isFinished ? { ...blank(), ...prev } : blank()
-      return { ...base, running: base.running + 1, phase: base.phase === 'plan' ? 'delegate' : base.phase }
+      return { ...base, phase: base.phase === 'plan' ? 'delegate' : base.phase }
     })
-    try {
-      return await next(e)
-    } finally {
-      await update($, flow, prev => (prev ? { ...prev, running: Math.max(0, prev.running - 1) } : prev))
-    }
+    await syncRunning($)
+    return next(e)
   })
 
   on('agent.spawn', async ($, e, next) => {
@@ -778,11 +837,13 @@ export const register: Register = (on, options) => {
         costUsd: 0,
         steps: 0,
         round,
+        ...(e.workflow ? { isWorkflow: true } : {}),
       }
       return [...list.filter(a => a.id !== run.id), run].slice(-200)
     })
     await update($, now, () => at)
-    if (e.subagentType.startsWith('savvy-')) {
+    await syncRunning($)
+    if (isSavvy(e.subagentType)) {
       const f = await read($, flow)
       await autoOpen($, f && !f.isFinished ? f.title : 'savvy-flow')
     }
@@ -797,6 +858,8 @@ export const register: Register = (on, options) => {
     if (!agentId || !usage) return result
 
     const model = usage.model || e.model
+    // A run that had ended (an idle teammate, a resumed agent) runs again.
+    const isRevived = (await read($, agents)).some(a => a.agentId === agentId && a.status !== 'running')
     await update($, agents, list =>
       list.map(a =>
         a.agentId !== agentId
@@ -824,6 +887,7 @@ export const register: Register = (on, options) => {
             },
       ),
     )
+    if (isRevived) await syncRunning($)
     return result
   })
 
@@ -855,6 +919,7 @@ export const register: Register = (on, options) => {
         }),
       )
       await update($, now, () => at)
+      await syncRunning($)
     }
     return next(e)
   })

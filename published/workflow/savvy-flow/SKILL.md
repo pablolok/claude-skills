@@ -52,7 +52,13 @@ flow, never in place of it:
 3. Break the work into **tasks** with:
    - a clear, self-contained brief (what, where, constraints, definition of done, how to verify);
    - explicit dependencies between tasks;
+   - a **topic**: the area the task works in (the files, the subsystem, the knowledge it must load);
    - a **tier** per task (section 3).
+
+   Then group by topic before delegating. Small tasks that share a topic and a tier become one brief for one worker:
+   every fresh worker pays its fixed context again and re-reads the same files, so two near-identical workers cost
+   about twice one. Keep tasks apart only when they need different tiers, or are independent and long enough to be
+   worth running in parallel.
 4. Present the plan to the user in a compact form: numbered tasks, tier, dependency order. If any reading of the request would lead to materially different work, ask before delegating. Otherwise proceed.
 
 ## 1a. New project (greenfield)
@@ -90,8 +96,13 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Fable | `savvy-fable` | Fable / high | "Hardest problems": very complex logic (subtle algorithms, concurrency, many interacting states), hard bugs that resist ordinary debugging or survived a Heavy investigation; targeted design features, only when the user asks (section 2) |
 | Heavy | `savvy-heavy` | Opus / xhigh | "Understand and find": unfamiliar or messy code, unclear root cause, non-obvious architecture, large contexts, anything where a wrong first approach is expensive |
 | Careful | `savvy-careful` | Opus / high | "Do it right": the approach is clear but execution is delicate. Multi-file refactors, fixes that must preserve invariants, logic with many edge cases, concurrency |
-| Medium | `savvy-medium` | Opus / medium | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
-| Light | `savvy-light` | Opus / low | Mechanical edits, renames, boilerplate, config, small isolated fixes, running builds/tests and reporting |
+| Medium | `savvy-medium` | Sonnet / medium, lean tools | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
+| Light | `savvy-light` | Sonnet / low, lean tools | Mechanical edits, renames, boilerplate, config, small isolated fixes, running builds/tests and reporting |
+
+Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
+or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
+lean, it starts at a fraction of that, and the cheaper model halves what is left. A task that needs a browser, a
+simulator, the web or a skill goes to Careful or above, or its brief states the rule it needs in a few lines.
 
 Heuristics:
 - Uncertain between two tiers → take the higher one. Exception: Fable is a reserve tier; pick it only when the task clearly meets its criteria, otherwise Heavy.
@@ -103,7 +114,9 @@ Heuristics:
 
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
-- Keep briefs tight. Do not paste the whole plan; paste this task.
+- Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
+  instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded
+  skill stays in the worker's context for the rest of its life.
 - Before delegating a task, check that nobody else already holds it — other people's open pull requests, branches and
   coordination notes when the work is shared; a duplicate is found only after both copies are done.
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
@@ -124,7 +137,8 @@ Heuristics:
 - **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
   one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a
   different worker (model and effort are fixed when an agent starts); a new topic gets a new worker. A worker left
-  behind stays registered, so a return to its topic resumes it.
+  behind stays registered, so a return to its topic resumes it. Before starting a worker, look in the registry for
+  one at the same tier whose topic overlaps the task (the same files or subsystem): resume that one instead.
 - **Keep the registry on file**, so it survives a compaction of your own context: in the session scratchpad directory
   when there is one, otherwise in a file outside version control. One row per worker: topic, tier, agent id, context
   tokens at its last return, handoff file, time of last use. Agent ids hold only within the session; in a new session

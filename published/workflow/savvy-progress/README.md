@@ -24,6 +24,9 @@ the mod needs.
 - **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model, effort, task
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
   them.
+- **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
+  of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
+  forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
 
 ## Tools it adds
 
@@ -47,6 +50,7 @@ and falls back to English. Set it with `/plugin configure savvy-progress@pablolo
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` option, the types. |
 | `hooks/hooks.json` | Names the hooks module. |
 | `hooks/register.tsx` | The module: the two tools, `/agents-info`, the bar and the panel. |
+| `hooks/register.test.ts` | The module's own tests, run by `claude plugin test`. |
 | `types/index.d.ts` | Its `$.state` contract. |
 | `plugin-entry.json` | `{"strict": true}`: the marketplace entry lets Claude Code read the mod's own manifest. |
 | `LICENSE` | The upstream MIT licence. |
@@ -55,4 +59,5 @@ and falls back to English. Set it with `/plugin configure savvy-progress@pablolo
 
 ```bash
 python -m unittest tests.test_savvy_progress_skill
+claude plugin test skills/savvy-progress
 ```

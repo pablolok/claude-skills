@@ -21,17 +21,19 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 
 | File | Role |
 | :--- | :--- |
-| `SKILL.md` | The orchestrator's playbook: plan, design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
+| `SKILL.md` | The orchestrator's playbook: plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
-| `agents/savvy-medium.md` | Opus / medium: standard feature work. |
-| `agents/savvy-light.md` | Opus / low: mechanical edits, builds, tests. |
+| `agents/savvy-medium.md` | Sonnet / medium, lean tools: standard feature work. |
+| `agents/savvy-light.md` | Sonnet / low, lean tools: mechanical edits, builds, tests. |
 | `LICENSE` | The upstream MIT licence. |
 
 `savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
 session tools (`disallowedTools: [mcp__ccd_turn, mcp__ccd_session]`): it reports to the orchestrator only. Where the
-host has no such tools the deny does nothing.
+host has no such tools the deny does nothing. Light and Medium also carry a tool allowlist (`tools`: files, the shell,
+`ToolSearch` and the savvy-progress tools): without the listing of every tool and skill a fresh worker starts at a
+fraction of the context, so a task that needs a skill, a browser or the web goes to Careful or above.
 
 ## With savvy-progress
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.0] - 2026-10-15
+- Tasks carry a topic and small tasks of one topic and tier merge into one brief; a new worker is started only when no registered worker of that tier covers the topic; Light and Medium run on Sonnet with lean tools (files, shell, progress), which cut a fresh worker's fixed context from about 60-90k to 8k tokens with no loss of first-pass quality on the measured tasks; briefs name the files to read and load no skill the task does not need
+
+
 ## [1.4.2] - 2026-10-15
 - Delegate: an isolated worker's worktree may start from the default branch — the brief names the base commit and the worker resets to it first, the base is checked on return; the orchestrator's full gate also builds, so with a live preview or device test on the working tree's output it runs in a copy of the final tree
 
