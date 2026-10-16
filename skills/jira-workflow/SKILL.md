@@ -129,6 +129,8 @@ estimates, Epics, the board's field, key results, the counts only a script can c
   A written rule was still broken under load: where the project can, a hook enforces it (a lock taken atomically
   before each connector call, with an expiry). Release it on **every** outcome — success, failure and a permission
   denial: the after-call event fires on success only, and a failed call held the lock until it expired.
+- **Only an agent that has the connector makes the calls.** A worker with a reduced tool set may lack it and stops
+  without a ticket: check its tools before delegating a tracker step, or keep the tracker calls in the session.
 - **A write answers with the whole ticket.** `createJiraIssue`, `editJiraIssue` and `transitionJiraIssue` send back
   the ticket's entire description and fields, which the session pays for in tokens on every call. Where the connector
   offers it, write and read through `executeWrite` / `executeRead` with `responseFields` naming only what the next
