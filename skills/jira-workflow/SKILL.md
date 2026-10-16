@@ -46,6 +46,9 @@ The project playbook fixes these; the skill never assumes them.
 - **A parent with an open sub-task stays in progress.** The waiting-for-user status is only for a ticket with no open
   work that waits for the user alone. A wait for the user's approval is written in that step's sub-task, never in the
   parent's status. Look at the sub-tasks before moving a parent.
+- **When a parent closes, or the piece of work it tracks ends, run the `skill-retrospective` skill** (when it is
+  installed) on the skills the work used: the close is the end of a piece of work, the moment the retrospective is
+  due — nothing else asks for it.
 - At every transition, in the same round: the right `fixVersion` and a comment.
 
 ## 3. Comments
@@ -74,33 +77,17 @@ The project playbook fixes these; the skill never assumes them.
 - Every ticket — sub-tasks and closed tickets included — has story points and an original estimate. Points = hours ×
   the points constant. Epics are the exception, below.
 - **Points go in the field the board measures**, read with `getJiraBoardConfig` (`estimation.field`) before the first
-  point is written, never assumed from a field's name: a site can hold two point fields (a locked "Story point
-  estimate" and a plain "Story Points"), and every report — burndown, burnup, velocity, version report — reads only the
-  board's one. Points written elsewhere leave every report empty.
+  point is written, never assumed from a field's name: every report reads only the board's one.
 - If the board measures another field, **move the points to the board's field once and write only that one from
-  then on**, never keep two fields in step. A company-managed board's estimation panel may offer only a method ("Story
-  points") with no field choice and bind it to a plain number field by name — never to the locked "Story point
-  estimate"; removing that field makes the board create a new one. So the board's field is the field: put it on the
-  project's screens, copy the values over in one bulk edit per value (by the site admin, with notifications off),
-  then **take the old field off the project's screens** rather than clearing it: first check that nothing reads it
-  (boards, saved filters, automation rules), then its values may stay frozen, since clearing costs one write per
-  ticket and protects nothing. A locked field stays writable through the API even off every screen, so the agent
-  never sends the old field again. Confirm every step with `getJiraBoardConfig` and JQL, never with the panel, which
-  can show a stale value; a field just added to a screen can be refused for a minute.
-- No sub-task goes below 15 minutes.
-- A parent with sub-tasks has original estimate `0m`; its points are the sum of its sub-tasks' points.
-- **An Epic has no points in the board's field.** The board treats an Epic as one more ticket: wherever the Epic and
-  its children meet (a sprint, a version), its points count twice — measured: a burndown at 68 instead of 18.5, a
-  version report at 352 instead of 198. The Epic report already sums the children itself, and a sum written by hand
-  drifts from them.
+  then on**; then take the old field off the project's screens rather than clearing it.
+- No sub-task goes below 15 minutes. A parent with sub-tasks has original estimate `0m` and the sum of its sub-tasks'
+  points. **An Epic has no points in the board's field** (the board would count them twice).
 - A closed ticket has the estimate from its size, a worklog with the real hours, and remaining `0m` written on purpose.
 - When a ticket's scope changes, re-estimate it at once, with a comment.
-- **An estimate must match the real hours.** Estimate from the real hours of closed tickets of the same kind; a
-  size table calibrated on one kind of work (features with tests, migrations and several sessions) never sizes
-  another (documents, tracker operations, skill edits). A ticket whose description is already the full specification
-  costs less than one that still has to write it.
-- At close, compare the estimate with the logged hours: a gap of more than twice, either way, is a defect — find the
-  cause (the estimating method, a missing worklog) and write it in a comment.
+- **An estimate must match the real hours**, estimated from closed tickets of the same kind; at close, a gap of more
+  than twice, either way, is a defect whose cause goes in a comment.
+- Read `references/estimates.md` before writing the first points on a board, moving points between fields, sizing a
+  kind of work for the first time, or explaining a gap.
 
 ## 7. Time tracking: continuous and precise, no exceptions
 
@@ -128,26 +115,10 @@ The project playbook fixes these; the skill never assumes them.
 
 ## 9. The total review
 
-After a heavy day of work and before every release, these checks must return **zero rows**, except tickets the user
-opened by hand:
-
-- `issuetype != Epic AND labels is EMPTY`, and tickets without one of the two role labels;
-- the manual label without an assignee, or the agent's label with one;
-- a plan's ticket outside its sprint (`sprint is EMPTY`);
-- a description without acceptance criteria, a "what to do" section or reproduction steps;
-- `fixVersion in releasedVersions() AND statusCategory != Done`;
-- `statusCategory = Done AND fixVersion is EMPTY`;
-- `statusCategory = Done AND resolution is EMPTY`;
-- `issuetype != Epic AND` the points field the playbook names `is EMPTY`, and `originalEstimate is EMPTY`;
-- `issuetype = Epic AND (` the points field `is not EMPTY OR sprint in openSprints())`;
-- the board's `estimation.field` (`getJiraBoardConfig`) is the field the playbook names;
-- key result counts equal to their Epics' counts;
-- **what a query cannot check runs from a script the project keeps**, read-only, that returns the differences and
-  must return none: every sprint report, burndown, version report and Epic report against the sum of its own tickets
-  (never a sample — a check on one sprint left another counting points twice), a parent against the sum of its
-  sub-tasks, no Epic with points or in an open sprint, every done ticket with a worklog, version and resolution;
-- **dependencies** (group 12): every dependency written in a description or in the plan has its Blocks link, and no
-  ticket blocked by an open one is in progress or beyond without a comment that says why.
+After a heavy day of work and before every release, the total review's checks must return **zero rows**, except
+tickets the user opened by hand: labels and assignees, sprints, descriptions, versions and resolutions, points and
+estimates, Epics, the board's field, key results, the counts only a script can check, and the dependencies (group
+12). Read `references/total-review.md` and run every check in it.
 
 ## 10. The Atlassian connector
 
@@ -158,27 +129,16 @@ opened by hand:
   A written rule was still broken under load: where the project can, a hook enforces it (a lock taken atomically
   before each connector call, with an expiry). Release it on **every** outcome — success, failure and a permission
   denial: the after-call event fires on success only, and a failed call held the lock until it expired.
-- Taking a field off a screen does not stop the API writing it, on a locked field and on a plain one alike; and a
-  field's global context cannot be narrowed to some issue types. Guard such a field with the review script, not with
-  the screen alone.
-- `timetracking` is not accepted at creation: set it right after with `editJiraIssue`. The same for sub-tasks.
-- A transition to a done status does not accept `resolution` (400 `TRANSITION_FAILED`): transition first, then
-  `editJiraIssue` with the resolution.
-- Editing a worklog moves the remaining estimate: on a closed ticket, write `remainingEstimate: "0m"` again after.
-- A goal links to a ticket through `addConnectionsToGoals` with the goal's **ARI** (from `getGoal`). With the goal's
-  key it answers `[]`, no error, and links nothing.
-- In JQL `0m` is not EMPTY, and there are no sub-queries (`parent in (labels = x)` fails): list the keys.
-- A sub-task type's display name may not match in JQL (a localized name returned no rows while the type existed): filter with `issuetype in subTaskIssueTypes()`.
-- The story point field id differs on every site: take it from the playbook, which took it from the board.
-- A compact read (the default view, and a JQL search even when `fields` names them) can leave out `fixVersions` and
-  `timetracking` without saying so: read them with the full view and `responseFields`, and never conclude from a
-  compact read that a field is empty.
-- **A report that shows nothing is a defect, not an absence of data.** After changing estimates, sprints or the board,
-  open the reports and look at them: an empty burnup ("no estimated issues") means the board reads another field.
-- A sprint's commitment is the points its tickets had when it started: points written after the start show as scope
-  added, and a closed sprint's history cannot be rewritten.
-- Automation on a free site has a monthly execution cap: prefer explicit calls to automation rules.
-- A very long description can fail in one call: if it does, rewrite it more compactly, without dropping content.
+- **A write answers with the whole ticket.** `createJiraIssue`, `editJiraIssue` and `transitionJiraIssue` send back
+  the ticket's entire description and fields, which the session pays for in tokens on every call. Where the connector
+  offers it, write and read through `executeWrite` / `executeRead` with `responseFields` naming only what the next
+  step needs, or through a compact view; never read a ticket back right after writing it — the write's own answer is
+  the proof, except where a rule asks for a check (a link's direction, a field a compact read leaves out), and then
+  read only that field.
+- Read `references/connector.md` before an operation you have not run this session — creating with time tracking,
+  closing with a resolution, editing a worklog, linking a goal, a JQL on sub-tasks or empty fields, a compact read,
+  a long description, a field taken off a screen. Its one rule to keep in mind always: **a report that shows nothing
+  is a defect**, not an absence of data.
 
 ## 11. In chat
 

@@ -18,6 +18,26 @@ INSTALL_CONFIG = REPO / "install.config.json"
 RELATIVE_SKILL_LINK = re.compile(r"\]\(\.\./")
 
 
+def rules_text(skill_folder: pathlib.Path) -> str:
+    """The skill's rules wherever they live: its SKILL.md, then every file under its ``references/`` folder.
+
+    A rule moved out of the core into a reference has changed place, not disappeared: tests that pin a rule read this.
+    """
+    parts = [(skill_folder / "SKILL.md").read_text(encoding="utf-8")]
+    parts += [path.read_text(encoding="utf-8") for path in sorted((skill_folder / "references").glob("*.md"))]
+    return "\n".join(parts)
+
+
+def unnamed_references(skill_folder: pathlib.Path) -> typing.List[str]:
+    """The files under ``references/`` that the SKILL.md never names: a reference nobody points at is never read."""
+    core = (skill_folder / "SKILL.md").read_text(encoding="utf-8")
+    return [
+        path.name
+        for path in sorted((skill_folder / "references").glob("*.md"))
+        if f"references/{path.name}" not in core
+    ]
+
+
 def frontmatter(text: str) -> typing.Dict[str, str]:
     """The ``key: value`` lines between the opening ``---`` fences of a SKILL.md."""
     match = re.match(r"^---\r?\n(.*?)\r?\n---", text, re.S)
@@ -56,6 +76,9 @@ class PublishedSkillChecks:
         self.assertEqual(fields.get("name"), self.SKILL)
         metadata = json.loads((self._published() / "metadata.json").read_text(encoding="utf-8"))
         self.assertEqual((metadata["name"], metadata["description"]), (self.SKILL, fields.get("description")))
+
+    def test_every_reference_is_named_by_the_skill(self) -> None:
+        self.assertEqual(unnamed_references(self._published()), [], "say in SKILL.md when to read each reference")
 
     def test_no_relative_link_into_another_skill(self) -> None:
         offenders = [

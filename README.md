@@ -9,7 +9,7 @@ or cloud project keeps managed copies instead (see below).
 | Skill | Description |
 | :--- | :--- |
 | **[Pre-Implementation Review](./skills/pre-implementation-review/)** | Before writing code, decide the right design — responsibilities, the pattern and owner of each, the seams; reuse and low duplication follow from it. |
-| **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. Two hooks (Node) log the skills used and ask for the retrospective after an archived backlog entry or 8 commits. |
+| **[Skill Retrospective](./skills/skill-retrospective/)** | When a piece of work closes, rewrites the skills it used in place with what it taught. The close steps of backlog and jira-workflow invoke it; one hook (Node) logs the skills used. |
 | **[Backlog](./skills/backlog/)** | The project's work tracked in `BACKLOG.md`, one doc folder per substantial piece of work archived on close, with the doc gates and a two-way GitHub Issues mirror (Node scripts inside the skill; project values in `.claude/backlog.json`). |
 | **[Review Backlog](./skills/review-backlog/)** | The periodic review of the backlog: run the gates, clean up what has rotted, close with ONE proposal of what to do next. Pairs with Backlog. |
 | **[Clean-Code Standards](./skills/clean-code-standards/)** | The language-agnostic quality bar: single responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, centralized literals, a reuse audit, fail-fast, no warning suppression. |
@@ -69,7 +69,7 @@ claude plugin update backlog@pablolok-skills                         # later, fo
 project's committed `.claude/settings.json`. Inside a session the same goes through `/plugin`.
 
 - A plugin skill is named `<plugin>:<skill>` (e.g. `backlog:backlog`).
-- Hooks and commands come with the plugin (`skill-retrospective`'s two hooks), declared by each skill in its own
+- Hooks and commands come with the plugin (`skill-retrospective`'s hook), declared by each skill in its own
   `plugin-entry.json`.
 - For **Claude Code on the web / cloud sessions**, add the repository as a plugin marketplace in claude.ai's
   settings (*Plugins & skills*): the account's plugins are synced into every session.

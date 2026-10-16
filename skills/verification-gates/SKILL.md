@@ -72,7 +72,7 @@ Where you *are* expected to run gates, run them and read the output before decla
   of inventing a command.
 - To learn whether a failing gate predates the change, run it on a separate checkout (a worktree, or the gate
   pointed at the base commit) — never by stashing the working tree: a plain stash and pop drops what was staged,
-  and the next commit silently leaves files out. Before committing, read the staged list against the files changed.
+  and the next commit silently leaves files out (reading the staged diff before the commit is `diff-self-review`'s).
 - A red that is a **timeout in a file the change does not touch** is re-run alone and with a longer timeout, the
   machine's load noted: passing that way, it is load and is reported as such — never called pre-existing, nor caused
   by the change, without that run.
@@ -83,9 +83,8 @@ Where you *are* expected to run gates, run them and read the output before decla
   conflict. First check each started from the integration branch's head (an isolated copy can start from the remote's
   default branch instead) and take its diff against its own starting commit; then, for every piece of data a change
   reads or interprets, list what else writes it after that base (the other changes included) and re-read the change
-  against those writers. Applied as patches with `git apply --3way --index`, they land **staged**: `git diff` shows
-  nothing and `git diff --cached` is the diff to read; a second apply reported clean is checked for a hunk that
-  landed twice.
+  against those writers. Applied as patches with `git apply --3way --index`, they land **staged** (read them as
+  `diff-self-review` does); a second apply reported clean is checked for a hunk that landed twice.
 - **A change aimed at one platform is verified on that platform**: a fix for a phone browser, touch input, the
   on-screen keyboard or an installed web app is proven on a simulator or device with that input — an emulated
   viewport, a desktop browser or a layout-only probe cannot show it. With none available, the change ships with the

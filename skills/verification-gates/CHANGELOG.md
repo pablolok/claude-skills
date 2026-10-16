@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.10] - 2026-10-16
+- Two sentences that repeated diff-self-review (reading the staged diff) now name it instead.
+
+
 ## [1.0.9] - 2026-10-14
 - a change judged by a threshold does not move it; report under the old rule beside the new
 

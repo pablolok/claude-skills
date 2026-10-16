@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"what's in the backlog\", \"backlog dashboard\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
-      "version": "1.8.10",
+      "version": "1.9.0",
       "category": "workflow",
       "strict": true,
       "skills": [
@@ -55,7 +55,7 @@
       "name": "jira-workflow",
       "source": "./published/workflow/jira-workflow",
       "description": "Use whenever work is tracked in Jira — before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook.",
-      "version": "1.0.9",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -77,7 +77,7 @@
       "name": "pre-implementation-review",
       "source": "./published/workflow/pre-implementation-review",
       "description": "Use BEFORE writing code, patching files, or scaffolding UI/backend changes — decide the RIGHT design first (responsibilities, the design pattern that expresses each, ownership, seams); reuse, testability and low duplication then follow as consequences. Trigger during reasoning and planning, especially when a change introduces new responsibilities, collaborators, shared services, UI patterns, validators, or orchestration logic. This is the \"plan clean\" front-half of clean-code-standards.",
-      "version": "1.1.29",
+      "version": "1.2.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -128,8 +128,8 @@
     {
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
-      "description": "Use when a piece of work closes — a backlog entry archived, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method — or when a hook asks for it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
-      "version": "1.6.1",
+      "description": "Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
+      "version": "2.0.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -143,17 +143,6 @@
               {
                 "type": "command",
                 "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/log-skill-use.mjs\"",
-                "timeout": 10
-              }
-            ]
-          }
-        ],
-        "Stop": [
-          {
-            "hooks": [
-              {
-                "type": "command",
-                "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/retrospective-hint.mjs\"",
                 "timeout": 10
               }
             ]
@@ -187,7 +176,7 @@
       "name": "verification-gates",
       "source": "./published/workflow/verification-gates",
       "description": "Use before declaring code work done / handing it back — verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards.",
-      "version": "1.0.9",
+      "version": "1.0.10",
       "category": "workflow",
       "strict": false,
       "skills": [

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.0] - 2026-10-16
+- The Stop hook that held the turn after an archived entry or every 8 commits is removed (with SKILL_RETRO_COMMITS and SKILL_RETRO_ARCHIVE_DIRS): the close steps of backlog and jira-workflow invoke the retrospective once, at the end of the work. The PostToolUse skill log stays.
+
+
 ## [1.6.1] - 2026-10-15
 - transcript-signals --since filters a transcript's records by time: a resumed agent's earlier tasks drop out
 

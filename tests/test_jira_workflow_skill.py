@@ -10,7 +10,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from published_skill_checks import REPO, PublishedSkillChecks  # noqa: E402  pylint: disable=wrong-import-position
+from published_skill_checks import REPO, PublishedSkillChecks, rules_text  # noqa: E402  pylint: disable=wrong-import-position
 
 SKILL_MD = REPO / "skills" / "jira-workflow" / "SKILL.md"
 
@@ -47,19 +47,21 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
     SKILL = "jira-workflow"
 
     def setUp(self) -> None:
-        self.text = SKILL_MD.read_text(encoding="utf-8")
+        self.core = SKILL_MD.read_text(encoding="utf-8")
+        # The rules wherever they live: a procedure moved into references/ is still the skill's rule.
+        self.text = rules_text(SKILL_MD.parent)
 
     def test_every_rule_group_is_a_numbered_section_in_order(self) -> None:
-        headings = re.findall(r"^## (\d+)\. (.+)$", self.text, re.M)
+        headings = re.findall(r"^## (\d+)\. (.+)$", self.core, re.M)
         self.assertEqual([int(number) for number, _ in headings], list(range(1, len(RULE_GROUPS) + 1)))
         for (_, title), group in zip(headings, RULE_GROUPS):
             self.assertTrue(title.startswith(group), f"group {group!r} is missing or out of order: {title!r}")
 
     def test_the_project_values_are_declared_parameters(self) -> None:
-        self.assertIn("## Parameters the project declares", self.text)
+        self.assertIn("## Parameters the project declares", self.core)
         for parameter in PARAMETERS:
             with self.subTest(parameter=parameter):
-                self.assertIn(f"| {parameter} |", self.text)
+                self.assertIn(f"| {parameter} |", self.core)
 
     def test_examples_use_only_the_neutral_ticket_key(self) -> None:
         keys = set(re.findall(r"\b([A-Z][A-Z0-9]+)-\d+\b", self.text))
@@ -93,6 +95,15 @@ class TestJiraWorkflowSkill(PublishedSkillChecks, unittest.TestCase):
         self.assertIn("what a query cannot check runs from a script the project keeps", self.text)
         self.assertIn("a hook enforces it", self.text)
         self.assertIn("Release it on **every** outcome", self.text)
+
+    def test_a_write_is_not_read_back_whole(self) -> None:
+        rule = " ".join(self.core.split())
+        for name in ("createJiraIssue", "editJiraIssue", "transitionJiraIssue", "responseFields"):
+            self.assertIn(name, rule)
+        self.assertIn("never read a ticket back right after writing it", rule)
+
+    def test_the_close_runs_the_retrospective(self) -> None:
+        self.assertIn("run the `skill-retrospective` skill", " ".join(self.core.split()))
 
     def test_the_dependency_direction_is_stated(self) -> None:
         self.assertIn("`inwardIssue` blocks `outwardIssue`", self.text)

@@ -1,6 +1,6 @@
 ---
 name: skill-retrospective
-description: Use when a piece of work closes — a backlog entry archived, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method — or when a hook asks for it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.
+description: Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.
 ---
 
 # Skill retrospective — every piece of work leaves the skills better
@@ -10,13 +10,16 @@ cleaning the skill up, not by adding to it. A skill is working instructions, not
 changes what is done next time, and what turned out wrong or useless goes away. A skill that only grows ends up slow
 to read and contradicting itself.
 
+**When**: once, at the end of a piece of work — never during it. The close step of the `backlog` skill (an entry
+archived) and of `jira-workflow` (a parent ticket or a piece of work closed) invoke it; no hook holds a turn to ask.
+
 ## 1. Evidence (what happened, measured)
 
 - **Which skills served the work**: `.claude/.state/skills-used.txt` (the `log-skill-use` hook), the skills edited in
   git since the last retrospective (`git log <last-retrospective>..HEAD -- .claude/skills ~/.claude/skills`), the
   skills whose scripts ran.
-- **Where time went**: the commits since `.claude/.state/last-retrospective`, the rounds and their scores, the
-  steps redone, the user's corrections — quote them.
+- **Where time went**: the commits since `.claude/.state/last-retrospective` (with none recorded yet, since the commit
+  that opened the work), the rounds and their scores, the steps redone, the user's corrections — quote them.
 - **What the agents actually did**, not what they reported: a worker's report tells its result and leaves out its
   wasted loops. Run `node <this skill's folder>/scripts/transcript-signals.mjs <transcripts folder> --since <the last
   retrospective commit's date>` over the session's transcripts (`~/.claude/projects/<project>/<session>/subagents/`

@@ -15,6 +15,12 @@ from that design; they are not the starting point.
   (time, randomness, config), component-local styling and hardcoded colours
 - where each new or moved file belongs (its folder, its layer, the direction of its dependencies)
 
+## Layout
+
+`SKILL.md` is the core loaded on every review: when it applies, the steps, the hard fails and the output.
+`references/` holds the full rules and their cases — derivability, design smells, hard fails, decision rules, file
+placement — each read when the core says the change needs it.
+
 ## Typical Trigger
 
 Use this when a request is still in the reasoning or planning phase, especially for:

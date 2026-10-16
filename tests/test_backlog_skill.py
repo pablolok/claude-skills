@@ -9,7 +9,12 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import sys
 import unittest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+from published_skill_checks import rules_text, unnamed_references  # noqa: E402  pylint: disable=wrong-import-position
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = REPO / "skills" / "backlog"
@@ -50,6 +55,30 @@ class TestPublishedPlugin(unittest.TestCase):
         source_scripts = sorted(path.name for path in (SOURCE / "scripts").glob("*.mjs"))
         published_scripts = sorted(path.name for path in (PUBLISHED / "scripts").glob("*.mjs"))
         self.assertEqual(published_scripts, source_scripts, "publish the skill: python automate_publish.py backlog ...")
+
+    def test_every_reference_is_named_by_the_core(self) -> None:
+        self.assertTrue(list((SOURCE / "references").glob("*.md")), "control: the references exist")
+        self.assertEqual(unnamed_references(SOURCE), [], "say in SKILL.md when to read each reference")
+        self.assertEqual(unnamed_references(PUBLISHED), [], "publish the references with the skill")
+
+
+class TestClosing(unittest.TestCase):
+    """The end of a piece of work is the archived entry: the close asks for the retrospective, no hook does."""
+
+    def test_the_close_runs_the_retrospective(self) -> None:
+        core = (SOURCE / "SKILL.md").read_text(encoding="utf-8")
+        closing = (SOURCE / "references" / "closing.md").read_text(encoding="utf-8")
+        for text in (core, closing):
+            self.assertIn("`skill-retrospective` skill", text)
+        self.assertIn("references/closing.md", core)
+
+    def test_the_moved_procedures_are_still_the_skill_s(self) -> None:
+        rules = " ".join(rules_text(SOURCE).split())
+        for rule in ("Copy it exactly: a project's own tools may parse that line",
+                     "check the filesystem, not just the entry", "Fail-soft", "Never back-filled",
+                     "The dashboard counts a row only in this form"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, rules)
 
 
 @unittest.skipUnless(shutil.which("node") and shutil.which("git"), "node and git are needed")

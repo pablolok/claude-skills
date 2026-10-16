@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 import unittest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+
+from published_skill_checks import rules_text, unnamed_references  # noqa: E402  pylint: disable=wrong-import-position
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = REPO / "skills" / "pre-implementation-review"
@@ -14,6 +19,11 @@ def _read(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _rules() -> str:
+    """The core and its references: a rule moved into a reference is still the skill's rule."""
+    return rules_text(SOURCE)
+
+
 class TestPreImplementationReviewSkill(unittest.TestCase):
     def test_skill_is_published_in_the_workflow_category(self) -> None:
         self.assertTrue((PUBLISHED / "SKILL.md").is_file())
@@ -22,35 +32,41 @@ class TestPreImplementationReviewSkill(unittest.TestCase):
     def test_source_skill_exists(self) -> None:
         self.assertIn("pre-implementation-review", _read(SOURCE / "SKILL.md"))
 
+    def test_the_core_stays_small_and_names_every_reference(self) -> None:
+        self.assertLessEqual(len(_read(SOURCE / "SKILL.md").encode("utf-8")), 10_000, "detail goes in references/")
+        self.assertTrue(list((SOURCE / "references").glob("*.md")), "control: the references exist")
+        self.assertEqual(unnamed_references(SOURCE), [], "say in SKILL.md when to read each reference")
+        self.assertEqual(unnamed_references(PUBLISHED), [], "publish the references with the skill")
+
     def test_skill_recommends_enums_over_raw_numeric_codes(self) -> None:
-        content = _read(SOURCE / "SKILL.md")
+        content = _rules()
         self.assertIn("numeric state/category/status codes", content)
         self.assertIn("Prefer enums or typed named constants over raw numeric codes", content)
 
     def test_skill_recommends_shared_frontend_styling_primitives(self) -> None:
-        content = _read(SOURCE / "SKILL.md")
+        content = _rules()
         self.assertIn("repeated component-local CSS or SCSS", content)
         self.assertIn("Prefer shared styling primitives, design tokens, or utility layers", content)
 
     def test_skill_recommends_themeable_color_tokens(self) -> None:
-        content = _read(SOURCE / "SKILL.md")
+        content = _rules()
         self.assertIn("themeable semantic color tokens", content)
         self.assertIn("hardcoded product colors", content)
 
     def test_skill_flags_semantic_string_literals_for_centralization(self) -> None:
-        content = " ".join(_read(SOURCE / "SKILL.md").split())   # a rule wrapped across lines is still the rule
+        content = " ".join(_rules().split())   # a rule wrapped across lines is still the rule
         self.assertIn("semantic string literals", content)
         self.assertIn("shared constants, resource keys, typed wrappers, or configuration inputs", content)
 
     def test_a_constraint_on_stored_data_is_checked_against_every_writer(self) -> None:
-        content = " ".join(_read(SOURCE / "SKILL.md").split())
+        content = " ".join(_rules().split())
         self.assertIn("A constraint added to stored data binds every writer", content)
         self.assertIn("the store's own generators", content)
         self.assertIn("at the edge of the allowed range", content)
         self.assertIn("or the constraint waits", content)
 
     def test_a_stored_rollup_and_an_inherited_copy_are_named(self) -> None:
-        text = _read(SOURCE / "SKILL.md")
+        text = _rules()
         self.assertIn("A rollup stored on a parent", text)
         self.assertIn("Retiring an inherited copy: cut its writers first, then count its readers", text)
 

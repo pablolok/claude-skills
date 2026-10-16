@@ -16,6 +16,12 @@ the release, and it always says what is true.
 - ticket keys as links in chat
 - dependencies as Blocks links in the right direction, and a work order that follows them
 
+## Layout
+
+`SKILL.md` holds every rule, in its twelve groups; `references/` holds the long parts — the estimates procedure, the
+total review's checks, the connector's pitfalls — each read at the moment the core names. A close also invokes the
+`skill-retrospective` skill.
+
 ## Parameters
 
 The skill is generic. Each project keeps a Jira playbook that declares its values — site and `cloudId`, board,

@@ -63,13 +63,10 @@ that start with `- **Field**:`; a value appended after a `·` is not seen).
   Write it as the **path the person follows**, in the words on their screen (page › tab › the heading they look
   for), read from the UI's text — never a component's or file's name, which they cannot find; and say what to bring
   back (the numbers, a screenshot), so the step closes in one round.
-- **Architecture** (only when the project keeps stable docs in `architectureDir`, default `docs/architecture`):
-  the documents this work changes, comma-separated, then in prose what changes. `—` is a statement ("changes
-  none"), not a blank. It may carry a structural defect's marker (`billing.md#D3`), checked **both ways** by
-  `backlog-anchor`: while the entry is open the defect **must** be among the doc's `## Open defects`; once closed it
-  must be **gone** from there and one row `| [[BKLG-NNN]] | what it did |` must be in its `## Who worked on it`
-  (the section names are the project's `words`; these are the defaults).
-  ⚠️ **Never back-filled**: the field binds new work; a value deduced from memory for an old entry is invented.
+- **Architecture** (only when the project keeps stable docs in `architectureDir`, default `docs/architecture`): the
+  documents this work changes, then in prose what changes; `—` is a statement ("changes none"), not a blank. Never
+  back-filled. Read `references/architecture.md` before writing it, before an entry that changes the system's shape,
+  and before opening or closing an entry that carries a structural defect (`D<n>`).
 
 ### `Status` carries the INTERNAL state, not just the word
 
@@ -88,40 +85,21 @@ can be picked up now.
 
 ### Multi-phase work carries a PHASE TABLE (in the Summary or the doc)
 
-More than two named steps → one row per step:
-
-| | state |
-|---|---|
-| **P1** parse the import file | ✅ — the old parser already read 6 of 11 columns, extended |
-| **P2** dedupe against existing rows | ⏳ half done; the fuzzy match is missing |
-| **P3** background job | ⛔ **dropped** — measured: the import takes 2 s, a job adds nothing |
-| **P4** error report for the user | 📋 not started |
-
-- The state carries its **evidence** (`✅ — what was learned`), not just a tick.
-- A **dropped step STAYS, with the reason** — otherwise it is proposed again.
-- `✅` done · `⏳` in progress (name what blocks it) · `⛔` dropped · `📋` not started. A step partly done is `⏳` with
-  what is left, never `✅` with a count: `✅ 11 of 17` is read as done wherever the table is counted.
-- **The dashboard counts a row only in this form**: the first cell opens with the name in bold (`**P1** …`) and the
-  state cell opens with the mark. A plain name, or a state in words, makes the row invisible — the entry's bar stays
-  empty however many steps are done. After editing a table, check it is read:
-  `node <skill>/scripts/dashboard.mjs --json` lists the entry's `phases`.
-- Edited in the same change that moves a step — **and every other row whose open item that change closed**: work
-  recorded only on the row it was done under leaves the rows that listed it open stale, and the entry looks
-  unclosable. The cell stays a short current state (done / open, with evidence); the story goes in the commit.
-- **No table on a single-step entry** — ceremony teaches readers to skip the tables that matter.
+More than two named steps → one row per step, `| **P1** <step> | ✅ — <evidence> |`: the first cell opens with the
+step's name in bold and the state cell opens with its mark (`✅` done · `⏳` in progress · `⛔` dropped, with the reason
+· `📋` not started) — in any other form the dashboard does not count the row. A dropped step stays; a step partly
+done is `⏳`. No table on a single-step entry. **Read `references/phase-tables.md` before writing or editing one.**
 
 ## Pending ledger — never lose an unverified (or undeployed) change
 
-Work gets committed before it can be checked or shipped (the tests need a closed tool, a deploy is manual, a
-playtest or a review is someone else's). A `## Pending <kind>` section at the **top of `BACKLOG.md`**, above
-`## Open`, holds each such change — the kinds are the project's (verification, deploy, migration…):
+Work committed before it can be checked or shipped (a closed tool, a manual deploy, someone else's review) gets a line
+in a `## Pending <kind>` section at the **top of `BACKLOG.md`**, above `## Open` — the kinds are the project's:
 
 ```
 ## Pending verification
 Committed but NOT yet verified. Remove a line the moment its check passes.
 
 - **Tests**: [[BKLG-NNN]] (commit `abc1234`) — the suite could not run here; run it
-- **Review**: [[BKLG-NNN]] — the new pricing copy (Manual: the product owner reads it)
 ```
 
 - Appended in the **same change** that commits the unchecked work. Never from memory.
@@ -151,80 +129,29 @@ bare id in a project that declares `"citation": "bare"`.
 - **When to create a doc**: a multi-step plan, cross-file changes, or a spec. A genuine one-liner stays inline
   (`- **Doc**: —`); if it grows, create the doc and update the field.
 
-### A change to the system's SHAPE is drawn, inside the activity's document
+## GitHub Issues mirror and dashboard
 
-An entry that changes the shape of the system (a new module or layer, a new data flow, a structural defect) puts
-in its own document: **how it is today** (a link to the stable doc in `architectureDir`, not a copy), **the shape
-after** as a diagram (today next to tomorrow, sources in a `diagrams` folder beside the doc), **what is still
-missing** and who closes it, and **acceptance written against the stable doc** ("updating that doc must produce
-these changes"). Not an extra file beside the spec; not for a one-step entry or a point fix. If the touched area
-has no stable doc yet, that is the moment to write it — coverage grows one activity at a time.
-
-A **structural** defect (it comes back if patched where it shows) in an area with a stable doc gets a `D<n>` row
-in that doc's `## Open defects`, its owner cell `[[BKLG-NNN]]`, **in the same commit that opens the entry**.
-`architecture-shape` checks every stable doc has both sections and every defect an owner cell.
-
-## GitHub Issues mirror (bidirectional, fail-soft)
-
-`backlog-github-sync.mjs` mirrors the Open entries to issues labelled `backlog` on the project's GitHub repo
-(read from `origin`; doc links point at origin's default branch), so collaborators can triage there.
-
-- **On or off is the project's choice** — on when its preamble says so, or when `backlog` issues already exist.
-  Never create the mirror for a project that hasn't adopted it. When on, run it with `--execute` after every
-  `add` / `process` / `done` / Status change, and `sync-all --execute` at the start and end of backlog work.
-- **Auth**: it only shells out to `gh` — `gh auth login` once per machine (a person runs it: suggest
-  `! gh auth login`), or `GH_TOKEN` in the environment. Never write a token to disk.
-- **Ownership**: the **file** owns the id, the doc link and the prose (an issue body that drifted is rewritten,
-  announced as `BODY`); **GitHub** owns the lifecycle (open/closed, `status:*` / `priority:*` labels, assignee).
-  Each side's drift is reported, not clobbered.
-- **The project's words**: a register whose Status or Priority values are in its own language maps them in
-  **.claude/backlog.json** (`github.statusWords`, `github.priorityWords`); the label names and the close comment the
-  mirror writes are `github.labels` and `github.closeComment` (see the README). A warning naming an entry and a value
-  means that value maps to no label: add its word to the map — never rewrite the project's values to English.
-- Commands (dry-run unless `--execute`; `--repo owner/name` overrides): `upsert-issue BKLG-NNN`,
-  `close-issue BKLG-NNN`, `sync-all` (also reports issues to adopt and issues closed on GitHub whose entry is still
-  open — the file move on close is never automated: run `done`).
-- **Fail-soft**: a `gh` failure warns and **never blocks** the file update.
+- **The mirror** (`backlog-github-sync.mjs`, open entries ⇄ issues labelled `backlog`) is **on only when the project
+  adopted it** — its preamble says so, or `backlog` issues already exist; never create it for a project that hasn't.
+  When it is on, read `references/github-mirror.md` before the first backlog change of the session: it runs after
+  every `add` / `process` / `done` / Status change. A `gh` failure warns and never blocks the file update.
+- **The dashboard** is read-only: the user types `/backlog-dashboard` (Claude cannot open the pane), or Claude starts
+  the browser page in the background. Read `references/dashboard.md` when asked for it, or when a table or ledger must
+  show there — it counts only the register's own forms.
 
 ## The gates
 
-Run each **plain, then read its exit code** — `node x.mjs | tail` reports `tail`'s status, and a failing gate reads
-green. Read the **control counts** each prints: "0 broken" without "out of how many" is indistinguishable from
-"didn't look".
-
-| script | the question |
-|---|---|
-| `check-doc-refs.mjs` | links, `file:line` pointers and (in instructions) backticked paths point at something that exists; entries are cited as `[[BKLG-NNN]]` (a project citing bare ids has nothing to report here); every activity folder is claimed by an Open entry |
-| `backlog-anchor.mjs --all` | every entry's declared `Architecture` docs cite it, markers both ways |
-| `architecture-shape.mjs` | every stable doc has its open-defects and contributions sections, and an owner cell per defect |
-| `backlog-coherence.mjs` | an entry lives in one place: never open and closed at once, never twice in one register |
-| `closed-defects.mjs` | a defect row with a state says what the entry that closes it says |
-| `related-docs.mjs [HEAD]` | not a gate (always exit 0): the live docs that cite the entry or name a file a change touched |
-
-Run `check-doc-refs` and `backlog-coherence` after every `add` and `done`; all the gates before closing an entry.
-A legitimate reference to something that is not a file of the repo goes in `pathExceptions` **with its reason** —
-never by weakening a rule. The gates are git-aware: they judge what git keeps, as a CI checkout would.
-
-Outside a Claude session (CI, git hooks, package scripts) a project copies `bootstrap/backlog-gate.mjs` into its
-repository: `node scripts/backlog-gate.mjs check-doc-refs` fetches this skill once at the version it pins and runs
-the gate on the project.
-
-**The register's language is the project's.** Entries may be `##` or `###` headings; the history may keep
-one-liners, phases (`- **BKLG-077 F1**`) or whole cards. A register that names its fields or its document sections
-in another language declares them in **.claude/backlog.json** (`fieldNames`, `words` — `words.open` for its
-`## Open` section — see the README), so the gates read them; a project that cites entries by the bare id declares
-`"citation": "bare"`. Never rename a project's fields, sections or citations to suit the gates.
+Run each **plain, then read its exit code** (never through `| tail`, which reports its own status) and its **control
+counts** ("0 broken" without "out of how many" is indistinguishable from "didn't look"). `check-doc-refs` and
+`backlog-coherence` after every `add` and `done`; all of them — `backlog-anchor --all`, `architecture-shape`,
+`closed-defects`, `related-docs` too — before closing an entry. A reference that is not a file of the repo goes in
+`pathExceptions` **with its reason**, never by weakening a rule. Read `references/gates.md` for what each gate asks,
+running them outside a session (CI, git hooks), a register in another language, and how the next id is chosen.
 
 ## add
 
-1. **The next id**: `node <this skill's base directory>/scripts/next-id.mjs` prints it — the highest id the
-   register's own documents claim + 1 (the first entry is `BKLG-001`). An id is **claimed** by a card heading
-   (`## BKLG-NNN` / `### BKLG-NNN`), a history line (`- **BKLG-NNN**`) or an activity folder's name (a parallel
-   session may have created one before any card cites it) — not by every mention: a history line citing another
-   project's entry is a mention, and counting it once handed out a number past that project's ids. A mention outside
-   the backlog folder (a bridge doc, a copied plan) is not read at all. Read its control line (the highest claim, the
-   files read) and its warning: ids mentioned above the highest claim (`BKLG-200…207 mentioned but never claimed`)
-   are another project's, or a card never written — check before using the number.
+1. **The next id**: `node <this skill's base directory>/scripts/next-id.mjs` prints it; read its control line and its
+   warning before using the number (`references/gates.md`).
 2. **Keep the entry lean** — the format's fields plus a 1–2 line Summary. Context, the real fix, acceptance and
    progress go in the **Doc**. From a one-liner, infer the rest from the code and the conversation and write a
    concrete plan — no placeholders. A temporary patch just shipped: its commit and why it isn't the real fix.
@@ -243,29 +170,6 @@ in another language declares them in **.claude/backlog.json** (`fieldNames`, `wo
 The Open entries as a compact table: id · priority · status word · title · the project's key fields. The count,
 the highest-priority item, anything in a pending ledger. Full entries only when asked (`/backlog show BKLG-NNN`).
 
-## dashboard
-
-The register's progress, what is in progress (phases, last commit), what comes next, the pending ledgers, recent
-activity, and every document of the project readable and linked — read-only, rebuilt from the register and git each
-time. Two ways to open it:
-
-- **In Claude Code** (the plugin is a mod): the user types **`/backlog-dashboard`**; a pane opens in the session,
-  driven by keys (1–6 views, Enter opens a row, `b` back, `r` refresh, Esc closes). Claude cannot open it: tell the
-  user the command.
-- **In a browser**: start `node <skill>/scripts/dashboard.mjs` **in the background** (in a project with the launcher:
-  `node scripts/backlog-gate.mjs dashboard`; `--port N`, `--no-open`) and give the user the URL it prints.
-
-Its "next" is a hint; the move is `review-backlog`'s. In a project with no register yet the pane says where one
-would start (`/backlog add …` creates it; `docsDir` in **.claude/backlog.json** moves it) — a state, not an error; the
-browser page refuses to start there.
-
-**It shows only what the register writes in its own forms**: phase tables, pending ledgers, and the Status and
-Priority words — words in the register's language count only once mapped (`github.statusWords`,
-`github.priorityWords`; unmapped, every entry reads as having none). To show more of the project in it (a roadmap of
-groups, the checks still owed), write it in those forms before building a second view: one phase per group in the
-umbrella entry, that entry `in-progress` while it runs, a `## Pending verification` line per shipped change awaiting a
-check. A table that restates another document's counts gets a check against that source, or it drifts.
-
 ## process BKLG-NNN (implement the real fix)
 
 1. Read the entry and its Doc in full. Restate plan + acceptance in one line; confirm scope if it is large or
@@ -276,30 +180,19 @@ check. A table that restates another document's counts gets a check against that
 4. **Verify** the way the preamble / CLAUDE.md says (build, tests, probes, a look at the result). What cannot run
    now goes in the pending ledger in the same change.
 5. Commit; a user-visible change also goes to the project's changelog if it keeps one.
-6. **Close**: remove the entry from `## Open`; add at the **top** of `BACKLOG-HISTORY.md` one line **in the
-   project's declared form** — the close line its preamble or conventions document gives, the close field it names
-   in **.claude/backlog.json** (`fieldNames.Done`), else the shape of the newest history lines: the field's name, the
-   date format, how the commit is written. Copy it exactly: a project's own tools may parse that line. Only a
-   history that declares and shows nothing takes the default:
-   ```
-   - **BKLG-NNN** <title> — <what shipped, one line> · **Done**: YYYY-MM-DD (commit `<sha>`) · [doc](archive/<name>/<file>.md)
-   ```
-   Whatever the form, the line opens with `- **BKLG-NNN**` (or the card moves whole, with its heading): that is
-   what the gates read as closed.
-   ⛔ Only when its pending lines are gone: an entry closes when the work is done **and verified**.
-7. **Archive the doc — check the filesystem, not just the entry**: `git mv <type>/<name> archive/<name>` (inside
-   the backlog folder) and point the history line there — even if the entry's Doc is `—`: look in every type
-   folder for one belonging to this item.
-8. Declared `Architecture`: the `D<n>` leaves the doc's open defects, a row lands in its contributions section
-   (`## Who worked on it` by default; the project's `words.contributions`).
-9. Mirror: `close-issue BKLG-NNN --execute`. Run the gates.
-10. Tell the user what shipped, what is still pending, and any Manual step.
+6. **Close** — read `references/closing.md` and follow it: the entry leaves `## Open`, one history line in the
+   project's declared form at the top of `BACKLOG-HISTORY.md`, the doc folder archived (check the filesystem, not just
+   the entry), the declared `Architecture` updated, the mirror closed, the gates run. ⛔ Only when its pending lines
+   are gone: an entry closes when the work is done **and verified**.
+7. Tell the user what shipped, what is still pending, and any Manual step.
+8. **Then run the `skill-retrospective` skill** on the work that closed (when it is installed): the skills the work
+   used go back over what it taught. The archived entry is the end of a piece of work — the moment it is due.
 
 ## done / archive BKLG-NNN
 
-`process` steps 6–9 without implementing — for work that landed by other means or became obsolete (the history line
-then carries the project's obsolete field instead of its close field — `fieldNames.Obsolete`, or what its history
-shows; by default `**Obsolete**: <why>` instead of `**Done**`).
+The close of `process` (step 6, `references/closing.md`) and the retrospective of step 8, without implementing — for
+work that landed by other means or became obsolete (the history line then carries the project's obsolete field
+instead of its close field).
 
 ## Conventions
 

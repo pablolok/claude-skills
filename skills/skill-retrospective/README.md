@@ -1,7 +1,9 @@
 # Skill Retrospective
 
 When a piece of work closes, what it taught goes back into the skills that served it — rewritten in place, pruned,
-kept short — never appended as a lessons log. Two hooks make it happen without anyone having to remember.
+kept short — never appended as a lessons log. It runs once, at the end of a piece of work: the close step of the
+`backlog` skill (an entry archived) and of `jira-workflow` (a parent ticket or a piece of work closed) invoke it. One
+hook logs the skills the work used, so the retrospective knows which ones to rewrite.
 
 ## Installing
 
@@ -12,9 +14,9 @@ claude plugin marketplace add pablolok/claude-skills
 claude plugin install skill-retrospective@pablolok-skills --scope user
 ```
 
-The plugin wires its two hooks itself (declared in `plugin-entry.json`): nothing is copied into a project and no
-settings file is edited. The hooks run from the plugin cache and take the project from `CLAUDE_PROJECT_DIR`, which
-Claude Code sets for every hook; without it they do nothing.
+The plugin wires its hook itself (declared in `plugin-entry.json`): nothing is copied into a project and no settings
+file is edited. The hook runs from the plugin cache and takes the project from `CLAUDE_PROJECT_DIR`, which Claude Code
+sets for every hook; without it, it does nothing.
 
 ## What it holds
 
@@ -22,22 +24,17 @@ Claude Code sets for every hook; without it they do nothing.
 |---|---|
 | `SKILL.md` | The retrospective: evidence → rewrite each skill used → check → record. |
 | `hooks/log-skill-use.mjs` | `PostToolUse` (matcher `Skill`): adds each skill run to `.claude/.state/skills-used.txt`, once. |
-| `hooks/retrospective-hint.mjs` | `Stop`: holds the turn **once** (never with `stop_hook_active`) when, since the commit in `.claude/.state/last-retrospective`, a backlog entry was archived (under `SKILL_RETRO_ARCHIVE_DIRS`, else the backlog's `<docsDir>/archive`, default `docs/implementations/archive`) or `SKILL_RETRO_COMMITS` (default 8) commits piled up, and asks for the retrospective on the logged skills. |
-| `hooks/state.mjs` | The project root (`CLAUDE_PROJECT_DIR` alone: never the shell's cwd, never the hooks' own folder) and the state folder. |
-| `plugin-entry.json` | The two hooks, as the marketplace declares them for the plugin. |
+| `hooks/state.mjs` | The project root (`CLAUDE_PROJECT_DIR` alone: never the shell's cwd, never the hook's own folder) and the state folder. |
+| `plugin-entry.json` | The hook, as the marketplace declares it for the plugin. |
 
 ## Requirements and conventions
 
-- **Node** runs the hooks (it is there wherever Claude Code is, on Windows too — `python3` often is not).
-- **git**: the hooks count commits; outside a repository they stay silent.
-- The **archive trigger** follows a convention: a backlog entry is closed by moving its folder under
-  `<docsDir>/archive/` — `docsDir` read from the project's backlog config (`.claude/backlog.json`) when it declares
-  one, else `docs/implementations`. A project that archives elsewhere sets `SKILL_RETRO_ARCHIVE_DIRS` (repo-relative
-  folders, comma-separated, e.g. `Tasks/archive`; it wins over the config) — in the `env` block of its
-  `.claude/settings.local.json` (or `settings.json`), which the hooks inherit. Only the first level under the folder is counted, so a nested archive
-  gives a lower bound. A project with neither relies on the commit threshold alone (`SKILL_RETRO_COMMITS`, default 8).
+- **Node** runs the hook (it is there wherever Claude Code is, on Windows too — `python3` often is not).
+- **No hook holds a turn.** Up to 1.6 a `Stop` hook held the turn after an archived entry or every 8 commits; the
+  retrospective is now asked for by the close of the work itself (the `backlog` and `jira-workflow` close steps), once.
 - The **state** (`<project>/.claude/.state/`) is per machine and keeps itself out of git with its own `.gitignore`;
-  the project's `.gitignore` is never edited. With no baseline yet, the first stop records HEAD and says nothing.
+  the project's `.gitignore` is never edited. `last-retrospective` holds the commit of the last retrospective (the
+  skill writes it); with none yet, the retrospective counts from the commit that opened the work.
 
 ## Tests
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.0] - 2026-10-16
+- The core keeps the rules; closing and archiving, phase tables, the dashboard, the GitHub mirror, the Architecture field and the gates move to references/, each named at its step. The close now runs the skill-retrospective skill: the archived entry is the moment it is due.
+
+
 ## [1.8.10] - 2026-10-15
 - A check that can pass only after a step the person owns (a default-branch scanner, a merge) keeps the entry open even when asked to close first: say so, report a prediction, close once it passes
 

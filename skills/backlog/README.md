@@ -9,6 +9,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | File | Role |
 |---|---|
 | `SKILL.md` | The procedure: entry format, Status as a sentence, phase tables, pending ledgers, doc folders, `add` / `list` / `process` / `done`. |
+| `references/` | The long procedures the core names, each read at the step that says so: closing and archiving (with the retrospective), phase tables, the dashboard, the GitHub mirror, the Architecture field, the gates and the next id. |
 | `scripts/check-doc-refs.mjs` | Gate: links, `file:line` pointers and backticked paths resolve; entries cited as `[[BKLG-NNN]]` (or the project's `citation` form); every activity folder claimed by an open entry. |
 | `scripts/backlog-anchor.mjs` | Gate: an entry's declared architecture docs cite it, defect markers both ways (open → listed, closed → gone). |
 | `scripts/architecture-shape.mjs` | Gate: every stable architecture doc has its open-defects and contributions sections, and an owner cell per defect. |
@@ -137,10 +138,9 @@ whole card with its heading.
   scripts' arguments, commit messages and other tools' hooks: a configurable prefix would have to reach all of them at
   once, and one that missed would read zero entries while printing green.
 - **The folder names** — `features`, `bugs`, `diagnostic`, `analysis` and `archive`. The folder ⟺ card rule, the
-  mirror's type labels, the past-describing `archive/` (any path through one is not checked) and the
-  skill-retrospective hook (another plugin, which reads `<docsDir>/archive`) all name them; a renamed activity folder
-  would get no type label, and a renamed archive would be checked as live. The folders sit under `docsDir`, which is
-  configurable.
+  mirror's type labels and the past-describing `archive/` (any path through one is not checked) all name them; a
+  renamed activity folder would get no type label, and a renamed archive would be checked as live. The folders sit
+  under `docsDir`, which is configurable.
 
 What a project adds to the **procedure** (extra entry fields, its pending ledgers, how it verifies, whether the
 GitHub mirror is on) goes in the preamble of its `BACKLOG.md` — the skill reads it first. Long rules go in a

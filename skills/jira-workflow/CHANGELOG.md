@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - 2026-10-16
+- The core keeps the twelve rule groups; the estimates procedure, the total review's checks and the connector's pitfalls move to references/. New rule: a write answers with the whole ticket, so use executeRead/executeWrite with responseFields or a compact view, and never read back a ticket just written. A closed parent or piece of work runs the skill-retrospective skill.
+
+
 ## [1.0.9] - 2026-10-14
 - A compact read can omit fixVersions and timetracking: read them with the full view
 
