@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.29] - 2026-10-16
+- il disegno di un vecchio piano si rilegge contro ciò che esiste oggi; un osservatore su percorsi non misurati si limita per costruzione
+
+
 ## [1.1.28] - 2026-10-16
 - una affermazione su un sistema esterno si misura prima di copiarla; un negativo registrato come permanente chiede la prova della risposta; una capacità nuova su una porta condivisa va su un'interfaccia che la estende
 

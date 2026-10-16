@@ -125,6 +125,13 @@ The rules that make it bite:
 - **A guard, dedup or normalisation for an input that "could" occur starts with a count of it in real data.** Zero
   rows means the guard protects a population that does not exist and is dropped; a few rows are repaired once at the
   source. A tolerance that guesses an identity from text is the same patch in another form.
+- **An old plan's design is a hypothesis about the code of its day: re-read what exists now before building from it.**
+  A facility added since (a generic store with the retention the plan asked for, a shared helper) can make the planned
+  table or module unnecessary — the work shrinks to a new row type — and half of an old acceptance list may already be
+  met. Say what was planned, what exists, and build only the difference.
+- **A recorder or observer added to paths whose volume nobody measured is bounded by construction first** (a ceiling per
+  request, deduplication of what is re-emitted) and measured afterwards from what it wrote — not sized from a rate
+  guessed on the one path that was measured.
 - **Measured example**: a table storing a schedule's history held 276 rows, none carrying a user decision, none the
   matching rule would not rebuild from the ledger — around it had grown a write path, a known defect, a panel and a
   repair button. **One query months earlier would have said it should be a query.**
