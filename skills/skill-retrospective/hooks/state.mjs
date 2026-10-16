@@ -4,7 +4,7 @@
  * The project is `CLAUDE_PROJECT_DIR`, which the harness sets for every hook (tests point it at a temporary folder),
  * and nothing else. `process.cwd()` is NOT the project: the shell the model works in drifts into subfolders. Nor is
  * the hooks' own folder: they run from the plugin, installed in the user's plugin cache, far from any project.
- * Without `CLAUDE_PROJECT_DIR` there is no project: the hook does nothing and write no state anywhere (fail-open).
+ * Without `CLAUDE_PROJECT_DIR` there is no project: both hooks do nothing and write no state anywhere (fail-open).
  *
  * The state folder ignores itself (a `.gitignore` holding `*`), so the skill never has to edit the project's own
  * `.gitignore`: the state is per machine and never belongs in git.

@@ -42,7 +42,7 @@ copy by hand.
 ## Skill Retrospective On This Repo
 
 - This repository runs `skill-retrospective` on its own work: install the plugin at user scope
-  (`claude plugin install skill-retrospective@pablolok-skills --scope user`); its hook comes with it, and the close
+  (`claude plugin install skill-retrospective@pablolok-skills --scope user`); its two hooks come with it, and the close
   steps of `backlog` and `jira-workflow` invoke it.
 - A lesson about a skill is written in `skills/<skill>/` and published with the flow above — never in an installed
   copy (the plugin cache), which the next update overwrites.

@@ -1,4 +1,4 @@
-"""Tests for the skill-retrospective skill: its plugin declares the skill log alone, and its Node hook suite passes."""
+"""Tests for the skill-retrospective skill: its plugin declares the two hooks, and its Node hook suite passes."""
 
 from __future__ import annotations
 
@@ -14,17 +14,17 @@ PUBLISHED = REPO / "published" / "workflow" / "skill-retrospective"
 
 
 class TestPluginEntry(unittest.TestCase):
-    """The plugin wires one hook, the skill log; no Stop hook holds a turn — the close of the work asks instead."""
+    """The plugin wires the hooks: each declared command runs a hook file the published folder carries."""
 
-    def test_only_the_skill_log_is_declared_and_shipped(self) -> None:
+    def test_both_hooks_are_declared_and_shipped(self) -> None:
         entry = json.loads((PUBLISHED / "plugin-entry.json").read_text(encoding="utf-8"))
-        self.assertEqual(list(entry["hooks"]), ["PostToolUse"], "no Stop hook: the close steps invoke the skill")
         self.assertEqual(entry["hooks"]["PostToolUse"][0]["matcher"], "Skill")
         commands = [hook["command"] for event in entry["hooks"].values() for group in event for hook in group["hooks"]]
-        self.assertEqual(len(commands), 1)
-        self.assertIn("${CLAUDE_PLUGIN_ROOT}/hooks/log-skill-use.mjs", commands[0])
-        self.assertTrue((PUBLISHED / "hooks" / "log-skill-use.mjs").is_file())
-        self.assertFalse((PUBLISHED / "hooks" / "retrospective-hint.mjs").exists(), "publish the removal")
+        self.assertEqual(len(commands), 2)
+        for script in ("log-skill-use.mjs", "retrospective-hint.mjs"):
+            [command] = [command for command in commands if script in command]
+            self.assertIn("${CLAUDE_PLUGIN_ROOT}/hooks/", command)
+            self.assertTrue((PUBLISHED / "hooks" / script).is_file(), script)
 
 
 @unittest.skipUnless(shutil.which("node"), "node is not installed")

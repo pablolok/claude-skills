@@ -1,6 +1,6 @@
 ---
 name: skill-retrospective
-description: Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.
+description: Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it, and a hook asks after an archive or a run of commits. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.
 ---
 
 # Skill retrospective — every piece of work leaves the skills better
@@ -10,8 +10,10 @@ cleaning the skill up, not by adding to it. A skill is working instructions, not
 changes what is done next time, and what turned out wrong or useless goes away. A skill that only grows ends up slow
 to read and contradicting itself.
 
-**When**: once, at the end of a piece of work — never during it. The close step of the `backlog` skill (an entry
-archived) and of `jira-workflow` (a parent ticket or a piece of work closed) invoke it; no hook holds a turn to ask.
+**When**: at the end of each piece of work — an entry or ticket closed (the close steps of `backlog` and
+`jira-workflow` invoke it), a round of a multi-round loop accepted or rejected, the user correcting the method — never in
+the middle of a step. Work tracked nowhere still gets one: the plugin's `Stop` hook holds the turn once when, since the
+last retrospective, a backlog entry was archived or enough commits piled up.
 
 ## 1. Evidence (what happened, measured)
 

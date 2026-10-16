@@ -128,8 +128,8 @@
     {
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
-      "description": "Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
-      "version": "2.0.0",
+      "description": "Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it, and a hook asks after an archive or a run of commits. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
+      "version": "2.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -143,6 +143,17 @@
               {
                 "type": "command",
                 "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/log-skill-use.mjs\"",
+                "timeout": 10
+              }
+            ]
+          }
+        ],
+        "Stop": [
+          {
+            "hooks": [
+              {
+                "type": "command",
+                "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/retrospective-hint.mjs\"",
                 "timeout": 10
               }
             ]
