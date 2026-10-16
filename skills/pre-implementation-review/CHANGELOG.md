@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.28] - 2026-10-16
+- una affermazione su un sistema esterno si misura prima di copiarla; un negativo registrato come permanente chiede la prova della risposta; una capacità nuova su una porta condivisa va su un'interfaccia che la estende
+
+
 ## [1.1.27] - 2026-10-15
 - una guardia o un dedup per un input ipotetico parte da un conteggio sui dati veri
 

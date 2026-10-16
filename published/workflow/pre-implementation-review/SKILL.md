@@ -167,6 +167,10 @@ These are not soft smells to mention — if the change would introduce one, the 
   The same for a feature that **shows** existing data: run the real producer on real input and look at every field
   the feature will display before designing it — a field that comes back empty there (a parser reading one layout
   of a table and not another) is a defect inside the feature's scope, not after it.
+  The same for a **claim about an outside system** (its protocol, its gate, its limit) in a comment, an older
+  document or an entry: probe the system itself before designing around the claim or copying it into a new document —
+  comments describe the day they were written (a header saying "no token needed" outlived the site change by months,
+  and the live code beneath it did the opposite).
 - **The field's standard method before your own.** When the change enters a problem the project has not solved before
   and the industry solves a known way (a rendering or modelling technique, a sync protocol, a scheduling algorithm),
   find that method first — a short research with sources — and design from it. Home-made attempts fail one at a time
@@ -208,6 +212,11 @@ These are not soft smells to mention — if the change would introduce one, the 
   produced an answer, the others are kept beside it), and a retry the remaining budget cannot finish is not started.
   A fallback **reports the error it caught** before trying the next way: swallowed, the next attempt's failure is all
   that shows (a loader that missed a local file for one reason surfaced only the remote lookup's "not found").
+  A **negative recorded as permanent** ("asked, nobody knew") needs proof the asker really got an answer: a layer that
+  folds a timeout or a throw into its empty result must also report who answered, and the recorder writes only for those
+  (and only ever less, never more).
+- **A capability added to a port many consumers use goes on an extending interface or an optional method, not on the
+  shared one** — the consumers and their test fakes stay untouched, and only the new caller asks for the richer type.
 - **A write decided from reads that refresh independently is conditioned where it lands.** When client code
   decides to write by combining reads that come back separately (a summary and a settings record, two cached
   queries), one can be newer than the other, and the decision can undo a change the user just made (an automatic
