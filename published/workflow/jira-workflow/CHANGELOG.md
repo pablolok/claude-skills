@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.2] - 2026-10-18
+- A transition rejects fields that are not on its screen: fixVersions goes in with an edit before it, the resolution after.
+
+
 ## [1.1.1] - 2026-10-16
 - Only an agent that has the connector makes the calls: check a worker's tools before delegating a tracker step
 

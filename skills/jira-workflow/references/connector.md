@@ -7,8 +7,9 @@ have each cost a wrong result once. Read them before an operation you have not r
   field's global context cannot be narrowed to some issue types. Guard such a field with the review script, not with
   the screen alone.
 - `timetracking` is not accepted at creation: set it right after with `editJiraIssue`. The same for sub-tasks.
-- A transition to a done status does not accept `resolution` (400 `TRANSITION_FAILED`): transition first, then
-  `editJiraIssue` with the resolution.
+- A transition accepts only the fields on its own screen: `resolution` to a done status and `fixVersions` are
+  rejected (400, "not on the appropriate screen"). Set `fixVersions` with `editJiraIssue` before the transition, the
+  resolution right after it.
 - Editing a worklog moves the remaining estimate: on a closed ticket, write `remainingEstimate: "0m"` again after.
 - A goal links to a ticket through `addConnectionsToGoals` with the goal's **ARI** (from `getGoal`). With the goal's
   key it answers `[]`, no error, and links nothing.
