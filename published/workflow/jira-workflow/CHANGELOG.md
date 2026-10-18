@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3] - 2026-10-18
+- editJiraIssue fields all inside fields; transitionJiraIssue takes transitionId
+
+
 ## [1.1.2] - 2026-10-18
 - A transition rejects fields that are not on its screen: fixVersions goes in with an edit before it, the resolution after.
 
