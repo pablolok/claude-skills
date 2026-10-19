@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.2] - 2026-10-20
+- a field value of several paragraphs is read whole: a blank line no longer ends it, so the GitHub mirror stops truncating a Summary to its first paragraph and reporting up to date
+
+
 ## [1.9.1] - 2026-10-19
 - git mv stages both sides: never git add the old path after archiving
 

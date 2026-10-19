@@ -143,7 +143,9 @@ const FIELD = /^[-*]\s+\*\*([^*]+)\*\*\s*:\s*(.*)$/;
 /**
  * An entry block's fields, keyed by their CANONICAL name (`Architecture`), read under the project's name for each
  * (`Architettura`) — so the gates ask for one name whatever the register's language. A value that wraps onto
- * indented lines is joined; an unindented line or a blank one ends it.
+ * indented lines is joined, paragraphs included: a blank line does not end it (an indented block after one stays in
+ * its list item, as in markdown), the next unindented line does. Ending it at the blank line cut a several-paragraph
+ * Summary to its first paragraph — and the GitHub mirror, comparing the cut body with itself, reported «up to date».
  */
 export function entryFields(block, config) {
   const canonicalOf = new Map();
@@ -162,6 +164,7 @@ export function entryFields(block, config) {
       fields[last] = `${fields[last]} ${line.trim()}`.trim();
       continue;
     }
+    if (line.trim() === "") continue;
     last = null;
   }
   return fields;

@@ -146,6 +146,31 @@ test("open entries: only under ## Open, with titles and wrapped values", () => {
   assert.deepEqual(openEntries("# no open section\n## BKLG-001 — x\n"), []);
 });
 
+test("a value of several paragraphs is read whole: a blank line does not end it, an unindented line does", () => {
+  const block = [
+    "## BKLG-007 — Seven",
+    "- **Status**: open",
+    "- **Summary**: first paragraph",
+    "  still the first",
+    "",
+    "  second paragraph, after a blank line",
+    "",
+    "  third paragraph",
+    "- **Doc**: —",
+    "",
+    "Unindented text after a blank line belongs to no field.",
+    "  and an indented line after that belongs to none either",
+  ].join("\n");
+  const fields = entryFields(block);
+  assert.equal(
+    fields.Summary,
+    "first paragraph still the first second paragraph, after a blank line third paragraph",
+  );
+  // Control: the next field opens normally, and the stray text above stayed out of it.
+  assert.equal(fields.Doc, "—");
+  assert.equal(fields.Status, "open");
+});
+
 test("open entries: the section is the project's `words.open`", () => {
   const text = "# Registro\n\n## Aperte\n\n### BKLG-003 — Tre\n- **Status**: open\n\n## Chiuse\n- old\n";
   const config = parseConfig(JSON.stringify({ words: { open: "Aperte" } }));
