@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.1] - 2026-10-19
+- git mv stages both sides: never git add the old path after archiving
+
+
 ## [1.9.0] - 2026-10-16
 - The core keeps the rules; closing and archiving, phase tables, the dashboard, the GitHub mirror, the Architecture field and the gates move to references/, each named at its step. The close now runs the skill-retrospective skill: the archived entry is the moment it is due.
 

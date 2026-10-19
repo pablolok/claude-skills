@@ -107,7 +107,8 @@ The project playbook fixes these; the skill never assumes them.
 ## 8. Goals and releases
 
 - At every status change, update the goals and key results the ticket counts in: the "N of M" count and an update
-  with the score.
+  with the score. Count with **one** query over every Epic (`parent in (<keys>)`, fields `parent` and `status` only),
+  tallied locally — never one query per Epic: a set of counts is where calls get fired together.
 - A released version holds only closed tickets. If the work is live but its verification is not, the verification
   becomes a ticket of its own.
 - A verification that fails becomes a new Bug that **blocks** the verification ticket: the verification stays open,
@@ -127,7 +128,8 @@ estimates, Epics, the board's field, key results, the counts only a script can c
 
 - Read the `cloudId` once per session and pass it on every call.
 - `discover` an operation you do not know, then run it with `executeRead`, `executeWrite` or `executeDestructive`.
-- **One call at a time.** Parallel calls — several agents, or one batch — hit the rate limit (HTTP 429; on a free site
+- **One call at a time**, independent reads included: a general rule to parallelise independent work does not
+  reach the tracker. Parallel calls — several agents, or one batch — hit the rate limit (HTTP 429; on a free site
   past 4–5 agents, and an hourly cap after about 1000 calls). On a 429, stop and tell the user; never wait in a loop.
   A written rule was still broken under load: where the project can, a hook enforces it (a lock taken atomically
   before each connector call, with an expiry). Release it on **every** outcome — success, failure and a permission

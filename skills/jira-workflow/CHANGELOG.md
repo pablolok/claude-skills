@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.6] - 2026-10-19
+- Goal counts in one query over every Epic; one call at a time includes independent reads
+
+
 ## [1.1.5] - 2026-10-19
 - A user's sub-task the conversation completes is closed in that step's round
 
