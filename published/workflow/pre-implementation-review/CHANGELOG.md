@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.1] - 2026-10-20
+- a change to a rule many records pass through is run old and new over the real population and the records whose result changed are listed by kind
+
+
 ## [1.2.0] - 2026-10-16
 - The core is cut to the review itself (when, the steps, the hard fails, the output); the full rules and their cases move to references/ (derivability, design smells, hard fails, decision rules, file placement), each named by the core with when to read it. No rule removed; the rules of 1.1.28 and 1.1.29 included.
 

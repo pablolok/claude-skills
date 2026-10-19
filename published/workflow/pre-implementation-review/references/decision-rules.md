@@ -95,6 +95,9 @@ change touches before writing the note.
   floating. Name the region or set it may act on, and show what it removed before keeping the result.
   A **scripted bulk edit is an edit**: the review comes before the script, not after it, and the script's own output
   (files changed, what it rewrote) is looked at before it is kept.
+  **A change to a rule many records pass through** (a parser, a classifier, a normaliser) is run old and new over the
+  whole real population, and the records whose result changed are listed by kind before it ships: the one case it was
+  written for is not the population (a parser fix meant for one field also lengthened nine others).
 - **A check, computation or export whose result depends on an ambient mode establishes that mode itself.** A global
   setting (a display or preview mode, a simulation state, a locale, a flag) is set for the run and restored after,
   never inherited from whatever the caller left: inherited, a validator ran against the inert state and passed

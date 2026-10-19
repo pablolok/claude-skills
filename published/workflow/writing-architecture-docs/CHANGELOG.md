@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.2] - 2026-10-20
+- every claim is verified at the source (a header comment or the brief can be wrong), and the skill is trimmed: anecdotes, the mermaid example and duplicated common-mistakes rows go
+
+
 ## [1.2.1] - 2026-10-11
 - The description carries no colon followed by a space, which strict YAML rejects in the frontmatter
 

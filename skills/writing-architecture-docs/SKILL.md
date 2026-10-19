@@ -99,8 +99,7 @@ A number **leaves** when the **CODE** changes, and **moves** between the first t
 weight (rule 3: numbers are never recycled).
 
 ⚠️ **There is no "Closed defects" section**: it is how the story climbs back in through the window — a closed item
-reads as current state. What an entry closed is **one row in "Who worked on it"** (rule 4). Measured on a real
-document: a table of closed defects and **no** "Who worked on it" section — exactly that swap.
+reads as current state. What an entry closed is **one row in "Who worked on it"** (rule 4).
 
 The same holds for the **empty** section: *"None"* under "Open defects" is information — it says there is no pending
 work on the area, not that nobody looked.
@@ -132,15 +131,17 @@ The skeleton is the easy part. What separates a useful document from a neat essa
    document can refer to them: "D4 disappears" is a sentence that can be checked. A defect without evidence is an
    opinion; a defect that does not come back on its own is a bug, and bugs belong in the spec.
 
-2. **The count is measured, not estimated.** A table of numbers — how many calls, how many covered, how many
-   forgotten — obtained with a command, not by eye. **And check the denominator**: counting "the domains with a
-   queued action" leaves out the reads nobody writes, and the hole shows at the end, when the work looked finished.
+2. **Every claim is verified at the source, and every count is measured.** A table of numbers — how many calls, how
+   many covered, how many forgotten — comes from a command, not from the eye, and its denominator is checked:
+   counting "the domains with a queued action" leaves out the reads nobody writes. A statement about behaviour
+   (a table cell, an invariant) is read in the body of the code it describes — a header comment can say the opposite
+   of what the function does — and the brief or entry that asked for the document is a hypothesis, checked the same
+   way before its premise is written down.
 
 3. **A CLOSED defect leaves the document.** The defects section holds only the **open** ones: an architecture document
    describes how the code is *now*, and a closed item no longer does — it reads as current state, which is how a
-   document becomes false without any line being wrong. Measured on one document: four closed defects out of seven
-   took **287 lines** of past-tense prose, more than half the section, and the reader had to work out which were
-   still true. **Where the story goes**: into the **entry** that closed the defect (rule 4).
+   document becomes false without any line being wrong, and the reader has to work out which items are still true.
+   **Where the story goes**: into the **entry** that closed the defect (rule 4).
    ⚠️ **Numbers are never recycled**, and the document says which have left and toward which entry: the closed
    entries and the commits that cite `D2` still exist, and a new `D2` would make them lie.
 
@@ -172,9 +173,8 @@ The skeleton is the easy part. What separates a useful document from a neat essa
 
    ⚠️ **`> Corrected/Updated on <date>` blocks are TRANSIENT, not an archive.** They serve while a false sentence is
    still in circulation and someone might remember it; then the sentence is rewritten right and the block goes,
-   because a new reader has nothing to unlearn. Measured: two documents carried **21** and **9** of them — at that
-   point they are no longer corrections, they are a second past-tense document wedged inside the first. The
-   traceability they defended is not lost: it is in `git log`, in the linked entry and in the list's row.
+   because a new reader has nothing to unlearn. Piled up, they are a second past-tense document wedged inside the
+   first; the traceability they defended is in `git log`, in the linked entry and in the list's row.
 
    The test, on any paragraph: **does it describe how the code is now?** If it is in the past tense, or names a closed
    entry to explain *why* something changed, it goes into the entry.
@@ -199,11 +199,7 @@ The skeleton is the easy part. What separates a useful document from a neat essa
    the rule easiest to skip, because the prose is already being written and the `.mmd` is another file — and the cost
    of skipping is lopsided: **the diagram is what gets looked at first**, so a right paragraph over an old picture
    reads as a right picture and a confusing paragraph. A `> Updated on <date>` block repairs nothing if the drawing
-   above still says the old thing.
-
-   Measured twice in one session: the prose of a first gate updated while its two diagrams still said "compares two
-   strings"; then, fixing a second gate, its node left with only the label "fail-open". Neither mistake is visible
-   rereading the text.
+   above still says the old thing; the mistake is invisible rereading the text.
 
    Three moves, in this order, every time a change touches a section that has a diagram:
    - **grep the `.mmd` for the names you are changing** (a renamed function, a new field, a branch that disappears).
@@ -211,8 +207,7 @@ The skeleton is the easy part. What separates a useful document from a neat essa
    - **regenerate and look at the sizes**: an absurd ratio, or a file whose size does not change, says the render did
      not take what you thought.
    - **ask whether the change opened a section without a diagram.** If a section has just gained a real decision and
-     its twin has a drawing, the missing one is a hole, not a choice — the same day, the second gate turned out to have
-     no diagram while the first had had one from day one.
+     its twin has a drawing, the missing one is a hole, not a choice.
 
 ## Diagrams: one per question
 
@@ -225,19 +220,6 @@ The skeleton is the easy part. What separates a useful document from a neat essa
 
 One diagram per question: two diagrams that say the same thing mean the question was one. **The diagram carries the
 structure, the prose carries the numbers** — a label that wants a sentence is prose in disguise.
-
-The chosen and the rejected option read at a glance:
-
-```mermaid
-flowchart LR
-    L1["L1 — in the use case<br/>(today)"] --> L1N["59 places must remember it.<br/>40 did not."]
-    L2["L2 — in the transport<br/>(proposed)"] --> L2N["The use case declares a command.<br/>A single executor decides when."]
-
-    classDef bad fill:#5c1a1a,stroke:#ff8a80,color:#ffffff
-    classDef good fill:#14532d,stroke:#69f0ae,color:#ffffff
-    class L2 good
-    class L1 bad
-```
 
 **From three diagrams up, live blocks do not show** — the VS Code preview cancels the render in progress and leaves
 empty boxes, with no error. Above that threshold the sources live in `diagrams/*.mmd` and the document embeds the
@@ -263,13 +245,10 @@ and under each image goes the line that makes the `.mmd` the source of truth:
 | mistake | how to spot it | what to do |
 |---|---|---|
 | it describes instead of deciding | no rejected option, no cost | section 2, or the document was not needed |
-| numbers by eye | "about", "most of" | measure them, and check the denominator |
 | it repeats the spec | half a page of the report | link the spec |
 | defects as a bug list | "an `await` is missing in X" | it is a bug: spec or backlog, not here |
 | the diagram explains | labels a sentence long | the sentence goes in the prose, the diagram stays structure |
 | a decorative diagram | it answers no question of the table | remove it |
-| the story of the fix stays in the document | past-tense paragraphs: "it was broken", "before it did", "closed by [[BKLG-…]] because…" | rewrite the present right; the story goes into the entry, and here stays **one line** in "Who worked on it" (rule 4) |
-| dated blocks piling up | more than two or three `> Corrected/Updated on …` in one file | they are transient: absorb them into the present-tense text and remove them |
+| the story of the fix, or dated correction blocks, stay in the document | past-tense paragraphs ("it was broken", "closed by [[BKLG-…]] because…"), several `> Corrected on …` | rule 4: rewrite the present right; the story goes into the entry, one line stays in "Who worked on it" |
 | the frame tells the WORK, not the code | headings like "the case that started all this", "what does NOT change" (in a stable document), "axis A: OPEN" | the content is often fine where it is: change the **frame**. A measured case is a **worked example of the rule** ("the gate at work, with the numbers"), not the origin of an entry; invariants are **properties the code keeps**, not promises; a state is "they diverge", not "OPEN" |
-| phases that list files | "F2 — changes to network.ts" | write what it delivers |
-| **updated prose over an old diagram** | the paragraph says one thing, the picture above it another | regenerate the `.mmd` **in the same pass**, never "later" — rule 9 |
+| phases that list files, or prose updated over an old diagram | "F2 — changes to network.ts"; the picture says the old thing | rules 8 and 9: write what a phase delivers; regenerate the `.mmd` in the same pass |
