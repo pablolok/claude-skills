@@ -129,7 +129,8 @@ Heuristics:
   sequence, or start the one instance yourself and tell every brief to attach to it and never open another.
 - Workers in one working tree still share its index: a worker's `git mv` stages its files. When you commit one
   task while another runs, stage by path and read `git diff --cached --stat` before committing; unstage what is
-  not this task's.
+  not this task's. Chain the add to the commit with `&&`: one path that no longer exists (the old side of a move)
+  makes the whole add stage nothing, and a commit run after it anyway goes out with only what was staged before.
 - A worker isolated in its own worktree may start from the repository's default branch, not from the branch you work
   on: the brief names the base commit and makes resetting to it the worker's first step; on return, check the base
   before taking the diff.

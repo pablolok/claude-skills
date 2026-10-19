@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.5] - 2026-10-19
+- A user's sub-task the conversation completes is closed in that step's round
+
+
 ## [1.1.4] - 2026-10-19
 - The real hours at close are the worklogs summed from the tracker, never a recalled total
 

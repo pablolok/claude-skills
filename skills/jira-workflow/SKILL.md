@@ -45,7 +45,9 @@ The project playbook fixes these; the skill never assumes them.
   deployed, verified live, waiting for the user).
 - **A parent with an open sub-task stays in progress.** The waiting-for-user status is only for a ticket with no open
   work that waits for the user alone. A wait for the user's approval is written in that step's sub-task, never in the
-  parent's status. Look at the sub-tasks before moving a parent.
+  parent's status. Look at the sub-tasks before moving a parent. A sub-task assigned to the user that the
+  conversation completes (a decision, a specification given in chat) is closed in that step's round, with a comment
+  quoting where it was given: left for the end, it holds the parent back.
 - **When a parent closes, or the piece of work it tracks ends, run the `skill-retrospective` skill** (when it is
   installed) on the skills the work used: the close is the end of a piece of work, the moment the retrospective is
   due — nothing else asks for it.

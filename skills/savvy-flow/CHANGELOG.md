@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.1] - 2026-10-19
+- Chain the add to the commit with &&: a stale path stages nothing
+
+
 ## [1.5.0] - 2026-10-15
 - Tasks carry a topic and small tasks of one topic and tier merge into one brief; a new worker is started only when no registered worker of that tier covers the topic; Light and Medium run on Sonnet with lean tools (files, shell, progress), which cut a fresh worker's fixed context from about 60-90k to 8k tokens with no loss of first-pass quality on the measured tasks; briefs name the files to read and load no skill the task does not need
 

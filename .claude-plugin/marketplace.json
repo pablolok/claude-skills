@@ -55,7 +55,7 @@
       "name": "jira-workflow",
       "source": "./published/workflow/jira-workflow",
       "description": "Use whenever work is tracked in Jira — before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook.",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -110,7 +110,7 @@
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
       "description": "Orchestrated delivery flow. The session model plans, owns design, delegates implementation to tiered worker subagents (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.5.0",
+      "version": "1.5.1",
       "category": "workflow",
       "strict": false,
       "skills": [
