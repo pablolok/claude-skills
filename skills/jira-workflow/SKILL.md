@@ -85,7 +85,8 @@ The project playbook fixes these; the skill never assumes them.
 - A closed ticket has the estimate from its size, a worklog with the real hours, and remaining `0m` written on purpose.
 - When a ticket's scope changes, re-estimate it at once, with a comment.
 - **An estimate must match the real hours**, estimated from closed tickets of the same kind; at close, a gap of more
-  than twice, either way, is a defect whose cause goes in a comment.
+  than twice, either way, is a defect whose cause goes in a comment. The real hours are the sum of the worklogs read
+  back from the tracker, never a total recalled: a figure from memory hid a gap past twice.
 - Read `references/estimates.md` before writing the first points on a board, moving points between fields, sizing a
   kind of work for the first time, or explaining a gap.
 

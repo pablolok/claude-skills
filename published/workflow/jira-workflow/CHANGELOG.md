@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2026-10-19
+- The real hours at close are the worklogs summed from the tracker, never a recalled total
+
+
 ## [1.1.3] - 2026-10-18
 - editJiraIssue fields all inside fields; transitionJiraIssue takes transitionId
 
