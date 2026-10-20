@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.7] - 2026-10-21
+- Derivability also covers an attribute copied onto a queued or persisted record: a consumer holding only an id reads it from the owner
+
+
 ## [1.2.6] - 2026-10-20
 - a reported symptom is reproduced on the real surface and the chain located stage by stage before a cause read in the code is designed around; a list of declared refusals owes its date and transports, is re-measured with the real consumer, and its tests inject a member
 

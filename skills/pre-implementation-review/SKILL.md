@@ -38,8 +38,9 @@ Before writing code, a short implementation-readiness note that answers, in this
 
 ## Derivability — ask it FIRST, and answer it with a measurement
 
-**Before any other question**, for every field, table, cache, snapshot or sync mechanism the change would introduce
-*or inherit*: **what does it hold that cannot be derived from what is already there?** Answer with a **query against
+**Before any other question**, for every field, table, cache, snapshot, sync mechanism or attribute copied onto a
+queued or persisted record the change would introduce *or inherit* (a consumer that holds only an id reads the
+attribute from the entity's owner; it does not widen the record to carry it): **what does it hold that cannot be derived from what is already there?** Answer with a **query against
 real data**, not an estimate:
 
 - **"Nothing"** → do not store it, derive it. The mechanism is the defect.
