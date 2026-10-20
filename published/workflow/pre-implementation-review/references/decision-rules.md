@@ -100,6 +100,10 @@ change touches before writing the note.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.
+  The same for a **reported symptom**: a cause read from the code is a hypothesis until the symptom is reproduced on
+  the real surface, and the chain is located by observing each stage (was the request made, answered, decoded?) — zero
+  requests means the decision sits upstream of the fetch, where the downstream fallback that looked guilty never
+  runs (a real defect found by reading was not the one reported).
   A number **read once** (by eye on an image, or by a delegate) that will set a target or be reported is read a second,
   independent way first (another view, another method): one landmark mistaken for another set a target 30 % off.
 - **A step that deletes or rewrites by a rule is bounded to where the rule is meant, and its output looked at.**
@@ -163,6 +167,11 @@ change touches before writing the note.
   (a path shape, a response behaviour, a field) and list nothing: a list widened one value at a time fails on the
   next item, and only after a deploy. When several consumers read the same rule (a harvest, a direct read, an
   allowlist), derive all of them from one fragment, or widening one leaves the others refusing.
+  A list of **refusals** (hosts or routes declared dead) is a measurement with an expiry that never fails by itself:
+  its consumers skip before any request, so nothing errors while the declaration goes stale. An entry carries its
+  date and the transports tried, is re-measured with the real consumer (the page's own request), and its tests
+  inject a member so the mechanism keeps a proof when the list is empty — a test asserting the declared refusal
+  verifies nothing, it repeats the declaration.
 - **Find by name only with the owner's name for it.** A shared helper that looks something up by a conventional name
   (a part called "main", a field called "id") takes the name from the member that owns that vocabulary, and says so
   when it finds nothing — a lookup that silently did nothing hid that one member names the part differently.
