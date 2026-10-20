@@ -21,7 +21,7 @@ Task from the user: $ARGUMENTS
 If the tool `mcp__savvy-progress__progress` is available, keep it current; skip silently if it is not. Call it:
 - after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `savvy-` prefix, `after` the numbers of the tasks it waits for), `phase: "delegate"` (or `"design"` while in section 2);
 - each time a task is accepted in review: `done` (accepted so far); switch `phase` to `"review"` while reviewing;
-- in that same call, drop the accepted task from `tasks` (keep `total` and `done`): the panel lists as "Planned" every task in `tasks` it cannot match to a visible run, and a finished run stops being visible, so an accepted task left in the list reads as work not started. `tasks` holds only the tasks still open, numbered again from 1, with `after` renumbered to match;
+- in that same call, drop the accepted task from `tasks`, and pass `total` and `done` again in that call (a call with `tasks` alone resets `total` to the length of the list and the bar reads 1/1): the panel lists as "Planned" every task in `tasks` it cannot match to a visible run, and a finished run stops being visible, so an accepted task left in the list reads as work not started. `tasks` holds only the tasks still open, numbered again from 1, with `after` renumbered to match;
 - if re-planning changes the tasks: the new `tasks` and `total`;
 - once at close: `finished: true`.
 

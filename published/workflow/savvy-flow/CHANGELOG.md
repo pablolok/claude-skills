@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.5] - 2026-10-20
+- Re-send total and done with tasks: tasks alone resets total to the list length
+
+
 ## [1.5.4] - 2026-10-20
 - Accepted tasks leave the tasks list: the panel shows them as Planned once their run is gone
 
