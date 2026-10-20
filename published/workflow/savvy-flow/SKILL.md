@@ -177,4 +177,10 @@ Cap at two return rounds per task; after that, re-plan or ask the user.
 
 ## 6. Close
 
+Before the report, leave the repository with only the branches it had before the flow, locally and on the remote:
+take what the workers' worktrees hold that is still needed, then remove every worker worktree
+(`git worktree remove --force`) and its branch (`git branch -D`), `git worktree prune`, and read `git worktree list`,
+`git branch -a` and the remote's heads to confirm. A worker's worktree is removed as soon as its diff is integrated,
+not left for the end: the user reads every leftover branch in their git client as work still open.
+
 Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration.

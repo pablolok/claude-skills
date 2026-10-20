@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.2] - 2026-10-20
+- Close: remove every worker worktree and branch once integrated, leaving only the branches the repository had before the flow
+
+
 ## [1.5.1] - 2026-10-19
 - Chain the add to the commit with &&: a stale path stages nothing
 
