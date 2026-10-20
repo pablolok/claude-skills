@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.6] - 2026-10-20
+- brief di un worker isolato: comandi shell semplici
+
+
 ## [1.5.5] - 2026-10-20
 - Re-send total and done with tasks: tasks alone resets total to the list length
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.2] - 2026-10-20
+- valore libero sotto un vincolo di unicita': letture su tutto l'ambito, marcatore nel prefisso
+
+
 ## [1.2.1] - 2026-10-20
 - a change to a rule many records pass through is run old and new over the real population and the records whose result changed are listed by kind
 

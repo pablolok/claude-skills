@@ -80,6 +80,10 @@ change touches before writing the note.
   would have failed only once the constraint was live, with a generic error. The same holds the other way: a **new
   writer** checks every constraint already on the fields it writes, through the project's shared limits if it has
   them, so a value out of range is refused with the field's message, not by the store with a generic error.
+  A writer that picks a **free value under a uniqueness constraint** reads the taken values over the constraint's
+  whole scope (unique per user → every row of the user, not only the rows the operation touches: a row moved
+  elsewhere still holds its value), and a marker it adds to a composite value (a copy number) goes where no
+  free-text part can produce it — the prefix, not after a free-text last segment.
   A new **automatic** writer (one row per period of a schedule, per item of an import) also reopens, in the same
   change, every exemption or assumption justified by how the data used to be written — small, by hand, one per
   user: an unpaginated read exempted from a guard because the data was small truncates silently once a generator

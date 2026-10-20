@@ -137,7 +137,9 @@ Heuristics:
   makes the whole add stage nothing, and a commit run after it anyway goes out with only what was staged before.
 - A worker isolated in its own worktree may start from the repository's default branch, not from the branch you work
   on: the brief names the base commit and makes resetting to it the worker's first step; on return, check the base
-  before taking the diff.
+  before taking the diff. The brief also asks it for plain shell commands — explicit paths, no command substitution,
+  no runtime variables, one git command at a time: the isolation guard refuses any command it cannot prove stays
+  inside the worktree, and each refusal costs the worker a round.
 - **Answer quick questions yourself.** One that needs no file work gets no worker.
 - **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
   one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a
