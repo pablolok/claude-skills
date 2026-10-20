@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.4] - 2026-10-20
+- Accepted tasks leave the tasks list: the panel shows them as Planned once their run is gone
+
+
 ## [1.5.3] - 2026-10-20
 - Panel titles: plan before the first worker, verbatim descriptions, SendMessage summary, relaunch keeps the title
 
