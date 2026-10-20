@@ -24,7 +24,10 @@ If the tool `mcp__savvy-progress__progress` is available, keep it current; skip 
 - if re-planning changes the tasks: the new `tasks` and `total`;
 - once at close: `finished: true`.
 
-When delegating, pass the task's `title` verbatim as the Agent tool's `description` (a return round reuses it too): the agents panel matches runs to planned tasks by it.
+When delegating, pass the task's `title` verbatim as the Agent tool's `description` (a return round reuses it too): the agents panel matches runs to planned tasks by it. A run whose name differs stays "Planned" in the panel after its task is committed, which the user reads as work not done. So:
+- send the plan to the bar **before** the first worker starts, and copy each `description` from it character for character, never a shorter or reworded name;
+- a task handed to a worker already running (SendMessage) carries the task's title as its `summary`;
+- a worker relaunched for the same task (a wrong base, a crash) keeps the same title; a task that changes is re-planned in the bar first, then delegated under its new title.
 
 ## Host tools
 

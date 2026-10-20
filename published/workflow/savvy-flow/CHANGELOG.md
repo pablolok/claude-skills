@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.3] - 2026-10-20
+- Panel titles: plan before the first worker, verbatim descriptions, SendMessage summary, relaunch keeps the title
+
+
 ## [1.5.2] - 2026-10-20
 - Close: remove every worker worktree and branch once integrated, leaving only the branches the repository had before the flow
 
