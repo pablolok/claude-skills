@@ -88,6 +88,15 @@ change touches before writing the note.
   change, every exemption or assumption justified by how the data used to be written — small, by hand, one per
   user: an unpaginated read exempted from a guard because the data was small truncates silently once a generator
   fills it.
+- **A follow-up write after a non-idempotent write that succeeded never turns the answer into a failure.** Labels
+  after an insert, a notice after a payment: when the follow-up fails, log it (codes and ids, no row values) and answer
+  success. An error makes the caller retry: with no idempotency key the record is created twice, with one the retry
+  answers "already done" and the follow-up never happens. If the follow-up matters, make it retryable on its own.
+- **A choice offered to a person is checked against every limit its write will enforce, before it is offered.**
+  Classify first by what makes the action impossible (a text longer than the column, a value of the wrong kind), then
+  by what makes it a preference: an item classed as a conflict offered "keep this" and "use that", both of which had
+  to store a text too long for the column, and every click failed. Resolve a stored reference against the full set and
+  filter only the choices: a name looked up among the choices alone showed "none" for a valid value of the other kind.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.

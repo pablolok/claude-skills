@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.11] - 2026-10-20
+- A shared function's contract change runs its callers' tests; no git stash in a shared working tree
+
+
 ## [1.0.10] - 2026-10-16
 - Two sentences that repeated diff-self-review (reading the staged diff) now name it instead.
 

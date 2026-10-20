@@ -82,6 +82,8 @@ you just made. Read `references/hard-fails.md` whenever the change touches code 
 - adds a capability to a port many consumers use — an extending interface, not the shared one;
 - writes from reads that refresh independently — condition the write where it lands;
 - adds a constraint to stored data, or a new (automatic) writer — every writer, every constraint;
+- writes again after a write that succeeded, or offers a choice a write must accept — the follow-up never fails the
+  first, the choice checked against the write's limits;
 - explains or reports a measurement — from the control flow, read twice;
 - deletes or rewrites by a rule or a script — bounded, its output looked at;
 - depends on an ambient mode, a tool's default or an unmeasured value;

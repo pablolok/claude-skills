@@ -53,6 +53,11 @@ Where you *are* expected to run gates, run them and read the output before decla
   or report), each against an independent count taken from the store itself — never on a sample, and never as
   "shows a value": a fix checked on one view and on "not empty" was declared done while other views still counted
   the same records twice.
+- **A change to a shared function's contract (what it throws, retries or returns) runs its callers' tests before the
+  full gate**: list its importers and run their tests with its own, because a caller's test may pin the old contract.
+  The "before" of a check is read with `git show HEAD:<file>` or in a separate worktree, never with `git stash` in a
+  working tree others share: the stash takes their edits too, and its pop can turn a staged move into an add and a
+  delete.
 - **Evidence is the runner's totals, read whole**: the count of tests run, passed, failed and skipped, compared with
   the suite's known size. A count far off means the runner ran something else (a folder taken as a single file, a
   filter, a skipped module) — a false red or a false green. Never through `| tail`/`| head`: they cut the totals off

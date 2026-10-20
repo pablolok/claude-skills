@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.5] - 2026-10-20
+- A follow-up write never fails the write that succeeded; a choice is checked against the write's limits before it is offered
+
+
 ## [1.2.4] - 2026-10-20
 - a new fact appended to an existing line of a list row is checked at the narrowest width: it gets its own element, and the note says whether the surface was seen
 
