@@ -58,7 +58,9 @@ The rules that make it bite:
 - **An old plan's design is a hypothesis about the code of its day: re-read what exists now before building from it.**
   A facility added since (a generic store with the retention the plan asked for, a shared helper) can make the planned
   table or module unnecessary — the work shrinks to a new row type — and half of an old acceptance list may already be
-  met. Say what was planned, what exists, and build only the difference.
+  met. Say what was planned, what exists, and build only the difference. A note saying "confirmed still true on <date>"
+  is the same kind of claim: re-run its check on the path the work will actually touch (a confirmation read a
+  neighbouring path, and the feature it said was missing had shipped).
 - **A recorder or observer added to paths whose volume nobody measured is bounded by construction first** (a ceiling per
   request, deduplication of what is re-emitted) and measured afterwards from what it wrote — not sized from a rate
   guessed on the one path that was measured.

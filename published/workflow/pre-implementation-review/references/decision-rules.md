@@ -102,6 +102,9 @@ change touches before writing the note.
   **A change to a rule many records pass through** (a parser, a classifier, a normaliser) is run old and new over the
   whole real population, and the records whose result changed are listed by kind before it ships: the one case it was
   written for is not the population (a parser fix meant for one field also lengthened nine others).
+  **Replacing a stored definition whole** (a function, view, trigger, policy) starts from the LIVE definition read from
+  the catalog, not the file that created it, and carries every clause of it (security mode, search path, guards,
+  grants); afterwards the same catalog read, plus one control, confirms each clause survived.
 - **A check, computation or export whose result depends on an ambient mode establishes that mode itself.** A global
   setting (a display or preview mode, a simulation state, a locale, a flag) is set for the run and restored after,
   never inherited from whatever the caller left: inherited, a validator ran against the inert state and passed

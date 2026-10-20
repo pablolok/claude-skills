@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.3] - 2026-10-20
+- replacing a stored definition whole starts from the live definition and is verified clause by clause; a 'confirmed still true' note is re-checked on the path the work touches
+
+
 ## [1.2.2] - 2026-10-20
 - valore libero sotto un vincolo di unicita': letture su tutto l'ambito, marcatore nel prefisso
 
