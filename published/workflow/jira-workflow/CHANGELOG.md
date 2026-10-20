@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.7] - 2026-10-20
+- un aggiornamento di un obiettivo porta la salute che ha gia'
+
+
 ## [1.1.6] - 2026-10-19
 - Goal counts in one query over every Epic; one call at a time includes independent reads
 

@@ -106,8 +106,10 @@ The project playbook fixes these; the skill never assumes them.
 
 ## 8. Goals and releases
 
-- At every status change, update the goals and key results the ticket counts in: the "N of M" count and an update
-  with the score. Count with **one** query over every Epic (`parent in (<keys>)`, fields `parent` and `status` only),
+- At every status change, update the goals and key results the ticket counts in: the "N of M" count and an update.
+  The update carries the health the goal already has — read its latest update's status first and resend it: an update
+  sent with a default status silently overwrote an "at risk" goal; a new count is not a new health. A numeric score
+  only where the playbook asks for one. Count with **one** query over every Epic (`parent in (<keys>)`, fields `parent` and `status` only),
   tallied locally — never one query per Epic: a set of counts is where calls get fired together.
 - A released version holds only closed tickets. If the work is live but its verification is not, the verification
   becomes a ticket of its own.
