@@ -3,6 +3,9 @@
 Flag each one the change would introduce or repeat, in the note, before code exists.
 
 - repeated UI widgets (dropdowns, pickers, menus, cards, dialogs, filters)
+- **a new fact appended to an existing line of a list row** — read what that line already does at the narrowest
+  target width (it truncates, wraps, clips): a fact that must be seen gets its own element, never the tail of a line
+  that cuts. Say in the note whether the surface was seen at that width; if it cannot be seen, say so and say who looks.
 - repeated business rules, mappings, validators, request builders, orchestration flows
 - a single module doing several responsibilities (a god handler mixing rule + IO + presentation) →
   split by responsibility, don't reuse-as-is

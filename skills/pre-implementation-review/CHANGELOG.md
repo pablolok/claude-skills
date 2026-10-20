@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.4] - 2026-10-20
+- a new fact appended to an existing line of a list row is checked at the narrowest width: it gets its own element, and the note says whether the surface was seen
+
+
 ## [1.2.3] - 2026-10-20
 - replacing a stored definition whole starts from the live definition and is verified clause by clause; a 'confirmed still true' note is re-checked on the path the work touches
 
