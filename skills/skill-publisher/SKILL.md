@@ -70,6 +70,10 @@ claude plugin validate .
   and regenerates the marketplace. Several skills: run it once per skill, then the checks once. With several new
   skills registered at once, every run but the last exits 2 (`no published skill at …` for one not copied yet):
   that is expected, so separate the runs with `;`, not `&&`, and judge the last run and the checks.
+  **Run it once per version**: every run bumps again, so a second run leaves a version nobody released and a launcher
+  that disagrees with `metadata.json`. When a check fails after the run, fix the source, restore only what the flow
+  generated (`git checkout -- skills/<skill>/metadata.json skills/<skill>/CHANGELOG.md published/<category>/<skill>
+  .claude-plugin/marketplace.json`), delete the published files that were new, and run it again.
 - `claude plugin validate .` checks the marketplace with every plugin in it. Never validate a `strict: false`
   plugin's folder alone: its manifest is its marketplace entry, so the folder has none by design and the check fails
   with "No manifest found"; adding one would make the install refuse it. The warnings about a mod's `plugin.json`
@@ -99,10 +103,16 @@ python tag_published.py --push
 - **This machine**: `claude plugin marketplace update pablolok-skills`, then
   `claude plugin update <skill>@pablolok-skills` (first time: `claude plugin install <skill>@pablolok-skills
   --scope user`). An open session keeps what it loaded at start: the new version is there after a restart
-  (`/compact` is not one). Install the new plugin before removing an old copy of the same skill, never the other way.
-- **claude.ai**: the marketplace syncs from GitHub on its own; to force it, *Customize → Plugins → Add → Manage
-  marketplaces → ⋮ → Check for updates*. A warning there (a description too long) means the plugin was synced
-  without that part: fix it here and publish again.
+  (`/compact` and `/reload-plugins` are not one). Install the new plugin before removing an old copy of the same
+  skill, never the other way. `claude plugin list --json` has **one entry per scope and per project**: update each
+  one that matters (`--scope user`, and the project's own by running the command in its folder without `--scope`,
+  which otherwise can pick another project), and read the versions back from the list.
+- **claude.ai and the Desktop app**: the marketplace syncs from GitHub on its own; to force it, *Customize → Plugins
+  → Add → Manage marketplaces → ⋮ → Check for updates*. A warning there (a description too long) means the plugin
+  was synced without that part: fix it here and publish again. The Desktop app keeps **its own copy** of each
+  plugin, apart from `~/.claude/plugins` (under `Claude-Data/<id>/rpm/…/plugin_*`, its `metadata.json` holds the
+  version): the sync updates the marketplace, and the copy follows only after the app is quit from its tray icon and
+  reopened. A mod's command in the Desktop app runs from that copy, so confirm the version there before testing it.
 - **Projects on plugins**: a project declares the plugins it needs in its `.claude/settings.json`
   (`extraKnownMarketplaces` + `enabledPlugins`); whoever trusts the folder in an interactive session is offered them.
   A cloud session never shows that trust dialog, so it installs none of them, and a plugin floats with the
