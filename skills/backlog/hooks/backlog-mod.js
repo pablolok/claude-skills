@@ -52,6 +52,7 @@ const WORDS = {
     cites: 'Cites', citedByL: 'Cited by', usedBy: 'Entries linking it', linksIn: 'Links in this document',
     notFound: 'Not found', failed: 'The dashboard could not read the register:',
     drawingDiagrams: 'Drawing the diagrams…', diagramAlt: 'Diagram',
+    diagramsFailed: (m) => `The diagrams could not be drawn: ${m}`,
     diagramNote: {
       'no-renderer': 'diagram not drawn: this project has no scripts/mermaid.mjs launcher',
       'render-failed': 'diagram not drawn: the renderer failed',
@@ -78,6 +79,7 @@ const WORDS = {
     cites: 'Cita', citedByL: 'Citata da', usedBy: 'Voci che lo collegano', linksIn: 'Link nel documento',
     notFound: 'Non trovato', failed: 'La dashboard non è riuscita a leggere il registro:',
     drawingDiagrams: 'Disegno i diagrammi…', diagramAlt: 'Diagramma',
+    diagramsFailed: (m) => `Non sono riuscito a disegnare i diagrammi: ${m}`,
     diagramNote: {
       'no-renderer': 'diagramma non disegnato: questo progetto non ha il lanciatore scripts/mermaid.mjs',
       'render-failed': 'diagramma non disegnato: il renderer è fallito',
@@ -275,7 +277,9 @@ async function loadDiagrams($, path) {
     if (run.exitCode !== 0) throw new Error((run.stderr || run.stdout || `exit ${run.exitCode}`).trim())
     diagrams.set(path, { status: 'done', segments: JSON.parse(run.stdout).segments })
   } catch (error) {
-    diagrams.set(path, { status: 'failed', message: String(error?.message ?? error) })
+    // The first line says what failed; a stack or a launcher's several lines would not fit the pane.
+    const message = String(error?.message ?? error).split(/\r?\n/).find((line) => line.trim()) ?? ''
+    diagrams.set(path, { status: 'failed', message: message.trim() })
   } finally {
     $.ui.invalidate('ui.render')
   }
@@ -771,6 +775,7 @@ function docView($, el, width) {
     dim(el, clip(view.path, width)),
     ...entryButtons($, el, T.usedBy, usedBy, 'usedby'),
     ...(diagrams.get(view.path)?.status === 'pending' ? [dim(el, T.drawingDiagrams)] : []),
+    ...(diagrams.get(view.path)?.status === 'failed' ? [dim(el, clip(T.diagramsFailed(diagrams.get(view.path).message), width))] : []),
     blank(el),
     ...body.elements,
     ...(docTargets.length

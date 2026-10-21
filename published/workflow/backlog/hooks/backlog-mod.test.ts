@@ -161,6 +161,25 @@ test('a diagram the script could not draw stays as its source, with the reason u
   expect(await ui.find({ type: 'Text', text: /scripts\/mermaid\.mjs|mermaid\.mjs/ })).toBeDefined()
 })
 
+test('when the diagram script fails the pane says so, with its first line, instead of showing the code in silence', async ($, on) => {
+  mock.clock(on)
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.cwd', () => ({ value: '/work' }))
+  on('fs.read', ($, e) => ({ value: e.path.endsWith('spec.md') ? DIAGRAM_DOC : '# Register' }))
+  on('process.run', ($, e) =>
+    e.argv[1].endsWith('dashboard-mermaid.mjs')
+      ? { value: { exitCode: 1, stdout: '', stderr: '\nchrome not found\n    at launch (render.js:1)\n' } }
+      : { value: { exitCode: 0, stdout: JSON.stringify(SNAPSHOT), stderr: '' } })
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'entry-BKLG-002' })
+  await ui.press({ key: 'edoc-docs/implementations/features/import/spec.md' })
+
+  expect(await ui.find({ type: 'Text', text: /chrome not found/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /render\.js/ })).toBeUndefined()
+  expect(await ui.find({ key: 'doc-md' })).toBeDefined()
+})
+
 test('a document with no diagram never calls the diagram script', async ($, on) => {
   const runs: string[][] = []
   stubs(on, runs)

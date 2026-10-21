@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.1] - 2026-10-21
+- The dashboard pane says why the diagrams could not be drawn (the script's first error line) instead of showing the code in silence
+
+
 ## [1.10.0] - 2026-10-21
 - The dashboard draws fenced mermaid diagrams: the browser page loads mermaid, the pane has the document cut at its diagrams and drawn through the project's mermaid launcher (cached by source hash), with the source and the reason when it cannot
 
