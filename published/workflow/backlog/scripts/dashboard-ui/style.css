@@ -181,6 +181,8 @@ table.entries td.bar-cell { width: 160px; }
 /* break-word, not anywhere: "anywhere" lets a table column shrink to one letter a line. */
 .md { overflow-wrap: break-word; }
 .md td code, .md li code { overflow-wrap: anywhere; }
+/* A diagram scrolls inside its box instead of widening the page; the text before it is mermaid's, not ours. */
+.md .mermaid { overflow-x: auto; margin: 12px 0; text-align: center; }
 .md h1 { font-size: 22px; margin: 0 0 12px; }
 .md h2 { font-size: 18px; margin: 24px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
 .md h3 { font-size: 15px; margin: 18px 0 8px; }

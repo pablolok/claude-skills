@@ -18,7 +18,7 @@ those documents honest and an optional two-way mirror to GitHub Issues.
 | `scripts/related-docs.mjs` | Not a gate (always exit 0): the live docs that cite the entry being worked on or name a file a change touched — a post-commit hook's job. |
 | `scripts/next-id.mjs` | Not a gate: prints the next entry id — the highest one the backlog folder's documents claim (a card heading, a history line, an activity folder's name; nothing outside it), + 1; ids only mentioned above it are a warning on stderr. |
 | `scripts/backlog-github-sync.mjs` | The GitHub Issues mirror (`upsert-issue`, `close-issue`, `sync-all`; dry-run unless `--execute`). |
-| `scripts/dashboard.mjs` | Not a gate: the local dashboard (see [Dashboard](#dashboard)). Its pieces: `dashboard-board.mjs` (the board, pure), `dashboard-activity.mjs` (commits → entries), `dashboard-docs.mjs` (the documents tree and the path guard), `dashboard-server.mjs` (HTTP), `dashboard-ui/` (the page). |
+| `scripts/dashboard.mjs` | Not a gate: the local dashboard (see [Dashboard](#dashboard)). Its pieces: `dashboard-board.mjs` (the board, pure), `dashboard-activity.mjs` (commits → entries), `dashboard-docs.mjs` (the documents tree and the path guard), `dashboard-mermaid.mjs` (a document cut at its diagrams, drawn and cached, for the pane), `dashboard-server.mjs` (HTTP), `dashboard-ui/` (the page). |
 | `scripts/project.mjs`, `scripts/register.mjs`, `scripts/docIndex.mjs` | The project root and its config; what an entry looks like in the two registers; the shared reference vocabulary. |
 | `scripts/*.test.mjs` | The scripts' tests (`node --test`). |
 | `bootstrap/backlog-gate.mjs` | Copied into a project (not run from the skill): runs a gate from CI, git hooks or package scripts, fetching this skill once at the version it pins. |
@@ -179,7 +179,12 @@ tab). Type `/backlog-dashboard`: a pane opens beside the transcript (a wide full
 
 The hooks module has no Node APIs: it runs `scripts/dashboard.mjs --json --root <session folder>` and draws the
 snapshot, and reads documents with `$.fs.read`. Links inside a document are pressable where the terminal reports
-clicks, and listed as rows under it for the keyboard. Its tests: `claude plugin test` in the skill's folder.
+clicks, and listed as rows under it for the keyboard. A document with fenced `mermaid` diagrams opens at once with them
+as code; `scripts/dashboard-mermaid.mjs` then cuts it at its diagrams, draws each one through the project's
+mermaid launcher (the copy of the `mermaid-diagrams` skill's bootstrap script, which drives a real browser) and keeps the drawing in the temp folder by
+the hash of its source, and the pane redraws with each diagram as an image. Without that launcher, or when the drawing
+fails or is too large for the pane, the diagram stays as its source with the reason under it. Its tests:
+`claude plugin test` in the skill's folder.
 Developing it: `claude --plugin-dir <skill folder>` hot-reloads it; Claude Code then writes `.claude-plugin/types/`
 and `tsconfig.json` there (git-ignored, never published).
 
@@ -191,7 +196,8 @@ node <skill>/scripts/dashboard.mjs [--port N] [--no-open]
 ```
 
 A page on `http://127.0.0.1:4317/` (a free port if that one is taken; loopback only). It needs only Node; the page
-loads `marked` and `DOMPurify` from jsDelivr to render markdown (offline, documents show as plain text). Its views:
+loads `marked`, `DOMPurify` and `mermaid` from jsDelivr to render markdown and its fenced `mermaid` diagrams (offline,
+documents show as plain text and a diagram as its source). Its views:
 
 - **Overview** — entries closed over all, phases done over all phases (dropped ones left out), in progress, not
   started, blocked, pending checks; the entries in progress (their Status note, phase bar, current phase, last

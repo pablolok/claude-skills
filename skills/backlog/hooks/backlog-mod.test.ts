@@ -112,6 +112,65 @@ test('an entry opens with its phases, its docs and its links; its doc opens with
   expect(await ui.find({ key: 'cite-BKLG-003' })).toBeDefined()
 })
 
+const DIAGRAM_DOC = 'Intro\n\n```mermaid\nflowchart TD\n  A --> B\n```\n\nOutro\n'
+const DRAWING = '<svg width="300" height="200" viewBox="0 0 300 200"><text>A to B</text></svg>'
+
+/** `stubs`, but a document with a diagram, and the diagram script answering with `segments`. */
+function diagramStubs(on, runs: string[][], diagram: Record<string, unknown>) {
+  mock.clock(on)
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.cwd', () => ({ value: '/work' }))
+  on('fs.read', ($, e) => ({ value: e.path.endsWith('spec.md') ? DIAGRAM_DOC : '# Register' }))
+  on('process.run', ($, e) => {
+    runs.push([...e.argv])
+    const segments = [
+      { kind: 'text', text: 'Intro\n\n' },
+      { kind: 'diagram', source: 'flowchart TD\n  A --> B', id: 'x', ...diagram },
+      { kind: 'text', text: '\n\nOutro\n' },
+    ]
+    return { value: { exitCode: 0, stdout: JSON.stringify(e.argv[1].endsWith('dashboard-mermaid.mjs') ? { segments } : SNAPSHOT), stderr: '' } }
+  })
+}
+
+test('a document with a diagram is cut at it once the script has drawn it: text as markdown, the diagram as an Svg', async ($, on) => {
+  const runs: string[][] = []
+  diagramStubs(on, runs, { svg: DRAWING, reason: null })
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'entry-BKLG-002' })
+  await ui.press({ key: 'edoc-docs/implementations/features/import/spec.md' })
+
+  const asked = runs.find((r) => r[1].endsWith('dashboard-mermaid.mjs'))
+  expect(asked?.slice(2)).toEqual(['--root', '/work', '--doc', 'docs/implementations/features/import/spec.md'])
+  const drawings = await ui.findAll({ type: 'Svg' })
+  expect(drawings.map((d) => d.props.source)).toContain(DRAWING)
+  expect(await ui.find({ key: 'doc-md-0' })).toBeDefined()
+  expect(await ui.find({ key: 'doc-md-2' })).toBeDefined()
+  expect(await ui.find({ key: 'doc-md' })).toBeUndefined()
+})
+
+test('a diagram the script could not draw stays as its source, with the reason under it', async ($, on) => {
+  diagramStubs(on, [], { svg: null, reason: 'no-renderer' })
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'entry-BKLG-002' })
+  await ui.press({ key: 'edoc-docs/implementations/features/import/spec.md' })
+
+  const source = await ui.find({ key: 'doc-diagram-1' })
+  expect(source.props.text).toContain('```mermaid\nflowchart TD\n  A --> B\n```')
+  expect(await ui.find({ type: 'Text', text: /scripts\/mermaid\.mjs|mermaid\.mjs/ })).toBeDefined()
+})
+
+test('a document with no diagram never calls the diagram script', async ($, on) => {
+  const runs: string[][] = []
+  stubs(on, runs)
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  await ui.press({ key: 'entry-BKLG-002' })
+  await ui.press({ key: 'edoc-docs/implementations/features/import/spec.md' })
+  expect(runs.some((r) => r[1].endsWith('dashboard-mermaid.mjs'))).toBe(false)
+})
+
 test('the documents tab lists every document and filters them by path', async ($, on) => {
   stubs(on, [])
   await $.command.run({ command: 'backlog-dashboard', args: '' })

@@ -12,6 +12,8 @@ const PANE = 'backlog-dashboard'
 const COMMAND = 'backlog-dashboard'
 /** How long the snapshot script may take: git log and every open entry's docs on a large register. */
 const LOAD_TIMEOUT_MS = 60000
+/** How long the diagrams of one document may take: a real browser draws each one the first time. */
+const DIAGRAM_TIMEOUT_MS = 150000
 /** How often an open pane asks the register again. */
 const REFRESH_MS = 60000
 /** How many rows a list draws before it says how many more there are. */
@@ -49,6 +51,12 @@ const WORDS = {
     filter: 'Filter', filterHint: 'part of a path, Enter', docsOf: 'Documents', waitsOn: 'Waits on', unblocksL: 'Unblocks',
     cites: 'Cites', citedByL: 'Cited by', usedBy: 'Entries linking it', linksIn: 'Links in this document',
     notFound: 'Not found', failed: 'The dashboard could not read the register:',
+    drawingDiagrams: 'Drawing the diagrams…', diagramAlt: 'Diagram',
+    diagramNote: {
+      'no-renderer': 'diagram not drawn: this project has no scripts/mermaid.mjs launcher',
+      'render-failed': 'diagram not drawn: the renderer failed',
+      'too-large': 'diagram not drawn: too large for the pane',
+    },
     noRegister: 'This project has no backlog yet.',
     startOne: (p) => `No register at ${p}. Ask for "/backlog add …" to start one; if the register lives elsewhere, set "docsDir" in .claude/backlog.json.`,
     groups: { register: 'Register', work: 'Work docs', architecture: 'Architecture', archive: 'Archive', other: 'Other' },
@@ -69,6 +77,12 @@ const WORDS = {
     filter: 'Filtro', filterHint: 'parte di un percorso, Invio', docsOf: 'Documenti', waitsOn: 'Aspetta', unblocksL: 'Sblocca',
     cites: 'Cita', citedByL: 'Citata da', usedBy: 'Voci che lo collegano', linksIn: 'Link nel documento',
     notFound: 'Non trovato', failed: 'La dashboard non è riuscita a leggere il registro:',
+    drawingDiagrams: 'Disegno i diagrammi…', diagramAlt: 'Diagramma',
+    diagramNote: {
+      'no-renderer': 'diagramma non disegnato: questo progetto non ha il lanciatore scripts/mermaid.mjs',
+      'render-failed': 'diagramma non disegnato: il renderer è fallito',
+      'too-large': 'diagramma non disegnato: troppo grande per il pannello',
+    },
     noRegister: 'Questo progetto non ha ancora un backlog.',
     startOne: (p) => `Nessun registro in ${p}. Chiedi "/backlog add …" per iniziarne uno; se il registro sta altrove, imposta "docsDir" in .claude/backlog.json.`,
     groups: { register: 'Registro', work: 'Documenti di lavoro', architecture: 'Architettura', archive: 'Archivio', other: 'Altri' },
@@ -100,6 +114,8 @@ let loadedAt = 0
 let isOpen = false
 let view = { name: 'overview' } // overview | progress | next | pending | docs | activity | entry {id} | doc {path, text}
 let trail = [] // the views Back returns to
+/** The drawn diagrams of the documents opened: path → { status: 'pending' | 'done' | 'failed', segments, message }. */
+const diagrams = new Map()
 let docFilter = ''
 let openPhase = null // { id, name }: the phase whose detail is shown under its entry's phases
 
@@ -241,6 +257,28 @@ async function openDoc($, path) {
     text = `**${T.notFound}**: \`${path}\` — ${String(error?.message ?? error)}`
   }
   go($, { name: 'doc', path, text })
+  diagrams.delete(path)
+  if (text.includes('```mermaid')) loadDiagrams($, path)
+}
+
+/**
+ * Ask the skill's script for the document cut at its diagrams, each with its drawing. The document is already on
+ * screen with the diagrams as code: the pane redraws when the drawings land, and a failure leaves the code in place.
+ */
+async function loadDiagrams($, path) {
+  diagrams.set(path, { status: 'pending' })
+  $.ui.invalidate('ui.render')
+  try {
+    const run = await $.process.run(['node', $.plugin.root + '/scripts/dashboard-mermaid.mjs', '--root', snapshot.root, '--doc', path], {
+      timeoutMs: DIAGRAM_TIMEOUT_MS,
+    })
+    if (run.exitCode !== 0) throw new Error((run.stderr || run.stdout || `exit ${run.exitCode}`).trim())
+    diagrams.set(path, { status: 'done', segments: JSON.parse(run.stdout).segments })
+  } catch (error) {
+    diagrams.set(path, { status: 'failed', message: String(error?.message ?? error) })
+  } finally {
+    $.ui.invalidate('ui.render')
+  }
 }
 
 // ─── vector drawing ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -696,15 +734,45 @@ function entryView($, el, width, now) {
   return rows
 }
 
+/**
+ * The open document as elements: its markdown whole, or — once the script has drawn its diagrams — cut at them, text
+ * pieces as markdown and each diagram as an `Svg`. A diagram without a drawing (no renderer, a failure, a surface
+ * without `Svg`) stays as its source, with the reason under it. The pane parses no fence: the script owns that.
+ */
+function docBody($, el) {
+  const base = dirOf(view.path)
+  const drawn = diagrams.get(view.path)
+  if (drawn?.status !== 'done' || !drawn.segments) {
+    const whole = markdown($, el, 'doc-md', view.text, base)
+    return { elements: [whole.element], targets: whole.targets }
+  }
+  const elements = []
+  const targets = []
+  drawn.segments.forEach((s, i) => {
+    if (s.kind === 'text') {
+      const piece = markdown($, el, `doc-md-${i}`, s.text, base)
+      elements.push(piece.element)
+      targets.push(...piece.targets)
+    } else if (s.svg && hasSvg(el)) {
+      elements.push(el.Svg({ key: `doc-diagram-${i}`, source: s.svg, alt: T.diagramAlt }))
+    } else {
+      elements.push(markdown($, el, `doc-diagram-${i}`, '```mermaid\n' + s.source + '\n```', base).element)
+      if (s.reason) elements.push(dim(el, T.diagramNote[s.reason] ?? s.reason))
+    }
+  })
+  return { elements, targets }
+}
+
 function docView($, el, width) {
   const usedBy = snapshot.board.entries.filter((e) => e.docs.some((d) => d.path === view.path)).map((e) => e.id)
-  const md = markdown($, el, 'doc-md', view.text, dirOf(view.path))
-  const docTargets = [...new Map(md.targets.filter((t) => t.kind === 'doc').map((t) => [t.path, t])).values()].slice(0, LIST_LIMIT.links)
+  const body = docBody($, el)
+  const docTargets = [...new Map(body.targets.filter((t) => t.kind === 'doc').map((t) => [t.path, t])).values()].slice(0, LIST_LIMIT.links)
   return [
     dim(el, clip(view.path, width)),
     ...entryButtons($, el, T.usedBy, usedBy, 'usedby'),
+    ...(diagrams.get(view.path)?.status === 'pending' ? [dim(el, T.drawingDiagrams)] : []),
     blank(el),
-    md.element,
+    ...body.elements,
     ...(docTargets.length
       ? [blank(el), heading(el, T.linksIn), ...docTargets.map((t) => el.Button({ key: 'link-' + t.path, label: clip(t.path, width - 2), plain: true, onPress: () => openDoc($, t.path) }))]
       : []),

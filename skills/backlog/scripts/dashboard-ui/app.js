@@ -120,8 +120,34 @@ const Markdown = {
       else { a.removeAttribute("href"); a.title = target; a.classList.add("muted"); }
     }
     linkBareIds(root);
+    drawDiagrams(root);
   },
 };
+
+/**
+ * Fenced `mermaid` blocks become diagrams. `marked` leaves them as `<pre><code class="language-mermaid">`; when the
+ * mermaid script did not load (offline) the block simply stays as code, and a diagram that does not parse stays as its
+ * source too (`suppressErrors`), so a document never loses its text to a drawing.
+ */
+let diagramsReady = false;
+function drawDiagrams(root) {
+  if (!window.mermaid) return;
+  if (!diagramsReady) {
+    const dark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    // `strict`: the source is a project's own text, but it reaches the page through innerHTML and the engine's
+    // default lets a label carry markup.
+    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "default" });
+    diagramsReady = true;
+  }
+  const nodes = $$("pre > code.language-mermaid", root).map((code) => {
+    const box = document.createElement("div");
+    box.className = "mermaid";
+    box.textContent = code.textContent;
+    code.parentElement.replaceWith(box);
+    return box;
+  });
+  if (nodes.length) mermaid.run({ nodes, suppressErrors: true }).catch(() => {});
+}
 
 /** Wrap every `BKLG-NNN` in plain text (not inside a link or code) in a link to the entry. */
 function linkBareIds(root) {

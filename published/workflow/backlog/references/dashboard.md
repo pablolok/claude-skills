@@ -10,6 +10,10 @@ time. Two ways to open it:
 - **In a browser**: start `node <skill>/scripts/dashboard.mjs` **in the background** (in a project with the launcher:
   `node scripts/backlog-gate.mjs dashboard`; `--port N`, `--no-open`) and give the user the URL it prints.
 
+Fenced `mermaid` diagrams in a document are drawn in both: the page by loading `mermaid` itself, the pane through the
+project's mermaid launcher (the copy of the `mermaid-diagrams` skill's bootstrap script) — a project without it sees the
+diagram as its source, with the reason.
+
 Its "next" is a hint; the move is `review-backlog`'s. In a project with no register yet the pane says where one
 would start (`/backlog add …` creates it; `docsDir` in **.claude/backlog.json** moves it) — a state, not an error; the
 browser page refuses to start there.

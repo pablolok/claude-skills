@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.0] - 2026-10-21
+- The dashboard draws fenced mermaid diagrams: the browser page loads mermaid, the pane has the document cut at its diagrams and drawn through the project's mermaid launcher (cached by source hash), with the source and the reason when it cannot
+
+
 ## [1.9.2] - 2026-10-20
 - a field value of several paragraphs is read whole: a blank line no longer ends it, so the GitHub mirror stops truncating a Summary to its first paragraph and reporting up to date
 
