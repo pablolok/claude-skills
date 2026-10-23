@@ -69,6 +69,9 @@ unit, the refactor isn't done.
     A check that fails on behaviour that is correct gets its rule fixed — what it measures, on the right unit —
     never its threshold loosened, and the change says which: a rigid part riding its base read as a leak while it
     was judged by its tip; judged by its base, the same tolerance passed it and still caught a base that leaked.
+    The other way round: a check that fails on behaviour that is wrong gets the behaviour fixed, never its scope
+    narrowed (the inputs, the cases, the limits a consumer may use) below what the consumers need — a deformation
+    gate was "passed" by capping every joint at a third of the angle the animations required.
     A check that drives its input by a convention (a sign, an axis, a direction) asserts it drove what it names:
     a bend test's "+" opened the joint it claimed to close, and its axis sat 17-76° off the joint's own — every
     number it reported was about another motion.

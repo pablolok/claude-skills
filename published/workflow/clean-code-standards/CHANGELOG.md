@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-10-23
+- a failing check gets the behaviour fixed, never its scope narrowed below what consumers need
+
+
 ## [1.0.4] - 2026-10-12
 - a check driving its input by convention asserts it drove what it names
 
