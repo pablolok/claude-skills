@@ -13,6 +13,8 @@ have each cost a wrong result once. Read them before an operation you have not r
 - Through `executeWrite`, `editJiraIssue` takes every field (`timetracking`, `labels`, custom fields, the
   description) inside `inputs.fields`; one left beside `fields` is rejected as invalid input. `transitionJiraIssue`
   takes `transitionId` directly in `inputs`, not a `transition` object.
+- Releasing, updating or creating a version (`manageJiraProjectVersion`) is classed destructive: it runs only through
+  `executeDestructive`; `executeWrite` refuses it (403) and changes nothing.
 - Editing a worklog moves the remaining estimate: on a closed ticket, write `remainingEstimate: "0m"` again after.
 - A goal links to a ticket through `addConnectionsToGoals` with the goal's **ARI** (from `getGoal`). With the goal's
   key it answers `[]`, no error, and links nothing.

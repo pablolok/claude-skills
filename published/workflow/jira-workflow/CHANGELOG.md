@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.8] - 2026-10-23
+- Releasing or creating a version runs through executeDestructive
+
+
 ## [1.1.7] - 2026-10-20
 - un aggiornamento di un obiettivo porta la salute che ha gia'
 
