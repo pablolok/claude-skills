@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.10] - 2026-10-24
+- Le decisioni dovute dalla persona: tabella indice, poi una alla volta spiegate in parole semplici, con la voce riletta e il numero rimisurato lo stesso giorno
+
+
 ## [1.0.9] - 2026-10-23
 - Un'attesa si chiude anche con un controllo lanciato a mano; una query vuota non la chiude; senza lavoro azionabile la proposta classifica e raccoglie le decisioni in una tabella; il referto dà i conteggi della dashboard
 

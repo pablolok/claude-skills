@@ -146,8 +146,11 @@ anyway.
 
 When **nothing is actionable without the person** — every open entry waits on a window, a measurement or a decision —
 say so by class (window / decision / long programme, with the count of each) instead of inventing work, and put the
-decisions they owe in **one table**: entry, the question, your recommended default. They answer "all ok" or change a
-line; the move is still one.
+decisions they owe in **one index table** (entry, the question, a recommended default); the move is still one.
+A one-line question is not enough to decide: the person has not seen the entry for weeks. Walk the decisions **one
+at a time**, each in plain words — what it is and why it was opened, what changed since, what each answer costs, your
+recommendation and the reason. **Re-read the entry and re-measure its number the same day** before recommending: a
+default carried over from an earlier summary has flipped on a fresh count.
 
 ### The move starts in the register
 
