@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.9] - 2026-10-23
+- Un'attesa si chiude anche con un controllo lanciato a mano; una query vuota non la chiude; senza lavoro azionabile la proposta classifica e raccoglie le decisioni in una tabella; il referto dà i conteggi della dashboard
+
+
 ## [1.0.8] - 2026-10-11
 - A cleanup stages the files it touched by name, never a blanket add.
 

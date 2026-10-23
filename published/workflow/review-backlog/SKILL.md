@@ -86,7 +86,10 @@ Search for them **in this order** — the first ones invalidate the later ones.
    the wrong way.
 3. **The wait is dead.** `blocked — on [[BKLG-NNN]]` where that entry is closed, "waiting for the deploy" where it
    landed days ago. ⛔ **A blocker is verified in the CODE, not in the plan.** A wait for the first live data (a
-   column never written, a job never seen running) is closed with **one query**, not by reading the document.
+   column never written, a job never seen running) is closed with **one query**, not by reading the document — or by
+   running the check by hand (a probe the person can trigger, a live search in the running app) instead of waiting for
+   its schedule: ask for that one gesture. A query that comes back **empty** does not close the wait: record the
+   measurement, name what covers the case meanwhile (a test, a gate), and keep the entry open.
 4. **A withdrawn decision has REVIVED because the population changed.** The sneakiest: "⛔ dropped — zero rows"
    stays true on the data of then and turns false when the data changes. Check against **recent** work, not the
    entry's date.
@@ -141,6 +144,11 @@ ago — this review is where it gets corrected, more often down than up.
 ⛔ **Don't propose the easiest work because it's easy.** If the honest candidate is expensive, say so and propose it
 anyway.
 
+When **nothing is actionable without the person** — every open entry waits on a window, a measurement or a decision —
+say so by class (window / decision / long programme, with the count of each) instead of inventing work, and put the
+decisions they owe in **one table**: entry, the question, your recommended default. They answer "all ok" or change a
+line; the move is still one.
+
 ### The move starts in the register
 
 Proposing it is not starting it. The proposed entry's `Status` becomes in progress, with the date and the step, and
@@ -164,7 +172,8 @@ kept showing another, the first one its cleanup commit happened to name.
 
 Four things and nothing else:
 
-- **the gates**, with their control counts (`0 broken out of 567 examined`, not `0 broken`);
+- **the gates**, with their control counts (`0 broken out of 567 examined`, not `0 broken`), and the register's counts
+  **as the dashboard shows them** (in progress / not started / awaiting verification) — the person compares the two;
 - **what was cleaned**, one line each, and **what it was verified against**;
 - **the proposal**, in the Act 3 form, already started in the register;
 - the **commits**: the cleanup's, if it touched files — repaired documents are committed in the same session, or the
