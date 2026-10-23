@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.8] - 2026-10-23
+- When an observed value moves (a domain, a path), find it in every written form and run each consumer on a real input from the new place before shipping
+
+
 ## [1.2.7] - 2026-10-21
 - Derivability also covers an attribute copied onto a queued or persisted record: a consumer holding only an id reads it from the owner
 

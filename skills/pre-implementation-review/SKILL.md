@@ -90,7 +90,7 @@ you just made. Read `references/hard-fails.md` whenever the change touches code 
 - depends on an ambient mode, a tool's default or an unmeasured value;
 - uses a value measured in another frame (space, unit, projection, one side of a pair);
 - selects an item by position, or by being listed, named or nearest;
-- lists observed values or refusals (hosts, labels, ids, formats), or fixes a reported symptom from a cause read in the code;
+- lists observed values or refusals (hosts, labels, ids, formats), moves one (a domain, a path), or fixes a reported symptom from a cause read in the code;
 - finds something by a conventional name;
 - adds a default for a whole family, a member to one, or a condition that decides when something runs.
 

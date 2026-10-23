@@ -167,6 +167,10 @@ change touches before writing the note.
   (a path shape, a response behaviour, a field) and list nothing: a list widened one value at a time fails on the
   next item, and only after a deploy. When several consumers read the same rule (a harvest, a direct read, an
   allowlist), derive all of them from one fragment, or widening one leaves the others refusing.
+  When a value **moves** (a domain, a path, an id), find every place that holds it in every written form — plain,
+  escaped inside a pattern, encoded inside a link, stored in data — and run each consumer on a **real input from the
+  new place** before it ships: a pattern that spelled the old host escaped was invisible to a text search, and parsed
+  the new page to nothing.
   A list of **refusals** (hosts or routes declared dead) is a measurement with an expiry that never fails by itself:
   its consumers skip before any request, so nothing errors while the declaration goes stale. An entry carries its
   date and the transports tried, is re-measured with the real consumer (the page's own request), and its tests
