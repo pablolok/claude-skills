@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.2] - 2026-10-23
+- Chiusura: dopo git mv si cerca il vecchio percorso in tutti i documenti, archiviati compresi
+
+
 ## [1.10.1] - 2026-10-21
 - The dashboard pane says why the diagrams could not be drawn (the script's first error line) instead of showing the code in silence
 

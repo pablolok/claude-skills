@@ -16,7 +16,8 @@ The skill names these steps; this is each in full. An entry closes only when its
 7. **Archive the doc — check the filesystem, not just the entry**: `git mv <type>/<name> archive/<name>` (inside
    the backlog folder) and point the history line there — even if the entry's Doc is `—`: look in every type
    folder for one belonging to this item. `git mv` stages both sides: never `git add` the old path afterwards (it no
-   longer exists, and the failing command takes the whole `git add` with it).
+   longer exists, and the failing command takes the whole `git add` with it). Then `grep` the old path across all
+   docs, archived ones included, and rewrite what names it: a path written in prose goes stale when the folder moves.
 8. Declared `Architecture`: the `D<n>` leaves the doc's open defects, a row lands in its contributions section
    (`## Who worked on it` by default; the project's `words.contributions`).
 9. Mirror: `close-issue BKLG-NNN --execute`. Run the gates.
