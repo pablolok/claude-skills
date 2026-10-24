@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.9] - 2026-10-24
+- A total-review check for an open unreleased version; an empty {} after a write is not a failure
+
+
 ## [1.1.8] - 2026-10-23
 - Releasing or creating a version runs through executeDestructive
 

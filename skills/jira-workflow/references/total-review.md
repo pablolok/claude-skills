@@ -10,6 +10,8 @@ opened by hand. The points field, labels and sprints are the parameters the proj
 - `fixVersion in releasedVersions() AND statusCategory != Done`;
 - `statusCategory = Done AND fixVersion is EMPTY`;
 - `statusCategory = Done AND resolution is EMPTY`;
+- at least one unreleased version (`getJiraProjectVersions`, status unreleased): none means the last release did not
+  open the next one, and the next ticket that closes has no version to take;
 - `issuetype != Epic AND` the points field the playbook names `is EMPTY`, and `originalEstimate is EMPTY`;
 - `issuetype = Epic AND (` the points field `is not EMPTY OR sprint in openSprints())`;
 - the board's `estimation.field` (`getJiraBoardConfig`) is the field the playbook names;
