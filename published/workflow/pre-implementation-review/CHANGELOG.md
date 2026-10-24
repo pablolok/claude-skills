@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.9] - 2026-10-24
+- Targets come from the consumer's written requirements (specify the consumer first); a proxy check is not the acceptance - a change that clears it is judged on what it stands for, a check flagging what no one perceives is fixed in the check
+
+
 ## [1.2.8] - 2026-10-23
 - When an observed value moves (a domain, a path), find it in every written form and run each consumer on a real input from the new place before shipping
 

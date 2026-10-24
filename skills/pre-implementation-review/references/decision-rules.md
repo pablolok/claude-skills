@@ -36,7 +36,9 @@ change touches before writing the note.
   carried its unwrap, rig, bake and paint before anyone counted; cut to the limit, its bake and every rig check ran
   again. And run the step that **consumes** a result on a rough version of it before polishing it: a defect the consumer
   finds reshapes the work upstream (a rough model rigged and posed showed one limb dragging the body — found before any
-  assembly polish, not after). The same for a design's own **top-named risk**: the pieces are ordered so the cheapest
+  assembly polish, not after). The **targets** the work is tuned toward come from the consumer's written requirements;
+  when the consumer is not specified yet, specify it first (a component was tuned toward guessed cases for weeks
+  before the consumer's spec, written afterwards, named the cases it needed). The same for a design's own **top-named risk**: the pieces are ordered so the cheapest
   prototype that proves or kills it comes first — a physics feature whose design named "it may never settle into the
   wanted pose" as its first risk was built in full, ten pieces, before its first run showed exactly that.
 - **Never read an input back from what the operation itself writes.** If a job decides which records
@@ -106,6 +108,10 @@ change touches before writing the note.
   runs (a real defect found by reading was not the one reported).
   A number **read once** (by eye on an image, or by a delegate) that will set a target or be reported is read a second,
   independent way first (another view, another method): one landmark mistaken for another set a target 30 % off.
+  A **proxy check** (a number standing in for what a person perceives) is not the acceptance: a change that clears it
+  is judged on what it stands for before it is kept, and a check that flags what no one can perceive is fixed in the
+  check, not the thing — a correction that brought a reading under its limit made the visible result worse than the
+  defect it removed, which no view had shown.
 - **A step that deletes or rewrites by a rule is bounded to where the rule is meant, and its output looked at.**
   A cleanup that removes whatever a test touches (near a moving part, matching a filter) finds far more than the
   case it was written for when the inputs change: unbounded, one removed half of an unrelated part and left its end
