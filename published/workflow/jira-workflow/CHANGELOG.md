@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.10] - 2026-10-24
+- An empty {} after a write: read back once, then the playbook records it
+
+
 ## [1.1.9] - 2026-10-24
 - A total-review check for an open unreleased version; an empty {} after a write is not a failure
 

@@ -17,7 +17,8 @@ have each cost a wrong result once. Read them before an operation you have not r
   `executeDestructive`; `executeWrite` refuses it (403) and changes nothing.
 - A write through the execute tools whose `responseFields` names a path the answer does not have returns `{}`, with no
   error, and the write happened (a comment added with `responseFields: ["id"]`). Never repeat it, or a comment lands
-  twice: read back the one field that proves it (`fields.comment.total`).
+  twice. The first time, read back the one field that proves it (`fields.comment.total`) and write in the playbook
+  that this operation answers `{}`; from then on, no read-back.
 - Editing a worklog moves the remaining estimate: on a closed ticket, write `remainingEstimate: "0m"` again after.
 - A goal links to a ticket through `addConnectionsToGoals` with the goal's **ARI** (from `getGoal`). With the goal's
   key it answers `[]`, no error, and links nothing.
