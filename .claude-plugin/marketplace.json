@@ -22,7 +22,7 @@
       "name": "clean-code-standards",
       "source": "./published/workflow/clean-code-standards",
       "description": "A language-agnostic clean-code / OOP quality bar. Use whenever writing, refactoring, or reviewing code in ANY language — enforces single-responsibility, injected collaborators, Tell-Don't-Ask, no god objects, no business logic in static/global scope, strong typing over magic values, centralized literals, a reuse audit, fail-fast inputs, and no warning suppression. This is the universal core; per-language skills (e.g. csharp-oop-standards) layer their own idioms on top of it.",
-      "version": "1.0.5",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -54,8 +54,8 @@
     {
       "name": "jira-workflow",
       "source": "./published/workflow/jira-workflow",
-      "description": "Use whenever work is tracked in Jira — before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook.",
-      "version": "1.1.10",
+      "description": "Use when work is tracked in Jira, before code or tracker changes. Applies the project’s declared cadence, fields, estimates, worklogs, releases and dependencies; continuous updates remain the default when no project policy is declared.",
+      "version": "1.2.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -128,8 +128,8 @@
     {
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
-      "description": "Use when a piece of work closes — a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it, and a hook asks after an archive or a run of commits. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log.",
-      "version": "2.1.0",
+      "description": "Use at the close of tracked work or an accepted/rejected deliverable, or after a user correction of the method. Start with a brief evidence check; investigate and revise only skills implicated by an observed problem. No automatic rewrite or publication.",
+      "version": "2.2.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -176,7 +176,7 @@
       "name": "typescript-react-standards",
       "source": "./published/workflow/typescript-react-standards",
       "description": "The TypeScript/React-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing TypeScript, React, or Node/Deno code. Assumes the language-agnostic core of clean-code-standards and adds only the TS/React idioms, tooling, and quality gates.",
-      "version": "1.1.6",
+      "version": "1.2.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -187,7 +187,7 @@
       "name": "verification-gates",
       "source": "./published/workflow/verification-gates",
       "description": "Use before declaring code work done / handing it back — verify that the required automated gates are green across any stack (tests, builds, compilers, bundlers, linters, static analysis) and that nothing was silently removed. Applies to changed code in any language. Confirms green evidence rather than assuming it; who RUNS the gates depends on the project (some environments have the user run them). This is the \"verify clean\" back-half of clean-code-standards.",
-      "version": "1.0.11",
+      "version": "1.1.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -198,7 +198,7 @@
       "name": "writing-architecture-docs",
       "source": "./published/workflow/writing-architecture-docs",
       "description": "Use when a piece of work must be designed before it is written — a large feature, a rework, a defect that crosses several layers, a multi-phase job — or when the question is \"how is it built today\", \"what shape must it take\", \"why this and not something else\". Any project, any language. The diagram mechanics are NOT here — they are in the mermaid-diagrams skill.",
-      "version": "1.2.2",
+      "version": "1.3.0",
       "category": "workflow",
       "strict": false,
       "skills": [

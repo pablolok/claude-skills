@@ -56,25 +56,11 @@ unit, the refactor isn't done.
 9. **Logging via an abstraction.** Business-logic tracking goes through an injected logger / event
    sink (its own responsibility) — never scattered raw stdout/console writes. A dedicated log or
    UI-event sink is fine; ad-hoc prints for tracking are not.
-10. **Tests for new logic.** Deterministic automated tests for new behavior, using test doubles for
-    injected collaborators; assert behavior, not implementation. (Concrete coverage targets and the
-    test framework are set by the per-language layer or the project.) A check that something bad is absent
-    (no error, nothing torn, no overflow) also asserts the thing happened at all: an empty or inert input passes
-    every "nothing bad" check — one such check stayed green for a day on output that did nothing. A lower bound
-    ("more than N results") passes on duplicated output too: bound it on both sides or assert what must not be
-    there (a split that cut every part twice still passed "more than 10 pieces"). Write the assertion first and
-    watch it fail on the current code: a test that was never red proves nothing about the fix. Code that tells
-    states apart (present / missing / broken) is tested on each state built for real, the broken one included: a
-    platform's existence check can report a broken link as present.
-    A check that fails on behaviour that is correct gets its rule fixed — what it measures, on the right unit —
-    never its threshold loosened, and the change says which: a rigid part riding its base read as a leak while it
-    was judged by its tip; judged by its base, the same tolerance passed it and still caught a base that leaked.
-    The other way round: a check that fails on behaviour that is wrong gets the behaviour fixed, never its scope
-    narrowed (the inputs, the cases, the limits a consumer may use) below what the consumers need — a deformation
-    gate was "passed" by capping every joint at a third of the angle the animations required.
-    A check that drives its input by a convention (a sign, an axis, a direction) asserts it drove what it names:
-    a bend test's "+" opened the joint it claimed to close, and its axis sat 17-76° off the joint's own — every
-    number it reported was about another motion.
+10. **Tests for new logic.** Deterministic tests through public behavior, written and seen failing
+    before the fix. Assert both that the intended operation happened and that forbidden outcomes
+    did not. Read [test invariants](references/test-invariants.md) when writing or reviewing tests
+    involving absence checks, thresholds, transformations or borrowed state. The test-design skill
+    owns test structure; this reference retains the concrete failure modes behind these invariants.
 11. **Leave borrowed state as found.** Code that changes shared state to do its work (a mode, a setting, a
     selection, a global) records every property it touches and restores each one — not only the values it
     measured with: a probe that switched a mode and reset just the values left everything after it inert.

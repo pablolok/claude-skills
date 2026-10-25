@@ -1,5 +1,5 @@
 {
   "name": "skill-retrospective",
-  "version": "2.1.0",
-  "description": "Use when a piece of work closes \u2014 a backlog entry archived, a tracked parent ticket or piece of work closed, a multi-round loop ended, a deliverable accepted or rejected, the user correcting the method; the close steps of backlog and jira-workflow invoke it, and a hook asks after an archive or a run of commits. Reviews what the work taught and rewrites the skills it used in place so the next run is shorter and right first time; never appends a lessons log."
+  "version": "2.2.0",
+  "description": "Use at the close of tracked work or an accepted/rejected deliverable, or after a user correction of the method. Start with a brief evidence check; investigate and revise only skills implicated by an observed problem. No automatic rewrite or publication."
 }

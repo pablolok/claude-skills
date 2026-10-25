@@ -23,6 +23,19 @@ their side and pastes results back. In that case:
 
 Where you *are* expected to run gates, run them and read the output before declaring done.
 
+## Evidence reuse
+
+A recorded green result can satisfy the same gate without a duplicate run only when its provenance
+identifies the command, exit status, totals and the final relevant files (including untracked files),
+inputs, dependencies and environment. A commit id alone is insufficient for a dirty working tree.
+After any relevant change, rerun the affected checks and any full gate the project requires. Never
+weaken a required full gate into covering tests. Reuse is not permission to skip the full gate.
+
+After a review correction, one reviewer checks the changed points; repeat the whole review only when
+the scope or risk changes. A specialist security audit remains separate where the project requires it.
+After compaction, recover the evidence and pending checks from the ledger; unknown provenance means
+unverified, not a fresh green. One reviewer per diff is the default unless the project asks for more.
+
 ## What to verify (changed code paths)
 
 1. The required automated gates were **identified from the repository** (docs, scripts, CI config,

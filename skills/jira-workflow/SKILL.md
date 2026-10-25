@@ -1,6 +1,6 @@
 ---
 name: jira-workflow
-description: Use whenever work is tracked in Jira — before touching code, at every step, on a status change, commit or release, and when creating tickets, logging time or linking dependencies through the Atlassian connector. Tracker first, status moved when the fact happens, points and hours on every ticket, continuous worklogs, Blocks links in the right direction, the total review queries and the connector's pitfalls. Statuses, labels, sprints and field ids come from the project's playbook.
+description: Use when work is tracked in Jira, before code or tracker changes. Applies the project’s declared cadence, fields, estimates, worklogs, releases and dependencies; continuous updates remain the default when no project policy is declared.
 ---
 
 # Jira Workflow
@@ -8,8 +8,8 @@ description: Use whenever work is tracked in Jira — before touching code, at e
 The tracker is the first tool, not the last: it says what is true before the code, the backlog file, the commit or
 the release does. Every rule below is generic; what differs between projects is a **parameter** the project's own
 Jira playbook declares (a file the project keeps, such as `docs/agent-playbook/jira.md`). Read that playbook before
-the first Jira call of a session. When this skill and the playbook disagree on a value, the playbook wins; when they
-disagree on a rule, raise it with the user.
+the first Jira call of a session. When this skill and the playbook disagree on a value, the playbook wins; an explicit operational policy (including update cadence) declared by the project also wins.
+For other rule conflicts, raise the conflict with the user.
 
 ## Parameters the project declares
 
@@ -28,7 +28,25 @@ The project playbook fixes these; the skill never assumes them.
 | Goals and key results | which goal tracks which Epic, and how its count is written | "Done and released: N of M" |
 | Title conventions | how a ticket title names its source | `[1.4] Title`, `[backlog 12] Title` |
 | Where dependencies are written | the plan or file whose dependencies must all be links | a dependency column in the plan |
+| Update cadence | continuous or entry-exit; when comments, worklogs, goal counts and total reviews run | continuous unless explicitly declared |
 | Release source | where a version's description comes from | the release notes file of that version |
+
+## Cadence policy
+
+Read the project's declared cadence once at entry. **continuous remains the default** for projects
+that declare none; the numbered rules below describe that default. An explicit **entry-exit** policy
+replaces their frequency clauses, not their evidence, authorization or required closing fields:
+
+- Entry: create or identify the ticket, acceptance criteria, estimates and dependencies; move it in progress.
+- During: update only for a real blocker, a discovery or a project-declared milestone. Do not create
+  tickets for the recommendations in an analysis or plan until the user chooses implementation.
+- Exit: one round per ticket with final state, real worklog, final comment, version/resolution where
+  applicable, documents and goal counts required by the project. Subtask boundaries use the same round.
+- No opening comment or read-back of a successful write just to repeat its response. An uncertain
+  write or a required field check gets a targeted verification. Calls remain serial.
+
+Project policy also fixes when total review runs. A close always checks that required closing fields
+and evidence exist. Record the chosen cadence in the work's brief; do not reload unchanged policy.
 
 ## 1. Jira first
 
@@ -48,7 +66,7 @@ The project playbook fixes these; the skill never assumes them.
   parent's status. Look at the sub-tasks before moving a parent. A sub-task assigned to the user that the
   conversation completes (a decision, a specification given in chat) is closed in that step's round, with a comment
   quoting where it was given: left for the end, it holds the parent back.
-- **When a parent closes, or the piece of work it tracks ends, run the `skill-retrospective` skill** (when it is
+- **When a parent closes, or the piece of work it tracks ends, run the `skill-retrospective` skill** using its brief closing check (when it is
   installed) on the skills the work used: the close is the end of a piece of work, the moment the retrospective is
   due — nothing else asks for it.
 - At every transition, in the same round: the right `fixVersion` and a comment.

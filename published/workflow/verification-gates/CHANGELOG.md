@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - 2026-10-25
+- Modular instructions, project cadence and evidence-based verification
+
+
 ## [1.0.11] - 2026-10-20
 - A shared function's contract change runs its callers' tests; no git stash in a shared working tree
 

@@ -1,10 +1,12 @@
 # Skill Retrospective
 
-When a piece of work closes, what it taught goes back into the skills that served it — rewritten in place, pruned,
-kept short — never appended as a lessons log. It runs at the end of each piece of work: the close step of the
-`backlog` skill (an entry archived) and of `jira-workflow` (a parent ticket or a piece of work closed) invoke it, and
-for work tracked nowhere a `Stop` hook asks for it after an archive or a run of commits. A second hook logs the skills
-the work used, so the retrospective knows which ones to rewrite.
+At the close of work, check the evidence already collected for errors, repeated attempts, user corrections or
+conflicting instructions. With no observed problem, complete the brief check without transcript sweeps or skill
+edits. An observed problem opens only the relevant section of the implicated skill at its source. Commits, tags,
+publishing and rollout follow the user's authorization; a closing trigger does not authorize them.
+
+The close steps of `backlog` and `jira-workflow`, and the existing Stop hint, invoke this brief check. The skill-use
+hook supplies context for a targeted investigation; it does not identify a mandatory list of skills to rewrite.
 
 ## Installing
 
@@ -23,7 +25,8 @@ Claude Code sets for every hook; without it they do nothing.
 
 | File | Role |
 |---|---|
-| `SKILL.md` | The retrospective: evidence → rewrite each skill used → check → record. |
+| `SKILL.md` | Brief closing check; no-change outcome or targeted investigation and checkpoint. |
+| `references/investigation-and-rewrite.md` | Detailed procedure, read only for an observed problem. |
 | `hooks/log-skill-use.mjs` | `PostToolUse` (matcher `Skill`): adds each skill run to `.claude/.state/skills-used.txt`, once. |
 | `hooks/retrospective-hint.mjs` | `Stop`: holds the turn **once** (never with `stop_hook_active`) when, since the commit in `.claude/.state/last-retrospective`, a backlog entry was archived (under `SKILL_RETRO_ARCHIVE_DIRS`, else the backlog's `<docsDir>/archive`, default `docs/implementations/archive`) or `SKILL_RETRO_COMMITS` (default 8) commits piled up, and asks for the retrospective on the logged skills. |
 | `hooks/state.mjs` | The project root (`CLAUDE_PROJECT_DIR` alone: never the shell's cwd, never the hooks' own folder) and the state folder. |

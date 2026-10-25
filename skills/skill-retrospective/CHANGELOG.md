@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.0] - 2026-10-25
+- Modular instructions, project cadence and evidence-based verification
+
+
 ## [2.1.0] - 2026-10-16
 - The Stop hook is back: it holds the turn once after an archived backlog entry or SKILL_RETRO_COMMITS commits (default 8) since the last retrospective, so work tracked in no backlog or tracker still gets one; the close steps of backlog and jira-workflow keep invoking it. A retrospective runs at the end of each piece of work — a round accepted or rejected, the user correcting the method — never in the middle of a step.
 

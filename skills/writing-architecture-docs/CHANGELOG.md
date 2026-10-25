@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2026-10-25
+- Modular instructions, project cadence and evidence-based verification
+
+
 ## [1.2.2] - 2026-10-20
 - every claim is verified at the source (a header comment or the brief can be wrong), and the skill is trimmed: anecdotes, the mermaid example and duplicated common-mistakes rows go
 

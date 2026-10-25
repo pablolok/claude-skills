@@ -29,3 +29,7 @@ validates and renders its diagrams.
 
 `claude plugin marketplace add pablolok/claude-skills`, then
 `claude plugin install writing-architecture-docs@pablolok-skills --scope user`.
+
+## Conditional detail and verification
+
+The nine document-quality rules live in `references/document-quality.md`; load them for the document being changed, without sweeping unrelated documents.

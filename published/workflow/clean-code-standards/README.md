@@ -24,3 +24,7 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 `claude plugin install clean-code-standards@pablolok-skills --scope user` (every project) or `--scope project`.
 A hook that gates on this skill sees the name `clean-code-standards:clean-code-standards` when it runs from the
 plugin: match the part after the last colon.
+
+## Conditional detail and verification
+
+Detailed test invariants live in `references/test-invariants.md`; read them when tests involve absence checks, thresholds, transformations or borrowed state.

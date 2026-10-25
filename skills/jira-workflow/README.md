@@ -3,6 +3,13 @@
 Use this whenever work is tracked in Jira: the tracker is updated before the code, the backlog file, the commit and
 the release, and it always says what is true.
 
+## Update cadence
+
+Each project may declare `entry-exit`: one entry round, updates for blockers/discoveries and one complete exit
+round. Without an explicit policy, continuous updates remain the default. Cadence changes frequency, not the
+required evidence or closing fields; analyses do not create tickets for recommendations before implementation is
+chosen. The frequency statements below describe the continuous default.
+
 ## What It Covers
 
 - Jira first: a ticket in progress before the work, a comment at every step, discoveries filed at once
@@ -26,7 +33,7 @@ total review's checks, the connector's pitfalls — each read at the moment the 
 
 The skill is generic. Each project keeps a Jira playbook that declares its values — site and `cloudId`, board,
 status cycle and transition ids, role and plan labels, sprints, the points constant, the story point field id, goals,
-title conventions and where dependencies are written — and the skill reads them from there.
+title conventions, update cadence and where dependencies are written — and the skill reads them from there.
 
 ## Installing
 

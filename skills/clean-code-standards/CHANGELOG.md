@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.0] - 2026-10-25
+- Modular instructions, project cadence and evidence-based verification
+
+
 ## [1.0.5] - 2026-10-23
 - a failing check gets the behaviour fixed, never its scope narrowed below what consumers need
 

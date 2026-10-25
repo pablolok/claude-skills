@@ -21,3 +21,7 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 `--scope project`. Install `clean-code-standards` with it: this layer assumes the core. A hook that gates on this
 skill sees the name `typescript-react-standards:typescript-react-standards` when it runs from the plugin: match the
 part after the last colon.
+
+## Conditional detail and verification
+
+React-specific detail lives in `references/react-conventions.md`; load it for components, hooks or state, not for TypeScript-only scripts.

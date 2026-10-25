@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0] - 2026-10-25
+- Modular instructions, project cadence and evidence-based verification
+
+
 ## [1.1.10] - 2026-10-24
 - An empty {} after a write: read back once, then the playbook records it
 
