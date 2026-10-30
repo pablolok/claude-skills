@@ -107,6 +107,10 @@ unverified, not a fresh green. One reviewer per diff is the default unless the p
   on-screen keyboard or an installed web app is proven on a simulator or device with that input — an emulated
   viewport, a desktop browser or a layout-only probe cannot show it. With none available, the change ships with the
   platform check named as pending, never as verified; a fix that passed every desktop gate shipped with the defect.
+- **A feature built to run over long real input** (a simulation, a batch, a migration, a replay) gets one run on the
+  real full-length input before "done", its result read — not only "it finished". Fixtures sized for unit tests end
+  before the behaviour that appears after a while: a one-time stop meant for live use froze a long replay early, and
+  every gate was green. Without the real input, that run is named as pending.
 - **A test proves only what it compares against.** Where a value the code writes crosses a constraint enforced
   elsewhere (a database trigger or CHECK, a range bound inclusive or exclusive), the expected value comes from that
   constraint or its twin in the code, never from a literal the test's author chose; a double of that boundary that

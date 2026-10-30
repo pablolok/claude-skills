@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.1] - 2026-10-30
+- A feature built to run over long real input gets one run on the real full-length input before done
+
+
 ## [1.1.0] - 2026-10-25
 - Modular instructions, project cadence and evidence-based verification
 
