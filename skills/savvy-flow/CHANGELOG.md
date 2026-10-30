@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.7] - 2026-10-30
+- Isolated worktrees inside the repo folder are git-ignored first; removing a worktree ends its worker, so the topic's next task starts fresh
+
+
 ## [1.5.6] - 2026-10-20
 - brief di un worker isolato: comandi shell semplici
 

@@ -52,7 +52,9 @@ reuse audit, fail-fast inputs, no warning suppression); the items below make it 
     a stateless service gets an interface (the DI seam), not `static` (CA1822); no type names as identifiers
     (`Long`, `Int`: CA1720) and no keywords of other .NET languages as parameter names (`to`, `step`: CA1716).
     Test names in `Method_behaviour` form trip CA1707: switch it off in the tests' own `.editorconfig` and record
-    that as the repo's documented exception (rule 11).
+    that as the repo's documented exception (rule 11). `dotnet format` can crash inside Roslyn (exit 139,
+    AccessViolation) on an unchanged tree: retry, or run `dotnet format whitespace` and `dotnet format style` with
+    `--verify-no-changes` — never read the crash as a format failure or a pass.
 11. **No warning suppression.** No `#pragma warning disable`, `NoWarn`, `[SuppressMessage]`,
     GlobalSuppressions, or severity downgrades to dodge a required diagnostic — unless the repo
     documents a justified exception. (Generated EF migration files under `Migrations/` are the one

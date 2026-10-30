@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - 2026-10-30
+- dotnet format can crash inside Roslyn (exit 139): retry or run the whitespace and style subcommands
+
+
 ## [1.0.2] - 2026-10-30
 - Analyzer-clean code the first time under latest-recommended (CA1822/CA1720/CA1716/CA1707); bindable settings validated at startup; xUnit v3 on the .NET 10 test platform
 

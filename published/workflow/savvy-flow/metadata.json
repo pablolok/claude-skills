@@ -1,5 +1,5 @@
 {
   "name": "savvy-flow",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "Orchestrated delivery flow. The session model plans, owns design, delegates implementation to tiered worker subagents (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light) and adversarially reviews their output. Invoke with /savvy-flow <task>."
 }

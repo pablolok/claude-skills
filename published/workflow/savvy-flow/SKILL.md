@@ -139,7 +139,9 @@ Heuristics:
   on: the brief names the base commit and makes resetting to it the worker's first step; on return, check the base
   before taking the diff. The brief also asks it for plain shell commands — explicit paths, no command substitution,
   no runtime variables, one git command at a time: the isolation guard refuses any command it cannot prove stays
-  inside the worktree, and each refusal costs the worker a round.
+  inside the worktree, and each refusal costs the worker a round. Isolated worktrees may be created inside the
+  repository's own folder: before the first one, make sure that folder is git-ignored, or a broad `git add` in the
+  main tree stages the worker's checkout as an embedded repository.
 - **Answer quick questions yourself.** One that needs no file work gets no worker.
 - **One worker per topic.** You stay the only conversation with the user and sort the work into topics. Each topic has
   one live worker: resume it (SendMessage) for the topic's next task at the same tier. A different tier needs a
@@ -187,6 +189,7 @@ Before the report, leave the repository with only the branches it had before the
 take what the workers' worktrees hold that is still needed, then remove every worker worktree
 (`git worktree remove --force`) and its branch (`git branch -D`), `git worktree prune`, and read `git worktree list`,
 `git branch -a` and the remote's heads to confirm. A worker's worktree is removed as soon as its diff is integrated,
-not left for the end: the user reads every leftover branch in their git client as work still open.
+not left for the end: the user reads every leftover branch in their git client as work still open. Removing it also
+ends that worker — it can no longer be resumed — so give its topic's next task to a fresh worker from the start.
 
 Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration.

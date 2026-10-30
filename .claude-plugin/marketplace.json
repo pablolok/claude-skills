@@ -33,7 +33,7 @@
       "name": "csharp-oop-standards",
       "source": "./published/workflow/csharp-oop-standards",
       "description": "The C#-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing C#. Assumes the language-agnostic core (SRP, injected collaborators, Tell-Don't-Ask, no god objects, no static business logic, strong typing, literal centralization, reuse audit, fail-fast, no warning suppression) and adds only the C#/.NET idioms, tooling, and coverage bar. The persistence conventions (repository/UnitOfWork/EF Core) apply only to a project that uses EF Core.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -110,7 +110,7 @@
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
       "description": "Orchestrated delivery flow. The session model plans, owns design, delegates implementation to tiered worker subagents (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.5.6",
+      "version": "1.5.7",
       "category": "workflow",
       "strict": false,
       "skills": [
