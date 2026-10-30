@@ -194,6 +194,14 @@ change touches before writing the note.
   A **condition that decides when something runs** (a trigger, a job filter, a flag) is a family too: list every way
   of reaching it — each event, each input of a manual start — and decide each: a costly step narrowed to "manual
   starts only" still ran in the manual failure drill, which needed only the step after it.
+- **A baseline the result is compared against is computed outside the policies under test.** Sent through the same
+  pipeline as the thing it measures, it inherits that pipeline's policies (a limit, a fee rule, a filter, a protective
+  exit) and stops being a baseline: it measures the policies, not the alternative. Compute it on its own, with only
+  the costs every alternative pays.
+- **A sequence that removes a safeguard before a step that can fail plans that failure in the design.** Cancel a
+  protection, then act: when the act fails, the protection is restored, or the system stops in a known, reported
+  state — never left running without it. The same holds when the safeguard is placed after the act (open, then
+  protect): a failed placement undoes the act or stops the system.
 
 ## The short rules the skill states, with their reasons
 

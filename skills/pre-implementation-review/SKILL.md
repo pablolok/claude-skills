@@ -93,6 +93,7 @@ you just made. Read `references/hard-fails.md` whenever the change touches code 
 - lists observed values or refusals (hosts, labels, ids, formats), moves one (a domain, a path), or fixes a reported symptom from a cause read in the code;
 - finds something by a conventional name;
 - adds a default for a whole family, a member to one, or a condition that decides when something runs.
+- builds a baseline, or drops a safeguard before a fallible step.
 
 ## File placement — decide the FOLDER before writing
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.10] - 2026-10-30
+- Baselines are computed outside the policies under test; removing a safeguard before a step that can fail plans the failure (decision rules)
+
+
 ## [1.2.9] - 2026-10-24
 - Targets come from the consumer's written requirements (specify the consumer first); a proxy check is not the acceptance - a change that clears it is judged on what it stands for, a check flagging what no one perceives is fixed in the check
 

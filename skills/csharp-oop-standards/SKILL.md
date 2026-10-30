@@ -31,6 +31,9 @@ reuse audit, fail-fast inputs, no warning suppression); the items below make it 
    at startup, not lazily deep in a call path. Null-check injected collaborators in the ctor. Check each argument on
    its own, the exception naming that argument and its value (`nameof(x), x, "why"`) — one combined check naming the
    first argument blames the wrong one.
+   Settings that `Configure<T>(section)` binds stay bindable (settable properties, a parameterless constructor) and
+   are validated at startup (`ValidateDataAnnotations`/`IValidateOptions<T>` + `ValidateOnStart`): a settings record
+   that validates in its constructor cannot be bound that way.
    An object driven on a schedule from the moment it exists (a tick, a poll, a timer callback) is valid before its
    first setup call: until it has its input it does nothing — it never assumes the setup came first (one computed
    a direction from two default zero points and logged a warning every frame).
@@ -42,8 +45,14 @@ reuse audit, fail-fast inputs, no warning suppression); the items below make it 
 
 9. **TDD & coverage.** Deterministic automated tests (typically MSTest/xUnit/NUnit) for new logic.
    Baseline **90% line / 85% branch**. Test doubles for injected collaborators; assert behavior.
+   On the .NET 10 SDK, xUnit v3 runs on Microsoft.Testing.Platform: `global.json` sets
+   `"test": { "runner": "Microsoft.Testing.Platform" }` and the command is `dotnet test --solution <sln>`.
 10. **Static analysis clean.** Passes Roslyn analyzers / `.editorconfig` / `dotnet format` with no
-    warnings.
+    warnings. Under `latest-recommended` + warnings-as-errors, write code the analyzers accept the first time:
+    a stateless service gets an interface (the DI seam), not `static` (CA1822); no type names as identifiers
+    (`Long`, `Int`: CA1720) and no keywords of other .NET languages as parameter names (`to`, `step`: CA1716).
+    Test names in `Method_behaviour` form trip CA1707: switch it off in the tests' own `.editorconfig` and record
+    that as the repo's documented exception (rule 11).
 11. **No warning suppression.** No `#pragma warning disable`, `NoWarn`, `[SuppressMessage]`,
     GlobalSuppressions, or severity downgrades to dodge a required diagnostic — unless the repo
     documents a justified exception. (Generated EF migration files under `Migrations/` are the one
