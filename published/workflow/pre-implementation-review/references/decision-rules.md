@@ -155,6 +155,9 @@ change touches before writing the note.
   read off one projection fixes two of its three coordinates: place it from two views and check it in a third. A
   centre averaged over a region takes in whatever is attached to it (hanging strips pulled a joint's centre 4-5 cm
   off): bound the region to the thing measured.
+  A timestamp is in a frame too — the open or the close of the period it was taken in: events stamped at different
+  points (a fill at a bar's open, a decision at its close) are each mapped to their period by their own stamp, never
+  by one formula for all (one formula put a series one period behind the prices it was drawn next to).
 - **Select by the property that defines the role, never by position.** "The first item / the first
   config entry / `items[0]`" holds only while the order does; when the collection changes, the code
   silently picks something else. Name the property that makes it the right one (its type, a key, the

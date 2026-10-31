@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.11] - 2026-10-31
+- A timestamp's frame (a period's open or close) decides its period; events stamped at different points are mapped by their own stamp
+
+
 ## [1.2.10] - 2026-10-30
 - Baselines are computed outside the policies under test; removing a safeguard before a step that can fail plans the failure (decision rules)
 

@@ -82,13 +82,13 @@ you just made. Read `references/hard-fails.md` whenever the change touches code 
 - has a job, setup, builder, correction, fallback or retry read its own output, or records a negative as permanent;
 - adds a capability to a port many consumers use — an extending interface, not the shared one;
 - writes from reads that refresh independently — condition the write where it lands;
-- adds a constraint to stored data, or a new (automatic) writer — every writer, every constraint;
+- adds a constraint to stored data, or a new writer — every writer, every constraint;
 - writes again after a write that succeeded, or offers a choice a write must accept — the follow-up never fails the
   first, the choice checked against the write's limits;
 - explains or reports a measurement — from the control flow, read twice;
 - deletes or rewrites by a rule or a script — bounded, its output looked at;
 - depends on an ambient mode, a tool's default or an unmeasured value;
-- uses a value measured in another frame (space, unit, projection, one side of a pair);
+- uses a value measured in another frame (space, unit, projection, one side of a pair, a period's open or close);
 - selects an item by position, or by being listed, named or nearest;
 - lists observed values or refusals (hosts, labels, ids, formats), moves one (a domain, a path), or fixes a reported symptom from a cause read in the code;
 - finds something by a conventional name;
