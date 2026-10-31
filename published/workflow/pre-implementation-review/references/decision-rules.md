@@ -99,6 +99,12 @@ change touches before writing the note.
   by what makes it a preference: an item classed as a conflict offered "keep this" and "use that", both of which had
   to store a text too long for the column, and every click failed. Resolve a stored reference against the full set and
   filter only the choices: a name looked up among the choices alone showed "none" for a valid value of the other kind.
+- **A design that emits quantities an outside system bounds is checked at the scale it will run at, before it is
+  fixed.** When the work sizes something as a share of a budget (an order as a fraction of capital, a batch as a share
+  of a quota, a request against a rate), compute from known magnitudes the smallest quantity it emits at the budget it
+  will really have, and compare it with the outside limit (a minimum order, a minimum batch, a maximum size) while the
+  design is still open. A sizing rule fixed first and checked only after the build emitted mostly orders below the
+  venue's minimum at every intended budget, and the work stopped with nothing it could run.
 - **Explain a measurement from the control flow that produced it, never from the arithmetic of its numbers.** Numbers
   that add up (100 + 30 = 130) fit more than one story. Read the code each one passed through — what is retried, cut or
   skipped — and when two stories fit, take the measurement that tells them apart before either is written down.

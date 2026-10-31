@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.12] - 2026-10-31
+- A sizing rule that emits quantities an outside system bounds (a minimum order, a quota) is checked at the real budget before the design is fixed
+
+
 ## [1.2.11] - 2026-10-31
 - A timestamp's frame (a period's open or close) decides its period; events stamped at different points are mapped by their own stamp
 

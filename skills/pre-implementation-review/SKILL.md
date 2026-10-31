@@ -85,6 +85,7 @@ you just made. Read `references/hard-fails.md` whenever the change touches code 
 - adds a constraint to stored data, or a new writer — every writer, every constraint;
 - writes again after a write that succeeded, or offers a choice a write must accept — the follow-up never fails the
   first, the choice checked against the write's limits;
+- sizes by a share of a budget an outside limit bounds — its smallest quantity at the real budget, first;
 - explains or reports a measurement — from the control flow, read twice;
 - deletes or rewrites by a rule or a script — bounded, its output looked at;
 - depends on an ambient mode, a tool's default or an unmeasured value;
