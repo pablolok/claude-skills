@@ -40,15 +40,17 @@ in chat wear the theme of the day: a holiday while one is on, otherwise the seas
 |-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
 | Christmas | December 1 – January 2 | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
 | Befana | January 3–6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
-| Carnival | the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🃏 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
+| Carnival | the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
 | Easter | Palm Sunday – Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
 | Halloween | October 15 – November 7 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
-| Spring | from March 21 | 🦋 | 🐝 | 🌱 | 🌷 | 🐞 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
-| Summer | from June 21 | 🪁 | 🤿 | 🧴 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
+| Spring | from March 21 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
+| Summer | from June 21 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
 | Autumn | from September 23 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
-| Winter | from December 21 | 🌟 | 🐧 | 🧤 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
+| Winter | from December 21 | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
 
-- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line.
+- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line. The mascots follow the
+  roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
+  fast one.
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.
 - The progress bar's `title` starts with your mark, the same on every call (a new title starts a new flow).
 - The close report opens with your mark and ends with the theme's closing line, in the session's language.

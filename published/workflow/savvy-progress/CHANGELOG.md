@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.5.0] - 2026-11-01
+- Each tier in its own costume for its role in every theme — seasons get one per tier (spring: butterfly, digging, watering, potting, kite, net; summer: swim ring, snorkel, sandcastle, watermelon, surf, spyglass; autumn: owl, mushrooms, chestnuts, grapes, rake, hike; winter: skating, ice fishing, knitting, cocoa, sled, polar lantern), and the holidays an explorer of their own (stargazer, lantern, Capitan Spaventa, binoculars), Santa checks his list, Arlecchino juggles
+
+
 ## [1.4.0] - 2026-11-01
 - Themes for the calendar — Christmas, Befana, Carnival, Easter and Halloween costumes per tier, and one outfit per season tinted with the tier's color (flowers, straw hat, beret and scarf, beanie), with falling snow, petals, leaves and confetti, a header ornament and bar colors per theme; every figure moves; theme option lists them all, auto follows the calendar
 

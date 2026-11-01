@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.1] - 2026-11-01
+- Chat mascots follow the panel's figures and the tiers' roles — spring worm and kite, summer swim ring and sandcastle bucket, winter skate, fishing rod and yarn, Carnival juggler
+
+
 ## [1.8.0] - 2026-11-01
 - Themes in chat for the seasons too — spring, summer, autumn and winter each with tier mascots, the orchestrator's mark, verdict marks and a closing line; a holiday wins over its season, as in the agents panel
 

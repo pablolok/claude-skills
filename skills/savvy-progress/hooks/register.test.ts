@@ -356,7 +356,7 @@ test('the classic theme keeps the crabs as they were', { options: { theme: 'clas
   expect(Object.values(rows).join('')).not.toContain('hw-')
 })
 
-test('a season dresses every figure in one outfit, tinted per tier, and still moves', { options: { theme: 'winter' } }, async ($, on) => {
+test('a season dresses each tier for its own job, in its color, and every figure moves', { options: { theme: 'winter' } }, async ($, on) => {
   const { state } = engine(on, { infos: [info('w1', 'running')] })
   await start($)
 
@@ -365,8 +365,10 @@ test('a season dresses every figure in one outfit, tinted per tier, and still mo
   expect(rows.running).toContain('class="c-wi-careful run"')
   expect(rows.finished).toContain('class="c-wi-heavy idle"')
   expect(rows.planned).toContain('class="c-wi-medium idle"')
-  // The beanie takes each tier's color: Careful's amber, Heavy's red.
+  // Careful knits in its amber, Heavy wears its red fur hat; each its own costume.
   expect(rows.running).toContain('fill="#BA7517"')
   expect(rows.finished).toContain('fill="#D85A30"')
   expect(rows.header).toContain('class="orn o-flake"')
+  expect(rows.running).toContain('class="ball"')
+  expect(rows.finished).toContain('class="bob"')
 })

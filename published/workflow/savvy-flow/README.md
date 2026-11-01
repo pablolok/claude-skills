@@ -39,7 +39,7 @@ fraction of the context, so a task that needs a skill, a browser or the web goes
 
 The orchestrator's chat messages wear the theme of the day, in the same windows as the savvy-progress panel: a holiday
 while one is on (Christmas, the Befana, Carnival, Easter, Halloween), otherwise the season (spring, summer, autumn,
-winter). Each theme has a mascot per tier (in summer 🪁 Fable, 🤿 Heavy, 🧴 Careful, 🍉 Medium, 🏄 Light), a mark of
+winter). Each theme has a mascot per tier (in summer 🛟 Fable afloat, 🤿 Heavy diving, 🪣 Careful building a sandcastle, 🍉 Medium, 🏄 Light surfing), a mark of
 the orchestrator's own that also opens the progress bar's title (🌞), marks for accepted, returned and escalated tasks,
 and a closing line. Chat only: files, commits, briefs and task titles stay plain, and the user can ask to drop it.
 With savvy-progress installed, the agents panel dresses its figures for the same themes, animated.

@@ -26,18 +26,26 @@ the mod needs.
   them.
 - **Themes**: the figures dress up for the calendar, and every one of them moves, running or not (a running one at
   full pace, the others idling slowly); the bar takes the theme's colors and the panel's header an ornament of its
-  own. The crab stays the crab: each theme adds what it wears and holds.
-  - Christmas (December 1 – January 2): angel, Santa, elf wrapping a gift, baker with a gingerbread man, reindeer;
-    snow falls.
-  - Befana (January 3–6): the patched kerchief, with her broom, the sack of coal, the stocking of sweets.
-  - Carnival (the twelve days up to Shrove Tuesday): Venetian mask, Balanzone, Arlecchino, Pulcinella with a slice of
-    pizza, party hat and horn; confetti falls.
+  own. The crab stays the crab, and each tier keeps its role in every theme: Fable is the rare one that floats or
+  glides, Heavy digs and finds, Careful does the delicate work, Medium the everyday work, Light runs, Explore scouts;
+  any other agent (and the bar) wears the theme's plain outfit.
+  - Christmas (December 1 – January 2): angel, Santa checking his list, elf wrapping a gift, baker with a gingerbread
+    man, reindeer, a stargazer following the star; snow falls.
+  - Befana (January 3–6): the patched kerchief; flying on the broom, the sack of coal, the stocking of sweets, a
+    wrapped sweet, sweeping, a lantern in the night.
+  - Carnival (the twelve days up to Shrove Tuesday): Venetian mask, Balanzone, Arlecchino juggling, Pulcinella with a
+    slice of pizza, party hat and horn, Capitan Spaventa; confetti falls.
   - Easter (Palm Sunday to Easter Monday): bunny ears, an egg hunt, a painted egg, a chocolate egg in foil, a chick
-    hatched on the head.
+    hatched on the head, binoculars on the lookout for the bunny.
   - Halloween (October 15 – November 7): vampire, skeleton, spider on its thread, bat, ghost, witch, jack-o'-lantern.
-  - The seasons, the rest of the year, one outfit tinted with each tier's color: a crown of flowers and a butterfly
-    in spring (from March 21), a straw hat, sunglasses and a gelato in summer (June 21), a beret and a scarf under
-    falling leaves in autumn (September 23), a knitted beanie under the snow in winter (December 21).
+  - Spring (from March 21): butterfly, digging the bed (and a worm), watering a seedling, potting a tulip, running
+    with a kite, a butterfly net; petals fall.
+  - Summer (from June 21): afloat on a swim ring, snorkel and fins, a sandcastle with its flag, a slice of
+    watermelon, surfing, a spyglass on the shore.
+  - Autumn (from September 23): the wise owl with a book, mushroom hunting, roasting chestnuts, the grape harvest,
+    raking leaves, a hike; leaves fall.
+  - Winter (from December 21): figure skating, ice fishing, knitting, hot cocoa, sledding, a polar explorer with a
+    lantern; snow falls.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
