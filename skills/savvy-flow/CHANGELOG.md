@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.0] - 2026-11-01
+- Holiday themes in chat — Christmas, Befana, Carnival, Easter and Halloween each with tier mascots, the orchestrator's mark, verdict marks and a closing line, in the agents panel's windows
+
+
 ## [1.6.1] - 2026-11-01
 - README — with savvy-progress the agents panel wears the same Halloween costumes
 
