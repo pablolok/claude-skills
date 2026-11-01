@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.13] - 2026-11-01
+- Un piano che altri costruiscono si rilegge una volta contro il codice prima dell'approvazione: scelte aperte che cambiano il risultato decise nel piano, firme cambiate con tutti i chiamanti nello stesso compito
+
+
 ## [1.2.12] - 2026-10-31
 - A sizing rule that emits quantities an outside system bounds (a minimum order, a quota) is checked at the real budget before the design is fixed
 

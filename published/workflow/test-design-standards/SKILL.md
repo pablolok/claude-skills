@@ -27,6 +27,9 @@ here. The framework and the coverage bar come from the language layer or the pro
    defect: the reader cannot see why the expected value is right.
    A parity test between a wrapper and the function it calls is tautological — it passes when both are wrong. Pin
    literal expected values (computed by hand, with the reason) for each case instead.
+   Assert the value where the unit decides it: when a later step may legitimately change it (a scaling to a budget, a
+   rounding, a cap), the end result is the wrong oracle — assert the decided value, and of the end result only the
+   bounds that later step keeps.
 5. **Deterministic.** No dependence on wall-clock time, sleeps, real network, unpinned random seeds, locale or time
    zone, filesystem listing order, hash-map or set iteration order, or the order the tests run in. Time, randomness
    and generated IDs come in as injected collaborators (`clean-code-standards` item 3) and are fixed in the test.

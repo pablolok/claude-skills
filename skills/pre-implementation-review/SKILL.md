@@ -8,9 +8,8 @@ description: Use BEFORE writing code, patching files, or scaffolding UI/backend 
 Use this before implementation starts. **The goal is the right design, not reuse**: decide the responsibilities, the
 design pattern that expresses each, the ownership boundaries and the seams — *during planning*, before code exists.
 Reusability, testability and low duplication follow as consequences; chasing reuse directly produces premature or wrong
-abstractions. Same judgment as `clean-code-standards`, *ahead* of writing. Start from "what are the responsibilities,
-and what is the correct shape for each?", never from "what can I reuse?". The order: design → find existing
-implementations of it (reuse/extend) → only if none, build it.
+abstractions. Start from "what are the responsibilities, and what is the correct shape for each?", never from "what
+can I reuse?".
 
 ## Required outcome
 
@@ -129,5 +128,7 @@ A responsibility with no existing owner that won't recur is said so, with the lo
   (a plan's design section does not substitute for it — "the design is already written down" is the rationalization),
   scoped to that task; a task with no behaviour effect (a rename, a comment, formatting) is exempt. `verification-gates`
   runs ONCE at the end: per task only the covering tests; earlier full sweeps only when a task touches what they can't
-  see (a shared type, a build config, a public interface). **review → build → covering tests → (next task) … → gates
-  once at the end.**
+  see (a shared type, a build config, a public interface).
+- **A plan others build gets one read against the code before approval**, by a reader who did not write it: every
+  choice still open that changes the result is decided in the plan, and a signature a task changes lands there with
+  all its callers.
