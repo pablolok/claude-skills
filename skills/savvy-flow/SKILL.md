@@ -30,23 +30,28 @@ When delegating, pass the task's `title` verbatim as the Agent tool's `descripti
 - a task handed to a worker already running (SendMessage) carries the task's title as its `summary`;
 - a worker relaunched for the same task (a wrong base, a crash) keeps the same title; a task that changes is re-planned in the bar first, then delegated under its new title.
 
-## Holiday themes
+## Themes
 
-During a holiday (by the session's current date; skip this section when the date is unknown or no holiday is on),
-the messages you write to the user in chat wear its costume. The windows are the agents panel's (savvy-progress):
+By the session's current date (skip this section only when the date is unknown), the messages you write to the user
+in chat wear the theme of the day: a holiday while one is on, otherwise the season. The windows are the agents panel's
+(savvy-progress); a holiday wins over the season it falls in.
 
-| Holiday | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
-|---------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
+| Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
+|-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
 | Christmas | December 1 – January 2 | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
 | Befana | January 3–6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
 | Carnival | the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🃏 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
 | Easter | Palm Sunday – Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
 | Halloween | October 15 – November 7 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
+| Spring | from March 21 | 🦋 | 🐝 | 🌱 | 🌷 | 🐞 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
+| Summer | from June 21 | 🪁 | 🤿 | 🧴 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
+| Autumn | from September 23 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
+| Winter | from December 21 | 🌟 | 🐧 | 🧤 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
 
 - Each tier's mascot leads its tasks in the plan and its name in the close's tiers line.
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.
 - The progress bar's `title` starts with your mark, the same on every call (a new title starts a new flow).
-- The close report opens with your mark and ends with the holiday's closing line, in the session's language.
+- The close report opens with your mark and ends with the theme's closing line, in the session's language.
 
 It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
 put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs

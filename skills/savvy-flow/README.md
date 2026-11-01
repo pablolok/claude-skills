@@ -35,14 +35,14 @@ host has no such tools the deny does nothing. Light and Medium also carry a tool
 `ToolSearch` and the savvy-progress tools): without the listing of every tool and skill a fresh worker starts at a
 fraction of the context, so a task that needs a skill, a browser or the web goes to Careful or above.
 
-## Holiday themes
+## Themes
 
-During Christmas, the Befana, Carnival, Easter and Halloween (the same windows as the savvy-progress panel) the
-orchestrator's chat messages wear the holiday's costume: a mascot per tier (at Christmas 👼 Fable, 🎅 Heavy, 🧝 Careful,
-🍪 Medium, 🦌 Light), a mark of its own for itself and the progress bar's title (🎄), marks for accepted, returned and
-escalated tasks, and a closing line. Chat only: files, commits, briefs and task titles stay plain. Outside the holidays
-nothing changes. With savvy-progress installed, the agents panel dresses its figures for the same holidays, animated,
-and for the seasons in between.
+The orchestrator's chat messages wear the theme of the day, in the same windows as the savvy-progress panel: a holiday
+while one is on (Christmas, the Befana, Carnival, Easter, Halloween), otherwise the season (spring, summer, autumn,
+winter). Each theme has a mascot per tier (in summer 🪁 Fable, 🤿 Heavy, 🧴 Careful, 🍉 Medium, 🏄 Light), a mark of
+the orchestrator's own that also opens the progress bar's title (🌞), marks for accepted, returned and escalated tasks,
+and a closing line. Chat only: files, commits, briefs and task titles stay plain, and the user can ask to drop it.
+With savvy-progress installed, the agents panel dresses its figures for the same themes, animated.
 
 ## With savvy-progress
 
