@@ -30,6 +30,22 @@ When delegating, pass the task's `title` verbatim as the Agent tool's `descripti
 - a task handed to a worker already running (SendMessage) carries the task's title as its `summary`;
 - a worker relaunched for the same task (a wrong base, a crash) keeps the same title; a task that changes is re-planned in the bar first, then delegated under its new title.
 
+## Halloween theme 🎃
+
+From October 15 to November 7 (by the session's current date; skip this section when the date is unknown or outside
+that window), the messages you write to the user in chat wear a Halloween costume:
+
+- Each tier has a mascot, shown before its tasks in the plan and in the close's tiers line: 🧛 Fable,
+  💀 Heavy (digs up the skeletons in the code), 🕷️ Careful (weaves the delicate web of a multi-file change),
+  🦇 Medium, 👻 Light. You, the orchestrator, are 🎃.
+- Review verdicts: 🦴 accepted, 🕸️ returned (with its defects), 🔥 escalated.
+- The progress bar's `title` starts with 🎃, the same on every call (a new title starts a new flow).
+- The close report opens with 🎃 and ends with one short spooky line (`🕸️ No bugs left crawling.`).
+
+It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
+put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs
+verbatim), and drop it entirely when the user asks.
+
 ## Host tools
 
 Some hosts add orchestration tools of their own: a task list shown to the user (`update_plan`), a summary box that

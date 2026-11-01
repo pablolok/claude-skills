@@ -35,6 +35,13 @@ host has no such tools the deny does nothing. Light and Medium also carry a tool
 `ToolSearch` and the savvy-progress tools): without the listing of every tool and skill a fresh worker starts at a
 fraction of the context, so a task that needs a skill, a browser or the web goes to Careful or above.
 
+## Halloween theme
+
+From October 15 to November 7 the orchestrator's chat messages wear a costume: a mascot per tier (🧛 Fable, 💀 Heavy,
+🕷️ Careful, 🦇 Medium, 👻 Light), 🎃 for the orchestrator and the progress bar's title, 🦴 / 🕸️ / 🔥 for accepted,
+returned and escalated tasks. Chat only: files, commits, briefs and task titles stay plain. It switches itself off
+after the window and comes back the next year.
+
 ## With savvy-progress
 
 The skill and the agents run fine alone. With the savvy-progress plugin of the same marketplace installed, the

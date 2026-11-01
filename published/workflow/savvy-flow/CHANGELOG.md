@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.0] - 2026-11-01
+- Halloween theme (October 15 – November 7) — tier mascots, spooky verdicts and close in chat only
+
+
 ## [1.5.7] - 2026-10-30
 - Isolated worktrees inside the repo folder are git-ignored first; removing a worktree ends its worker, so the topic's next task starts fresh
 
