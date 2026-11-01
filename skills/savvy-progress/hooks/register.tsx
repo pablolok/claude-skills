@@ -2,6 +2,10 @@ import { atom, read, update } from 'claude-code'
 import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
+import { CLAY, INK, crabBody, pixels, stamp } from './sprite'
+import type { Fill } from './sprite'
+import { DRESSES, THEME_CSS, costumeIn, themeOf } from './themes'
+import type { Dress, Theme } from './themes'
 
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -18,7 +22,6 @@ const PANE = 'savvy-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
 const DONE = '#5fbf8f'
-const PUMPKIN = '#F28C28'
 
 type ProgressInput = {
   title?: string
@@ -113,27 +116,14 @@ async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
 }
 
 // ---------------------------------------------------------------------------
-// Theme: the `theme` option; `auto` dresses the crabs up for Halloween from
-// October 15 to November 7 (the engine's local date).
-
-type Theme = 'classic' | 'halloween'
+// Theme: the `theme` option, or the calendar's (`themes.ts`).
 
 // Module scope is fine here: session.start sets it again on every (re)load.
 let theme: Theme = 'classic'
 
-export const isHalloween = (ms: number): boolean => {
-  const d = new Date(ms)
-  const month = d.getMonth()
-  const day = d.getDate()
-  return (month === 9 && day >= 15) || (month === 10 && day <= 7)
-}
+const dressOf = (): Dress | undefined => (theme === 'classic' ? undefined : DRESSES[theme])
 
-export const themeOf = (option: unknown, ms: number): Theme =>
-  option === 'halloween' || option === 'classic' ? option : isHalloween(ms) ? 'halloween' : 'classic'
-
-const isSpooky = (): boolean => theme === 'halloween'
-
-const accent = (): string => (isSpooky() ? PUMPKIN : ACCENT)
+const accent = (): string => dressOf()?.accent ?? ACCENT
 
 const blank = (): Flow => ({
   title: 'savvy-flow',
@@ -229,7 +219,7 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean): string => {
   const BAR_X = Math.round(16 + textWidth(title, 13) + 12)
   const BAR_W = Math.max(60, W - BAR_X - 46 - CRAB_W)
   const color = f.isFinished ? DONE : accent()
-  const isDusk = isSpooky() && !f.isFinished
+  const sparkle = f.isFinished ? undefined : dressOf()?.sparkle
   const y0 = (H - BAR_H) / 2
   const fillW = Math.round(BAR_W * ratio(f))
   const runW = f.total ? Math.round((BAR_W * Math.min(f.total, f.done + f.running)) / f.total) : 0
@@ -272,7 +262,7 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean): string => {
 .t1{animation-duration:${f.isFinished ? 3.8 : 2.8}s;animation-delay:-.7s}.t2{animation-duration:${f.isFinished ? 4.4 : 1.9}s;animation-delay:-1.3s}.t3{animation-duration:${f.isFinished ? 3.5 : 3.3}s;animation-delay:-.4s}
 @keyframes tw{0%,100%{opacity:1}50%{opacity:${f.isFinished ? 0.8 : 0.3}}}
 @media (prefers-reduced-motion: reduce){.t0,.t1,.t2,.t3{animation:none}}
-${isDusk ? '.dusk .t1,.dusk .t3{fill:#8f5cf4}' : ''}
+${sparkle ? `.dusk .t1{fill:${sparkle[0]}}.dusk .t3{fill:${sparkle[1]}}` : ''}
 </style>
 <defs><clipPath id="c"><rect x="0" y="0" width="${BAR_W}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath></defs>
 <circle cx="5" cy="${H / 2}" r="4" fill="${color}"/>
@@ -280,7 +270,7 @@ ${isDusk ? '.dusk .t1,.dusk .t3{fill:#8f5cf4}' : ''}
 <g transform="translate(${BAR_X},${y0})">
 <rect class="k" width="${BAR_W}" height="${BAR_H}" rx="${BAR_H / 2}"/>
 <g clip-path="url(#c)">
-<g fill="${color}"${isDusk ? ' class="dusk"' : ''}>${dots.join('')}</g>
+<g fill="${color}"${sparkle ? ' class="dusk"' : ''}>${dots.join('')}</g>
 <g fill="${color}" opacity="0.45">${faint.join('')}</g>
 <g class="tk">${ticks.join('')}</g>
 </g>
@@ -417,42 +407,6 @@ const PANE_CSS = `<style>
 @media (prefers-reduced-motion: reduce){.live{animation:none}}
 </style>`
 
-// Pixel Clawd from DockCrab (Clawdy): a 24×18 crab on a 30×28 grid, one costume per tier.
-// The body keeps the brand clay; the tier's color lives in the costume's accent.
-const CLAY = '#D97757'
-const INK = '#1F1E1D'
-
-// `cls` puts a pixel in a named group: `bd` (the default) is the body and its
-// costume, `la`/`lb` the leg pairs, anything else a prop with its own motion.
-type Fill = (x: number, y: number, w: number, h: number, c: string, cls?: string) => void
-
-const stamp = (f: Fill, x: number, y: number, rows: string[], map: Record<string, string>, cls?: string): void =>
-  rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f(x + dx, y + dy, 1, 1, map[ch] ?? '', cls)))
-
-// How a costume recolors the crab itself: `none` leaves the part out, `eyeCls`
-// puts the eyes in a group of their own (drawn over the costume).
-type Look = { body?: string; claws?: string; legs?: string; eyes?: string; eyeCls?: string }
-
-// `armCls` lets a raised claw travel with the prop it holds.
-const crabBody = (f: Fill, armFront = 0, armCls?: string, look: Look = {}): void => {
-  const body = look.body ?? CLAY
-  const claws = look.claws ?? body
-  const legs = look.legs ?? body
-  const eyes = look.eyes ?? INK
-  f(7, 10, 16, 12, body)
-  f(3, 14, 4, 4, claws)
-  f(23, 14 + armFront, 4, 4, claws, armCls)
-  if (eyes !== 'none') {
-    f(9, 12, 2, 2, eyes, look.eyeCls)
-    f(19, 12, 2, 2, eyes, look.eyeCls)
-  }
-  if (legs === 'none') return
-  f(7, 22, 2, 4, legs, 'la')
-  f(17, 22, 2, 4, legs, 'la')
-  f(11, 22, 2, 4, legs, 'lb')
-  f(21, 22, 2, 4, legs, 'lb')
-}
-
 // Pure CSS, run by the compositor: no redraws. Periods divide one second, so the
 // once-a-second redraw of a running row restarts them in phase. Every crab walks;
 // each costume adds its prop's own motion on top.
@@ -482,6 +436,7 @@ const CRAB_CSS = `<style>
 @media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
 </style>`
 
+// The classic costumes, one per tier (the sprite itself is in `sprite.ts`).
 const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
   // Fable: astronaut in a glass dome; floats instead of walking, the antenna and the star blink.
   fable: (f, t) => {
@@ -529,125 +484,10 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
   other: f => crabBody(f),
 }
 
-// Halloween: the same crabs in costume. A color written `.name` is painted by a
-// CSS class, so it can change with the color scheme (night ink turns lighter in
-// the dark, where black would vanish).
-const BONE = '#EDE6D6'
-const GLOW = '#FFD54A'
-const BLOOD = '#D0453F'
-const NIGHT = '.hn'
-const SHEET = '#F8F7F3'
-const SHEET_EDGE = '#BDBAB2'
-const BAT_WING = ['w......', 'ww....w', 'www..ww', 'wwwwwww', 'wwwwwww', '.wwwwww', '..w.w.w']
-const mirror = (rows: string[]): string[] => rows.map(r => [...r].reverse().join(''))
-
-const HALLOWEEN: Record<string, (f: Fill, t: string) => void> = {
-  // Fable: vampire in a high-collared cape; floats, the red eyes glow, a bat flaps above.
-  fable: (f, t) => {
-    f(4, 9, 22, 15, NIGHT)
-    ;[4, 11, 17, 23].forEach(x => f(x, 24, 3, 1, NIGHT))
-    f(3, 5, 4, 6, '#8E1B2B'); f(23, 5, 4, 6, '#8E1B2B'); f(3, 3, 1, 2, '#8E1B2B'); f(26, 3, 1, 2, '#8E1B2B')
-    crabBody(f, 0, undefined, { eyes: BLOOD, eyeCls: 'gl' })
-    stamp(f, 7, 10, ['kkkkkkkkkkkkkkkk', 'kk.....kk.....kk', '.......kk.......'], { k: INK })
-    f(11, 17, 8, 1, INK); f(12, 18, 1, 2, '#FFFFFF'); f(17, 18, 1, 2, '#FFFFFF')
-    f(14, 20, 2, 2, t)
-    stamp(f, 22, 0, ['k.....k', 'kk.k.kk', '.kkkkk.', '...k...'], { k: NIGHT }, 'bat')
-  },
-  // Heavy: a skeleton digging; it rattles, the eyes glow in the skull, the bone in its claw swings.
-  heavy: f => {
-    crabBody(f, -4, 'it', { body: NIGHT, claws: BONE, legs: BONE, eyes: BLOOD, eyeCls: 'gl' })
-    f(8, 11, 4, 4, BONE); f(18, 11, 4, 4, BONE)
-    f(14, 15, 2, 6, BONE); f(10, 16, 10, 1, BONE); f(11, 18, 8, 1, BONE); f(12, 20, 6, 1, BONE)
-    stamp(f, 24, 4, ['b.b', '.b.', '.b.', '.b.', 'b.b'], { b: BONE }, 'it')
-  },
-  // Careful: a spider on its thread; it climbs and drops, eight legs scuttle.
-  careful: f => {
-    f(15, -16, 1, 25, '#C9CCD2', 'thr')
-    crabBody(f, 0, undefined, { body: NIGHT, eyes: BLOOD, eyeCls: 'gl' })
-    f(12, 11, 1, 1, BLOOD, 'gl'); f(17, 11, 1, 1, BLOOD, 'gl')
-    stamp(f, 13, 15, ['rrrr', '.rr.', 'rrrr'], { r: BLOOD })
-    f(3, 11, 4, 1, NIGHT, 'la'); f(2, 8, 1, 3, NIGHT, 'la'); f(23, 19, 5, 1, NIGHT, 'la'); f(28, 20, 1, 4, NIGHT, 'la')
-    f(23, 11, 4, 1, NIGHT, 'lb'); f(27, 8, 1, 3, NIGHT, 'lb'); f(2, 19, 5, 1, NIGHT, 'lb'); f(1, 20, 1, 4, NIGHT, 'lb')
-  },
-  // Medium: a bat; the wings beat, yellow eyes and two fangs.
-  medium: f => {
-    const fur = '#6B4C8F'
-    crabBody(f, 0, undefined, { body: fur, eyes: GLOW, eyeCls: 'gl' })
-    f(8, 7, 2, 3, fur); f(8, 6, 1, 1, fur); f(20, 7, 2, 3, fur); f(21, 6, 1, 1, fur)
-    f(12, 16, 1, 2, '#FFFFFF'); f(17, 16, 1, 2, '#FFFFFF')
-    stamp(f, 0, 9, BAT_WING, { w: NIGHT }, 'wl')
-    stamp(f, 23, 9, mirror(BAT_WING), { w: NIGHT }, 'wr')
-  },
-  // Light: a ghost under a sheet; it floats, the hem flutters, the claws peek out.
-  light: f => {
-    crabBody(f, 0, undefined, { legs: 'none' })
-    stamp(f, 6, 3, ['.....oooooooo.....', '...oossssssssoo...', '..osssssssssssso..', '.osssssssssssssso.', ...Array<string>(16).fill('osssssssssssssssso')], { o: SHEET_EDGE, s: SHEET })
-    stamp(f, 6, 23, ['ss..ss..ss..ss..ss'], { s: SHEET }, 'ha')
-    stamp(f, 6, 23, ['..ss..ss..ss..ss..'], { s: SHEET }, 'hb')
-    f(10, 10, 2, 3, INK); f(18, 10, 2, 3, INK)
-    f(13, 15, 4, 1, INK); f(12, 16, 1, 2, INK); f(17, 16, 1, 2, INK); f(13, 18, 4, 1, INK)
-    f(8, 14, 2, 1, '#F2A7B8'); f(20, 14, 2, 1, '#F2A7B8')
-  },
-  // Explore: witch in a pointed hat; the broom sweeps, the hat wobbles.
-  explore: f => {
-    crabBody(f, -4, 'it')
-    stamp(f, 6, 1, ['..........kk......', '.........kkk......', '........kkkk......', '.......kkkkk......', '......kkkkkkk.....', '......ooooooo.....', '..kkkkkkkkkkkkkk..', 'kkkkkkkkkkkkkkkkkk'], { k: '#4B2A6B', o: PUMPKIN }, 'hat')
-    f(25, 3, 1, 8, '#7A4A26', 'it'); f(24, 0, 3, 3, '#D9A441', 'it')
-  },
-  // Any other agent, and the bar: a jack-o'-lantern whose face flickers.
-  other: f => {
-    crabBody(f, 0, undefined, { body: PUMPKIN, eyes: 'none' })
-    f(11, 10, 1, 12, '#C8641A'); f(18, 10, 1, 12, '#C8641A')
-    f(14, 7, 2, 3, '#4E8F3A'); f(16, 7, 2, 1, '#6DB33F')
-    stamp(f, 9, 12, ['.y.', 'yyy'], { y: GLOW }, 'gl')
-    stamp(f, 18, 12, ['.y.', 'yyy'], { y: GLOW }, 'gl')
-    stamp(f, 10, 16, ['y.yyyyyy.y', 'yyyyyyyyyy', '.yy.yy.yy.'], { y: GLOW }, 'gl')
-  },
-}
-
-// Halloween motion, on top of CRAB_CSS. A crab that is not running idles: every
-// costume keeps a slow motion of its own, so planned and finished rows move too.
-// Periods divide one second, as CRAB_CSS's do.
-const HALLOWEEN_CSS = `<style>
-.hn{fill:#2A2530}.hns{fill:#2A2530;stroke:#2A2530}.web{stroke:#b4b4b0}
-@media (prefers-color-scheme: dark){.hn{fill:#6E6380}.hns{fill:#8A7F9A;stroke:#8A7F9A}.web{stroke:#5a5a5a}}
-.idle g{transform-box:fill-box}
-@keyframes glow{50%{opacity:.35}}@keyframes drop{50%{transform:translateY(3px)}}@keyframes hem{50%{opacity:0}}
-@keyframes flap{50%{transform:scaleY(.35)}}@keyframes flapL{50%{transform:rotate(28deg)}}@keyframes flapR{50%{transform:rotate(-28deg)}}
-@keyframes flicker{25%{opacity:.5}50%{opacity:1}75%{opacity:.7}}@keyframes swing{50%{transform:rotate(-20deg)}}@keyframes wob{50%{transform:rotate(-8deg)}}
-@keyframes rattle{25%{transform:translate(-1px,0)}50%{transform:translate(0,1px)}75%{transform:translate(1px,0)}}
-.run .gl,.idle .gl{animation:glow 1s ease-in-out infinite}
-.c-hw-fable.run,.c-hw-light.run,.c-hw-light.idle{animation:float 1s ease-in-out infinite}
-.c-hw-fable.run .la,.c-hw-fable.run .lb,.c-hw-fable.run .bd,.c-hw-light.run .bd,.c-hw-careful.run .bd{animation:none}
-.c-hw-fable .bat{transform-origin:50% 0}.c-hw-fable.run .bat{animation:flap .25s steps(1) infinite}.c-hw-fable.idle .bat{animation:flap 1s steps(1) infinite}
-.c-hw-heavy.run .bd{animation:rattle .25s steps(1) infinite}
-.c-hw-heavy .it{transform-origin:50% 100%}.c-hw-heavy.run .it{animation:swing .5s ease-in-out infinite}.c-hw-heavy.idle .it{animation:swing 1s ease-in-out infinite}
-.c-hw-careful.run,.c-hw-careful.idle{animation:drop 1s ease-in-out infinite}
-.c-hw-medium .wl{transform-origin:100% 40%}.c-hw-medium .wr{transform-origin:0 40%}
-.c-hw-medium.run .wl{animation:flapL .25s steps(1) infinite}.c-hw-medium.run .wr{animation:flapR .25s steps(1) infinite}
-.c-hw-medium.idle .wl{animation:flapL 1s ease-in-out infinite}.c-hw-medium.idle .wr{animation:flapR 1s ease-in-out infinite}
-.c-hw-light.run .ha{animation:hem .25s steps(1) infinite}.c-hw-light.run .hb{animation:hem .25s steps(1) infinite -.125s}
-.c-hw-light.idle .ha{animation:hem 1s steps(1) infinite}.c-hw-light.idle .hb{animation:hem 1s steps(1) infinite -.5s}
-.c-hw-other .gl{animation:flicker .5s steps(1) infinite}
-.c-hw-explore .hat{transform-origin:50% 100%}.c-hw-explore.run .hat,.c-hw-explore.idle .hat{animation:wob 1s ease-in-out infinite}
-.c-hw-explore.run .it{transform-origin:50% 100%;animation:fence .5s ease-in-out infinite}
-.spin{animation:drop 1s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.run,.run g,.idle,.idle g,.spin{animation:none!important}}
-</style>`
-
-const crabCss = (): string => (isSpooky() ? CRAB_CSS + HALLOWEEN_CSS : CRAB_CSS)
-
-// A cobweb in the header's top-right corner, its spider bobbing on a thread.
-const webSvg = (W: number): string => {
-  const rays = [0, 30, 60, 90].map(a => (a * Math.PI) / 180)
-  const pt = (r: number, a: number): string => `${(W - r * Math.cos(a)).toFixed(1)},${(r * Math.sin(a)).toFixed(1)}`
-  const spokes = rays.map(a => `M${W},0L${pt(26, a)}`).join('')
-  const rings = [8, 15, 22].map(r => 'M' + rays.map(a => pt(r, a)).join('L')).join('')
-  const x = W - 40
-  const legs = [-1, 0, 1, 2].map(i => `M-2,${i}L-7,${i * 2.2 - 3.5}M2,${i}L7,${i * 2.2 - 3.5}`).join('')
-  return `<path class="web" d="${spokes}${rings}" fill="none" stroke-width="0.8"/>
-<g class="spin"><line class="web" x1="${x}" y1="-12" x2="${x}" y2="9" stroke-width="0.8"/>
-<g transform="translate(${x},12)"><path class="hns" d="${legs}" fill="none" stroke-width="1" stroke-linecap="round"/><circle class="hns" r="3.2"/><circle class="hns" cy="-3" r="1.8"/><circle cx="-0.8" cy="-3.3" r="0.5" fill="${BLOOD}"/><circle cx="0.8" cy="-3.3" r="0.5" fill="${BLOOD}"/></g></g>`
+// A theme's CSS rides on the classic crab's.
+const crabCss = (): string => {
+  const dress = dressOf()
+  return dress ? CRAB_CSS + THEME_CSS + dress.css : CRAB_CSS
 }
 
 const costumeOf = (type: string): string => (type === 'Explore' ? 'explore' : tierOf(type))
@@ -656,21 +496,19 @@ const CRAB_SCALE = 1.1
 
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.
+// In a theme every figure moves: a running one at full pace, any other idles.
 const crab = (x: number, y: number, costume: string, dim = false, isWalking = false, scale = CRAB_SCALE): string => {
-  const groups = new Map<string, string[]>([['bd', []]])
-  const f: Fill = (cx, cy, w, h, c, cls = 'bd') => {
-    if (!groups.has(cls)) groups.set(cls, [])
-    const paint = c.startsWith('.') ? `class="${c.slice(1)}"` : `fill="${c}"`
-    groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" ${paint}/>`)
-  }
-  const spooky = isSpooky() ? HALLOWEEN[costume] : undefined
-  const draw = spooky ?? COSTUMES[costume] ?? ((g: Fill) => crabBody(g))
+  const { f, groups } = pixels()
+  const dress = dressOf()
+  const themed = dress && costumeIn(dress, costume)
+  const draw = themed ?? COSTUMES[costume] ?? ((g: Fill) => crabBody(g))
   draw(f, colorOf(costume))
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
   const body = `<g class="bd">${(groups.get('bd') ?? []).join('')}${props.map(group).join('')}</g>`
-  const motion = isWalking ? ' run' : spooky ? ' idle' : ''
-  return `<g transform="translate(${x},${y}) scale(${scale})" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${spooky ? 'hw-' : ''}${costume}${motion}">${body}${group('la')}${group('lb')}</g></g>`
+  const motion = isWalking ? ' run' : themed ? ' idle' : ''
+  const cls = themed && dress ? `${dress.prefix}-${costume}` : costume
+  return `<g transform="translate(${x},${y}) scale(${scale})" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${cls}${motion}">${body}${group('la')}${group('lb')}</g></g>`
 }
 
 const statusMark = (x: number, y: number, status: string, color: string): string => {
@@ -696,8 +534,8 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>): stri
   return svg(
     W,
     headerHeight(title),
-    `${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitText(title, 14, isSpooky() ? W - 64 : W))}</text>` : ''}
-${title && isSpooky() ? webSvg(W) : ''}
+    `${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitText(title, 14, dressOf() ? W - 64 : W))}</text>` : ''}
+${title ? (dressOf()?.ornament(W) ?? '') : ''}
 ${tile(0, s.cost, '≈' + fmtCost(t.cost))}${tile(1, s.tokens, fmtTokens(t.tokens))}${tile(2, s.time, fmtTime(t.time))}`,
   )
 }
@@ -1304,7 +1142,7 @@ export const register: Register = (on, options) => {
         <Text color={f.isFinished ? DONE : ACCENT}>{barText(f, width)}</Text>
         <Text bold>{label(f)}</Text>
         <Text dimColor>{percent}</Text>
-        {isSpooky() ? <Text>🎃</Text> : <Text color={CLAY}>▣</Text>}
+        {dressOf() ? <Text>{dressOf()?.glyph}</Text> : <Text color={CLAY}>▣</Text>}
         {crewButton}
         {dismiss}
       </Box>

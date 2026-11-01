@@ -24,10 +24,20 @@ the mod needs.
 - **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model, effort, task
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
   them.
-- **Halloween** (October 15 to November 7, or always with the `theme` option): the crabs change costume — vampire
-  (Fable), skeleton (Heavy), spider on its thread (Careful), bat (Medium), ghost (Light), witch (Explore),
-  jack-o'-lantern (any other agent, and the bar). Every figure moves, running or not: a running one at full pace, the
-  others idling slowly. The bar fills in pumpkin and purple, and the panel's header hangs a cobweb with its spider.
+- **Themes**: the figures dress up for the calendar, and every one of them moves, running or not (a running one at
+  full pace, the others idling slowly); the bar takes the theme's colors and the panel's header an ornament of its
+  own. The crab stays the crab: each theme adds what it wears and holds.
+  - Christmas (December 1 – January 2): angel, Santa, elf wrapping a gift, baker with a gingerbread man, reindeer;
+    snow falls.
+  - Befana (January 3–6): the patched kerchief, with her broom, the sack of coal, the stocking of sweets.
+  - Carnival (the twelve days up to Shrove Tuesday): Venetian mask, Balanzone, Arlecchino, Pulcinella with a slice of
+    pizza, party hat and horn; confetti falls.
+  - Easter (Palm Sunday to Easter Monday): bunny ears, an egg hunt, a painted egg, a chocolate egg in foil, a chick
+    hatched on the head.
+  - Halloween (October 15 – November 7): vampire, skeleton, spider on its thread, bat, ghost, witch, jack-o'-lantern.
+  - The seasons, the rest of the year, one outfit tinted with each tier's color: a crown of flowers and a butterfly
+    in spring (from March 21), a straw hat, sunglasses and a gelato in summer (June 21), a beret and a scarf under
+    falling leaves in autumn (September 23), a knitted beanie under the snow in winter (December 21).
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
@@ -45,8 +55,10 @@ The cost is a rough estimate from token counts and a built-in per-model price ta
 
 - `language`: `auto` (default), `en` or `ru`. `auto` follows Claude Code's `language` setting, then the system
   locale, and falls back to English.
-- `theme`: `auto` (default), `halloween` or `classic`. `auto` dresses up for Halloween from October 15 to November 7
-  (the local date when the session starts or the mod reloads); the other two pin a theme all year.
+- `theme`: `auto` (default), `classic`, or one theme pinned all year (`christmas`, `befana`, `carnival`, `easter`,
+  `halloween`, `spring`, `summer`, `autumn`, `winter`). `auto` follows the calendar above by the local date when the
+  session starts or the mod reloads; `classic` keeps the tiers' everyday costumes (astronaut, detective, engineer,
+  chef, racer, pirate).
 
 Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 `claude plugin install savvy-progress@pablolok-skills --config language=en --config theme=classic`.
@@ -58,6 +70,8 @@ Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
 | `hooks/hooks.json` | Names the hooks module. |
 | `hooks/register.tsx` | The module: the two tools, `/agents-info`, the bar and the panel. |
+| `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
+| `hooks/themes.ts` | The calendar and the themes: costumes, motion, colors, the header's ornaments. |
 | `hooks/register.test.ts` | The module's own tests, run by `claude plugin test`. |
 | `types/index.d.ts` | Its `$.state` contract. |
 | `plugin-entry.json` | `{"strict": true}`: the marketplace entry lets Claude Code read the mod's own manifest. |

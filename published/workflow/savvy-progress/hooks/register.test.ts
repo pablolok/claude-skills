@@ -3,7 +3,8 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
-import { costOf, fmtTokens, isHalloween, themeOf, windowOf } from './register'
+import { costOf, fmtTokens, windowOf } from './register'
+import { easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
@@ -266,17 +267,50 @@ test('Haiku 5.5 is priced and sized as itself, not as Haiku 4.5', () => {
   expect(windowOf('claude-opus-5-5')).toBe(1_000_000)
 })
 
-test('the Halloween season runs from October 15 to November 7, and the option pins a theme', () => {
-  const at = (month: number, day: number): number => new Date(2026, month - 1, day, 12).getTime()
-  expect(isHalloween(at(10, 14))).toBe(false)
-  expect(isHalloween(at(10, 15))).toBe(true)
-  expect(isHalloween(at(10, 31))).toBe(true)
-  expect(isHalloween(at(11, 7))).toBe(true)
-  expect(isHalloween(at(11, 8))).toBe(false)
-  expect(themeOf('auto', at(10, 31))).toBe('halloween')
-  expect(themeOf('auto', at(6, 1))).toBe('classic')
-  expect(themeOf('halloween', at(6, 1))).toBe('halloween')
-  expect(themeOf('classic', at(10, 31))).toBe('classic')
+test('Easter falls where the calendar puts it', () => {
+  expect(easter(2026)).toEqual([4, 5])
+  expect(easter(2027)).toEqual([3, 28])
+  expect(easter(2038)).toEqual([4, 25])
+})
+
+test('the calendar picks the holiday first, then the season', () => {
+  const on = (y: number, m: number, d: number): string => themeOn(new Date(y, m - 1, d, 12).getTime())
+  expect(on(2026, 12, 1)).toBe('christmas')
+  expect(on(2026, 12, 25)).toBe('christmas')
+  expect(on(2027, 1, 2)).toBe('christmas')
+  expect(on(2027, 1, 3)).toBe('befana')
+  expect(on(2027, 1, 6)).toBe('befana')
+  expect(on(2027, 1, 7)).toBe('winter')
+  // Shrove Tuesday 2026 is February 17: the twelve days up to it.
+  expect(on(2026, 2, 5)).toBe('winter')
+  expect(on(2026, 2, 6)).toBe('carnival')
+  expect(on(2026, 2, 17)).toBe('carnival')
+  expect(on(2026, 2, 18)).toBe('winter')
+  // Easter 2026 is April 5: Palm Sunday to Easter Monday.
+  expect(on(2026, 3, 28)).toBe('spring')
+  expect(on(2026, 3, 29)).toBe('easter')
+  expect(on(2026, 4, 6)).toBe('easter')
+  expect(on(2026, 4, 7)).toBe('spring')
+  expect(on(2026, 3, 20)).toBe('winter')
+  expect(on(2026, 3, 21)).toBe('spring')
+  expect(on(2026, 6, 21)).toBe('summer')
+  expect(on(2026, 9, 22)).toBe('summer')
+  expect(on(2026, 9, 23)).toBe('autumn')
+  expect(on(2026, 10, 14)).toBe('autumn')
+  expect(on(2026, 10, 15)).toBe('halloween')
+  expect(on(2026, 11, 7)).toBe('halloween')
+  expect(on(2026, 11, 8)).toBe('autumn')
+  expect(on(2026, 12, 21)).toBe('christmas')
+})
+
+test('the option pins a theme; auto and an unknown value follow the calendar', () => {
+  const halloween = new Date(2026, 9, 31, 12).getTime()
+  const june = new Date(2026, 5, 1, 12).getTime()
+  expect(themeOf('auto', halloween)).toBe('halloween')
+  expect(themeOf('auto', june)).toBe('spring')
+  expect(themeOf('nonsense', june)).toBe('spring')
+  expect(themeOf('christmas', june)).toBe('christmas')
+  expect(themeOf('classic', halloween)).toBe('classic')
 })
 
 const PANE = {
@@ -320,4 +354,19 @@ test('the classic theme keeps the crabs as they were', { options: { theme: 'clas
   expect(rows.finished).toContain('class="c-heavy"')
   expect(rows.planned).toContain('class="c-medium"')
   expect(Object.values(rows).join('')).not.toContain('hw-')
+})
+
+test('a season dresses every figure in one outfit, tinted per tier, and still moves', { options: { theme: 'winter' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+
+  const rows = await drawn($, state)
+
+  expect(rows.running).toContain('class="c-wi-careful run"')
+  expect(rows.finished).toContain('class="c-wi-heavy idle"')
+  expect(rows.planned).toContain('class="c-wi-medium idle"')
+  // The beanie takes each tier's color: Careful's amber, Heavy's red.
+  expect(rows.running).toContain('fill="#BA7517"')
+  expect(rows.finished).toContain('fill="#D85A30"')
+  expect(rows.header).toContain('class="orn o-flake"')
 })

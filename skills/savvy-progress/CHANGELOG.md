@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.4.0] - 2026-11-01
+- Themes for the calendar — Christmas, Befana, Carnival, Easter and Halloween costumes per tier, and one outfit per season tinted with the tier's color (flowers, straw hat, beret and scarf, beanie), with falling snow, petals, leaves and confetti, a header ornament and bar colors per theme; every figure moves; theme option lists them all, auto follows the calendar
+
+
 ## [1.3.0] - 2026-11-01
 - Halloween theme — animated costumes in the agents panel (vampire, skeleton, spider, bat, ghost, witch, jack-o'-lantern), idle motion for every figure, pumpkin bar and cobweb header; theme option auto (October 15 – November 7) / halloween / classic
 

@@ -1,7 +1,7 @@
 {
   "name": "savvy-progress",
-  "version": "1.3.0",
-  "description": "Progress bar above the prompt for /savvy-flow, plus an agents panel (/agents-info): running, finished and planned subagents with model, task progress, context, cost and time.",
+  "version": "1.4.0",
+  "description": "Progress bar above the prompt for /savvy-flow, plus an agents panel (/agents-info): running, finished and planned subagents with model, task progress, context, cost and time, the figures dressed for the holidays and seasons.",
   "author": {
     "name": "johnnyvizz",
     "url": "https://github.com/johnnyvizz"
@@ -21,13 +21,21 @@
     },
     "theme": {
       "type": "string",
-      "title": "Panel theme",
-      "description": "auto dresses the crabs up for Halloween from October 15 to November 7",
+      "title": "Figures' theme",
+      "description": "auto follows the calendar: Christmas, Befana, Carnival, Easter and Halloween, otherwise the season",
       "default": "auto",
       "options": [
         "auto",
+        "classic",
         "halloween",
-        "classic"
+        "christmas",
+        "befana",
+        "carnival",
+        "easter",
+        "spring",
+        "summer",
+        "autumn",
+        "winter"
       ]
     }
   },
