@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
-import { costOf, fmtTokens, windowOf } from './register'
+import { costOf, fmtTokens, isHalloween, themeOf, windowOf } from './register'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
@@ -264,4 +264,60 @@ test('Haiku 5.5 is priced and sized as itself, not as Haiku 4.5', () => {
   expect(windowOf('claude-haiku-5-5')).toBe(1_000_000)
   expect(windowOf('claude-haiku-4-5')).toBe(200_000)
   expect(windowOf('claude-opus-5-5')).toBe(1_000_000)
+})
+
+test('the Halloween season runs from October 15 to November 7, and the option pins a theme', () => {
+  const at = (month: number, day: number): number => new Date(2026, month - 1, day, 12).getTime()
+  expect(isHalloween(at(10, 14))).toBe(false)
+  expect(isHalloween(at(10, 15))).toBe(true)
+  expect(isHalloween(at(10, 31))).toBe(true)
+  expect(isHalloween(at(11, 7))).toBe(true)
+  expect(isHalloween(at(11, 8))).toBe(false)
+  expect(themeOf('auto', at(10, 31))).toBe('halloween')
+  expect(themeOf('auto', at(6, 1))).toBe('classic')
+  expect(themeOf('halloween', at(6, 1))).toBe('halloween')
+  expect(themeOf('classic', at(10, 31))).toBe('classic')
+})
+
+const PANE = {
+  plugin: 'savvy-progress',
+  component: 'Pane',
+  requestId: 'savvy-agents',
+  props: { title: 'Agents', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+} as const
+
+// The panel's crabs on the desktop, one costume class per row, read off each row's drawing.
+const drawn = async ($: Engine, state: ReturnType<typeof store>): Promise<Record<string, string>> => {
+  state.seed(AGENTS, [run('w1'), run('w2', { type: 'savvy-flow:savvy-heavy', status: 'done', endedAt: 5 })])
+  state.seed(FLOW, flowOf({ tasks: [{ title: 'later', tier: 'medium', after: [] }] }))
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // A key never reaches the drawing: the rows come in order, after the header.
+  const [header, running, finished, planned] = (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source))
+  await ui.unmount()
+  return { header: header ?? '', running: running ?? '', finished: finished ?? '', planned: planned ?? '' }
+}
+
+test('in Halloween every crab wears a costume and moves, running or not', { options: { theme: 'halloween' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+
+  const rows = await drawn($, state)
+
+  expect(rows.running).toContain('class="c-hw-careful run"')
+  expect(rows.finished).toContain('class="c-hw-heavy idle"')
+  expect(rows.planned).toContain('class="c-hw-medium idle"')
+  expect(rows.running).toContain('@keyframes drop')
+  expect(rows.header).toContain('class="web"')
+})
+
+test('the classic theme keeps the crabs as they were', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+
+  const rows = await drawn($, state)
+
+  expect(rows.running).toContain('class="c-careful run"')
+  expect(rows.finished).toContain('class="c-heavy"')
+  expect(rows.planned).toContain('class="c-medium"')
+  expect(Object.values(rows).join('')).not.toContain('hw-')
 })

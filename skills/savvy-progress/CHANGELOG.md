@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.0] - 2026-11-01
+- Halloween theme — animated costumes in the agents panel (vampire, skeleton, spider, bat, ghost, witch, jack-o'-lantern), idle motion for every figure, pumpkin bar and cobweb header; theme option auto (October 15 – November 7) / halloween / classic
+
+
 ## [1.2.2] - 2026-10-15
 - Token counts show the unit they round to (999,500 is 1.0M, not 1000k); Haiku 5.5 is priced at its own rates ($0.10/$0.50 per million) with a 1M window, not as Haiku 4.5
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.1] - 2026-11-01
+- README — with savvy-progress the agents panel wears the same Halloween costumes
+
+
 ## [1.6.0] - 2026-11-01
 - Halloween theme (October 15 – November 7) — tier mascots, spooky verdicts and close in chat only
 
