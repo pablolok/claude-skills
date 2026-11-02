@@ -32,9 +32,17 @@ When delegating, pass the task's `title` verbatim as the Agent tool's `descripti
 
 ## Themes
 
-By the session's current date (skip this section only when the date is unknown), the messages you write to the user
-in chat wear the theme of the day: a holiday while one is on, otherwise the season. The windows are the agents panel's
-(savvy-progress); a holiday wins over the season it falls in.
+The messages you write to the user in chat wear a theme, chosen once when the flow starts, the first answer that
+applies winning:
+
+1. **The user asks for one** (by name, or for none) → that one for the rest of the session, until they ask again.
+2. **The agents panel's `theme` option** (savvy-progress) → the same theme as the panel, so the two never disagree.
+   Read it with one shell call, `claude plugin configure savvy-progress@pablolok-skills --json`: its
+   `inputs.theme`. A theme's name pins that theme all year; `classic` means no theme in chat (the panel's everyday
+   costumes have no chat counterpart); `auto`, any other value, or no answer (the plugin missing, the command
+   failing) falls through to the calendar.
+3. **The calendar**, by the session's current date: a holiday while one is on, otherwise the season, in the panel's
+   windows; a holiday wins over the season it falls in. With the date unknown, no theme.
 
 | Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
 |-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
@@ -57,7 +65,7 @@ in chat wear the theme of the day: a holiday while one is on, otherwise the seas
 
 It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
 put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs
-verbatim), and drop it entirely when the user asks.
+verbatim). With no theme, every message is plain.
 
 ## Host tools
 

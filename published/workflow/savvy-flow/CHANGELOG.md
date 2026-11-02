@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.0] - 2026-11-02
+- Theme in chat chosen by the user's ask, then the agents panel's theme option (one setting for both), then the calendar
+
+
 ## [1.8.1] - 2026-11-01
 - Chat mascots follow the panel's figures and the tiers' roles — spring worm and kite, summer swim ring and sandcastle bucket, winter skate, fishing rod and yarn, Carnival juggler
 

@@ -27,6 +27,10 @@ ATTRIBUTION = "Originally by johnnyvizz (github.com/johnnyvizz/claude-kit), MIT;
 #: The host app's MCP servers for its task list and turn summary, and for separate sessions: a worker reports to the
 #: orchestrator, so it gets neither.
 HOST_ORCHESTRATION_SERVERS = {"mcp__ccd_turn", "mcp__ccd_session"}
+#: The agents panel's manifest, whose `theme` option the chat themes follow.
+PANEL_MANIFEST = REPO / "skills" / "savvy-progress" / ".claude-plugin" / "plugin.json"
+#: The panel's `theme` values that name no chat theme of their own.
+PANEL_NON_THEMES = {"auto", "classic"}
 
 
 def _read(path: pathlib.Path) -> str:
@@ -125,6 +129,29 @@ class TestHostTools(unittest.TestCase):
     def test_a_turn_summary_does_not_close_the_flow(self) -> None:
         self.assertIn("**A turn summary closes a turn, not the flow.**", self.text)
         self.assertIn("Section 6 runs once, after the last task is accepted.", self.text)
+
+
+class TestThemes(unittest.TestCase):
+    """The chat theme is the user's ask, else the agents panel's `theme` option, else the calendar: one setting for
+    both, so chat and panel never disagree."""
+
+    def setUp(self) -> None:
+        self.text = _flat(_read(PUBLISHED / "SKILL.md"))
+
+    def test_a_theme_the_user_asks_for_holds_for_the_session(self) -> None:
+        self.assertIn("**The user asks for one** (by name, or for none) → that one for the rest of the session",
+                      self.text)
+
+    def test_the_panel_option_is_read_from_the_host_and_classic_keeps_chat_plain(self) -> None:
+        self.assertIn("`claude plugin configure savvy-progress@pablolok-skills --json`: its `inputs.theme`", self.text)
+        self.assertIn("`classic` means no theme in chat", self.text)
+        self.assertIn("falls through to the calendar", self.text)
+
+    def test_every_theme_the_panel_can_pin_has_a_chat_row(self) -> None:
+        options = json.loads(_read(PANEL_MANIFEST))["userConfig"]["theme"]["options"]
+        for theme in set(options) - PANEL_NON_THEMES:
+            with self.subTest(theme=theme):
+                self.assertIn(f"| {theme.capitalize()} |", self.text)
 
 
 class TestLicence(unittest.TestCase):

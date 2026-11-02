@@ -41,8 +41,17 @@ The orchestrator's chat messages wear the theme of the day, in the same windows 
 while one is on (Christmas, the Befana, Carnival, Easter, Halloween), otherwise the season (spring, summer, autumn,
 winter). Each theme has a mascot per tier (in summer 🛟 Fable afloat, 🤿 Heavy diving, 🪣 Careful building a sandcastle, 🍉 Medium, 🏄 Light surfing), a mark of
 the orchestrator's own that also opens the progress bar's title (🌞), marks for accepted, returned and escalated tasks,
-and a closing line. Chat only: files, commits, briefs and task titles stay plain, and the user can ask to drop it.
+and a closing line. Chat only: files, commits, briefs and task titles stay plain.
 With savvy-progress installed, the agents panel dresses its figures for the same themes, animated.
+
+The theme is chosen when the flow starts, the first that applies:
+
+1. **Asked in chat** — "use the winter theme", "no theme": it holds for the rest of the session.
+2. **The panel's `theme` option** — one setting for both. The orchestrator reads savvy-progress's `theme` with
+   `claude plugin configure savvy-progress@pablolok-skills --json` (`inputs.theme`): a theme's name (`winter`,
+   `halloween`, …) pins it all year in chat too, `classic` keeps chat plain, `auto` follows the calendar. Set it with
+   `/plugin configure savvy-progress@pablolok-skills`.
+3. **The calendar** — the holiday or season of the day.
 
 ## With savvy-progress
 
