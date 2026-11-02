@@ -48,6 +48,16 @@ export type Panel = {
   autoOpenedFor: string
 }
 
+// The panel's view held still while its theme picker has the focus: a redraw would
+// send the open list back to where it started.
+export type HeldView = {
+  flow: Flow | null
+  agents: AgentRun[]
+  now: number
+  /** When the picker took the focus. */
+  at: number
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'savvy-progress': {
@@ -57,6 +67,8 @@ declare module 'claude-code' {
       now: number
       /** The `theme` option's value as last picked: `auto` or a theme's name. */
       theme: string
+      /** The view the panel holds while the theme picker is open; null otherwise. */
+      held: HeldView | null
     }
   }
 }

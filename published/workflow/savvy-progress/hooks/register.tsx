@@ -16,6 +16,7 @@ const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, {
 })
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const picked = atom({ plugin: 'savvy-progress', key: 'theme' } as const, 'auto')
+const held = atom({ plugin: 'savvy-progress', key: 'held' } as const, null)
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
@@ -212,6 +213,25 @@ async function saveTheme($: EngineInterface, value: string): Promise<string | un
   } finally {
     isSaving = false
   }
+}
+
+// While the theme picker has the focus the panel draws the view it held when the
+// picker took it: running agents redraw the panel every second, and each redraw
+// sent the open list back to where it started. A pick takes the view again; the
+// focus moving on or HOLD_MS let it go.
+const HOLD_MS = 20_000
+
+async function holdView($: EngineInterface): Promise<void> {
+  const at = await $.clock.now()
+  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), at }
+  await update($, held, () => view)
+  $.clock.after(HOLD_MS, () => {
+    void update($, held, h => (h?.at === at ? null : h)).catch(() => undefined)
+  })
+}
+
+async function releaseView($: EngineInterface): Promise<void> {
+  if (await read($, held)) await update($, held, () => null)
 }
 
 const dressOf = (): Dress | undefined => (theme === 'classic' ? undefined : DRESSES[theme])
@@ -796,6 +816,8 @@ export const register: Register = (on, options) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
     await update($, picked, () => (typeof options.theme === 'string' ? options.theme : 'auto'))
+    // A reload drops the timer that would let a held view go.
+    await update($, held, () => null)
     await applyTheme($)
     await $.tool.register({
       name: 'progress',
@@ -1055,6 +1077,15 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // The theme picker taking the panel's focus holds the view; the focus moving on lets it go.
+  on('ui.focus', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    const result = await next(e)
+    if (result.deny) return result
+    if (e.element === 'theme' && (e.plugin ?? 'savvy-progress') === 'savvy-progress') await holdView($)
+    else await releaseView($)
+    return result
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const s = tr()
     const ui = $.ui.resolve(e)
@@ -1070,14 +1101,19 @@ export const register: Register = (on, options) => {
         value={await read($, picked)}
         options={[{ value: 'auto', label: `${s.auto}: ${calendar}` }, ...THEMES.map(t => ({ value: t, label: THEME_LABEL[t] }))]}
         onSelect={value => {
-          void pickTheme($, value, false).then(() => saveTheme($, value))
+          // The focus stays on the picker: the view is taken again, still held.
+          void holdView($)
+            .then(() => pickTheme($, value, false))
+            .then(() => saveTheme($, value))
         }}
       />
     )
-    const list = await read($, agents)
-    const f = await read($, flow)
+    const kept = await read($, held)
+    const hold = kept && (await $.clock.now()) - kept.at < HOLD_MS ? kept : null
+    const list = hold ? hold.agents : await read($, agents)
+    const f = hold ? hold.flow : await read($, flow)
     const p: Panel = await read($, panel)
-    const at = Math.max(await read($, now), ...list.map(a => a.startedAt), 0)
+    const at = Math.max(hold ? hold.now : await read($, now), ...list.map(a => a.startedAt), 0)
 
     const running = list.filter(a => a.status === 'running').reverse()
     const finished = list.filter(a => a.status !== 'running').reverse()

@@ -1,4 +1,4 @@
-import type { AgentInfo, CommandRunInput, ConfigSetInput, On } from 'claude-code'
+import type { AgentInfo, CommandRunInput, ConfigSetInput, On, UiFocusInput } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -92,6 +92,10 @@ const typed = (args: string): CommandRunInput =>
   ({ command: 'savvy-theme', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 const picked = (value: string): ConfigSetInput =>
   ({ key: 'savvy-progress.theme', value, previous: 'classic', provider: { plugin: 'savvy-progress', tier: 'user' }, origin: { kind: 'composer' } })
+
+// The person clicking an element of the agents panel, which moves its focus ring there.
+const clicked = (element: string): UiFocusInput =>
+  ({ component: 'Pane', requestId: 'savvy-agents', plugin: 'savvy-progress', element, origin: { kind: 'person' } })
 
 const info = (id: string, status: AgentInfo['status']): AgentInfo => ({ id, status, description: id, type: 'savvy-flow:savvy-careful' })
 
@@ -578,6 +582,65 @@ test("the panel's picker lists every theme and a pick redraws it at once", { opt
   expect(saved).toEqual([{ key: 'savvy-progress.theme', value: 'halloween' }])
   // A pick the model did not see is told to it, so the chat can follow.
   expect(told.join('')).toContain('the theme is now Halloween')
+  await ui.unmount()
+})
+
+test('the panel holds still while its theme picker has the focus, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
+  const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
+  // The surface: the ring moves where it is asked.
+  on('ui.focus', () => ({}))
+  await start($)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // The kit's state sits beneath the plugin and redraws nothing: a fresh drawing
+  // beside it stands for the redraw the engine makes on a change.
+  const live = async (): Promise<string> => {
+    const again = await $.ui.mount({ ...PANE, surface: 'vscode' })
+    // Handlers get new handles on every drawing; what is shown is what counts.
+    const tree = JSON.stringify(await again.drawn()).replace(/"handle":\d+/g, '')
+    await again.unmount()
+    return tree
+  }
+
+  await $.ui.focus(clicked('theme'))
+  const held = await live()
+  await clock.advance(3000)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
+  expect(await live()).toBe(held)
+
+  // The focus moving on lets the panel catch up.
+  await $.ui.focus(clicked('compact'))
+  expect(await live()).not.toBe(held)
+  await ui.unmount()
+})
+
+test('twenty seconds let the held panel go, and a pick redraws it in the new theme', { options: { theme: 'auto' } }, async ($, on) => {
+  const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
+  // The surface: the ring moves where it is asked.
+  on('ui.focus', () => ({}))
+  await start($)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+
+  const live = async (): Promise<string> => {
+    const again = await $.ui.mount({ ...PANE, surface: 'vscode' })
+    // Handlers get new handles on every drawing; what is shown is what counts.
+    const tree = JSON.stringify(await again.drawn()).replace(/"handle":\d+/g, '')
+    await again.unmount()
+    return tree
+  }
+
+  await $.ui.focus(clicked('theme'))
+  const held = await live()
+  await clock.advance(21_000)
+  expect(await live()).not.toBe(held)
+
+  await $.ui.focus(clicked('theme'))
+  await ui.select({ key: 'theme', value: 'halloween' })
+  await clock.advance(1000)
+  expect(await costumes(ui)).toContain('class="c-hw-careful run"')
   await ui.unmount()
 })
 

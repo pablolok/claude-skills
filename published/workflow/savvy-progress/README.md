@@ -60,7 +60,9 @@ the mod needs.
 - **Choosing the theme**: `/savvy-theme <theme>` (an id such as `republic-day`, or its Italian name such as
   `Festa della Repubblica` or `natale`) or the theme picker in the panel redraws the panel at once and keeps the pick
   in the `theme` option until `auto` is chosen; `/savvy-theme` alone lists every theme. A pick from the picker or from
-  `/config` also leaves the session a note, so savvy-flow's chat follows it from its next message.
+  `/config` also leaves the session a note, so savvy-flow's chat follows it from its next message. While the picker
+  has the focus the panel holds still (for up to twenty seconds), so running agents do not send the open list back
+  to its start.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
