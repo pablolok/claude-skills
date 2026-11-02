@@ -45,7 +45,9 @@ the mod needs.
   - Autumn (from September 23): the wise owl with a book, mushroom hunting, roasting chestnuts, the grape harvest,
     raking leaves, a hike; leaves fall.
   - Winter (from December 21): figure skating, ice fishing, knitting, hot cocoa, sledding, a polar explorer with a
-    lantern; snow falls.
+    lantern; snow falls. Now and then (a few seconds every half minute) a light flurry drifts down the panel's
+    header too, in the band right of the flow's title, and settles on the tiles: drawn beneath the title, the
+    ornament and the tiles, it never covers text or bars, and with `prefers-reduced-motion` it does not show.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
@@ -79,7 +81,7 @@ Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 | `hooks/hooks.json` | Names the hooks module. |
 | `hooks/register.tsx` | The module: the two tools, `/agents-info`, the bar and the panel. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
-| `hooks/themes.ts` | The calendar and the themes: costumes, motion, colors, the header's ornaments. |
+| `hooks/themes.ts` | The calendar and the themes: costumes, motion, colors, the header's ornaments and weather. |
 | `hooks/register.test.ts` | The module's own tests, run by `claude plugin test`. |
 | `types/index.d.ts` | Its `$.state` contract. |
 | `plugin-entry.json` | `{"strict": true}`: the marketplace entry lets Claude Code read the mod's own manifest. |

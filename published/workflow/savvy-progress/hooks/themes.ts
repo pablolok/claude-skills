@@ -140,6 +140,40 @@ const ornament =
     return `<g transform="translate(${W - 8 - width * 2},2) scale(2)" shape-rendering="crispEdges"><g class="orn ${cls}">${(groups.get('bd') ?? []).join('')}</g></g>`
   }
 
+// Weather over the header: now and then, for a few seconds, flakes drift down the
+// band left free by the title and the ornament (x from `from` to `to`) and settle
+// on the tiles. The layer is drawn first, so text, tiles and bars paint over it.
+// Its cycle is far longer than a second, so the phase rides in the drawing: a
+// header redrawn at `at` goes on where the last one was instead of restarting.
+export const FLURRY_MS = 30_000
+// Each flake's start within the cycle, in ms: each falls for three seconds (`flurry`
+// in winter's CSS), so the flurry lasts about five; unseen the rest of the cycle and
+// with reduced motion.
+const FLURRY_STARTS = [0, 1400, 600, 2000, 300, 1700, 900, 2300, 1100, 2600]
+const FLURRY_GAP = 28
+
+// Three sizes in turn: a large flake, a speck, a small flake (pixels at that scale).
+const FLURRY_SIZES: [string[], number][] = [[FLAKE, 2], [['o'], 2], [FLAKE, 1]]
+
+const flurry = (from: number, to: number, at: number): string => {
+  const n = Math.min(FLURRY_STARTS.length, Math.floor((to - from) / FLURRY_GAP))
+  if (n < 1) return ''
+  const step = (to - from) / n
+  const phase = ((at % FLURRY_MS) + FLURRY_MS) % FLURRY_MS
+  const flakes = FLURRY_STARTS.slice(0, n).map((start, i) => {
+    const [rows, scale] = FLURRY_SIZES[i % FLURRY_SIZES.length] ?? [FLAKE, 1]
+    const { f, groups } = pixels()
+    stamp(f, 0, 0, rows, { o: FROST })
+    const x = Math.round(from + step * i + ((i * 7) % 11))
+    // Two classes outrank `.fl`, whose `animation` shorthand would reset the delay.
+    return {
+      css: `.fl.fl${i}{animation-delay:${start - phase}ms}`,
+      svg: `<g class="fl fl${i}"><g transform="translate(${x},-6) scale(${scale})">${(groups.get('bd') ?? []).join('')}</g></g>`,
+    }
+  })
+  return `<style>${flakes.map(k => k.css).join('')}</style><g shape-rendering="crispEdges">${flakes.map(k => k.svg).join('')}</g>`
+}
+
 // ---------------------------------------------------------------------------
 // The themes. `costumes` is keyed by figure (a tier, `explore`, `other`); a figure
 // with no costume of its own wears `other`. `prefix` names the theme's classes.
@@ -152,6 +186,8 @@ export type Dress = {
   sparkle: [string, string]
   glyph: string
   ornament: (W: number) => string
+  // The header's weather, in the free band from `from` to `to` at the time `at`.
+  weather?: (from: number, to: number, at: number) => string
 }
 
 // Every tier keeps its character: Fable floats, Light runs at double pace.
@@ -181,7 +217,7 @@ export const THEME_CSS = `<style>
 .run .fx,.idle .fx{animation:fall 1s linear infinite}.run .fx1,.idle .fx1{animation-delay:-.33s}.run .fx2,.idle .fx2{animation-delay:-.66s}
 .orn{transform-box:fill-box;transform-origin:50% 0;animation:sway 1s ease-in-out infinite}
 .spin{animation:drop 1s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.run,.run g,.idle,.idle g,.spin,.orn{animation:none!important}}
+@media (prefers-reduced-motion: reduce){.run,.run g,.idle,.idle g,.spin,.orn,.fl{animation:none!important}}
 </style>`
 
 const style = (rules: string): string => `<style>${rules}</style>`
@@ -856,6 +892,7 @@ const winter: Dress = {
   sparkle: [FROST, FROST],
   glyph: '⛄',
   ornament: ornament(['...s...', '.s.s.s.', '..sss..', 'sssssss', '..sss..', '.s.s.s.', '...s...'], { s: FROST }, 'o-flake'),
+  weather: flurry,
   costumes: {
     // Fable: figure-skates, drawing figures on the ice; earmuffs and a scarf in the tier's color.
     fable: (f, t) => {
@@ -932,7 +969,9 @@ const winter: Dress = {
 .c-wi-light.run{animation:zoom .25s steps(1) infinite}.run .spd{animation:slide .25s steps(1) infinite}
 .c-wi-explore .it{transform-origin:50% 0}.c-wi-explore.run .it{animation:sway .5s ease-in-out infinite}
 .run .pom{animation:hop .5s steps(1) infinite}.idle .pom{animation:hop 1s steps(1) infinite}
-.o-flake{transform-origin:50% 50%;animation:spin90 1s linear infinite}`),
+.o-flake{transform-origin:50% 50%;animation:spin90 1s linear infinite}
+.fl{opacity:0;animation:flurry 30s linear infinite}
+@keyframes flurry{0%{transform:translate(0,0);opacity:0}1%{opacity:.85}5%{transform:translate(2px,13px)}8.5%{opacity:.85}10%,100%{transform:translate(-1px,27px);opacity:0}}`),
 }
 
 export const DRESSES: Record<Exclude<Theme, 'classic'>, Dress> = {

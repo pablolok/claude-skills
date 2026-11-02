@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
 import { costOf, fmtTokens, windowOf } from './register'
-import { easter, themeOf, themeOn } from './themes'
+import { DRESSES, FLURRY_MS, easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
@@ -371,4 +371,56 @@ test('a season dresses each tier for its own job, in its color, and every figure
   expect(rows.header).toContain('class="orn o-flake"')
   expect(rows.running).toContain('class="ball"')
   expect(rows.finished).toContain('class="bob"')
+})
+
+test('in winter, now and then, snow falls over the header, beneath its title and tiles', { options: { theme: 'winter' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+
+  const rows = await drawn($, state)
+  const header = rows.header ?? ''
+
+  expect(header).toContain('class="fl fl0"')
+  // Drawn first, so the title, the ornament and the tiles paint over the flakes.
+  expect(header.indexOf('class="fl fl0"')).toBeLessThan(header.indexOf('<text'))
+  expect(header.indexOf('class="fl fl0"')).toBeLessThan(header.indexOf('class="tile"'))
+  expect(header).toContain('.fl{opacity:0;animation:flurry 30s')
+  // Reduced motion stops it, and a stopped flake stays unseen.
+  expect(header).toContain('.fl{animation:none!important}')
+  // Only the header snows: the rows keep their own figures.
+  expect(rows.running).not.toContain('class="fl ')
+})
+
+test('the flurry goes on where it was when the header is redrawn a second later', () => {
+  const at = (ms: number): string => DRESSES.winter.weather?.(40, 300, ms) ?? ''
+
+  expect(at(1000)).toContain('.fl.fl0{animation-delay:-1000ms}')
+  expect(at(2000)).toContain('.fl.fl0{animation-delay:-2000ms}')
+  expect(at(2000)).toContain('.fl.fl1{animation-delay:-600ms}')
+  expect(at(FLURRY_MS + 1000)).toBe(at(1000))
+})
+
+test('the flurry keeps to the free band, and a band too narrow stays clear', () => {
+  // Each flake's left edge and the scale it is drawn at, three pixels wide at most.
+  const flakes = (from: number, to: number): number[][] =>
+    [...(DRESSES.winter.weather?.(from, to, 0) ?? '').matchAll(/translate\((\d+),-6\) scale\((\d)\)/g)].map(m => [Number(m[1]), Number(m[2])])
+
+  expect(flakes(100, 120)).toEqual([])
+  const drawn = flakes(100, 300)
+  expect(drawn.length).toBe(7)
+  expect(Math.min(...drawn.map(([x]) => x ?? 0))).toBeGreaterThanOrEqual(100)
+  expect(Math.max(...drawn.map(([x, k]) => (x ?? 0) + 3 * (k ?? 1)))).toBeLessThanOrEqual(300)
+})
+
+test('no other theme snows over the header, nor winter without a flow title', { options: { theme: 'winter' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(FLOW, null)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [header] = (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source))
+  await ui.unmount()
+
+  expect(header ?? '').not.toContain('class="fl ')
+  expect(Object.entries(DRESSES).filter(([, d]) => d.weather).map(([k]) => k)).toEqual(['winter'])
 })

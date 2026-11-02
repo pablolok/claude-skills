@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.0] - 2026-11-02
+- Winter's flurry over the agents panel — now and then, for a few seconds every half minute, light snow drifts down the header's free band right of the flow's title and settles on the tiles, drawn beneath the title, ornament and tiles so it covers no text or bar; its phase follows the clock, so the once-a-second redraw does not restart it; prefers-reduced-motion hides it
+
+
 ## [1.5.0] - 2026-11-01
 - Each tier in its own costume for its role in every theme — seasons get one per tier (spring: butterfly, digging, watering, potting, kite, net; summer: swim ring, snorkel, sandcastle, watermelon, surf, spyglass; autumn: owl, mushrooms, chestnuts, grapes, rake, hike; winter: skating, ice fishing, knitting, cocoa, sled, polar lantern), and the holidays an explorer of their own (stargazer, lantern, Capitan Spaventa, binoculars), Santa checks his list, Arlecchino juggles
 

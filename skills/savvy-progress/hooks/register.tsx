@@ -522,8 +522,12 @@ const svg = (W: number, H: number, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${crabCss()}${body}</svg>`
 
 // The pane's own title already says "Agents": the header names the flow, if any.
-const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>): string => {
+const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: number): string => {
   const s = tr()
+  const dress = dressOf()
+  const fitted = fitText(title, 14, dress ? W - 64 : W)
+  // The theme's weather falls right of the title, short of the ornament.
+  const weather = title ? (dress?.weather?.(Math.ceil(textWidth(fitted, 14)) + 12, W - 30, at) ?? '') : ''
   const gap = 6
   const tw = (W - gap * 2) / 3
   const top = title ? 28 : 0
@@ -534,8 +538,8 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>): stri
   return svg(
     W,
     headerHeight(title),
-    `${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitText(title, 14, dressOf() ? W - 64 : W))}</text>` : ''}
-${title ? (dressOf()?.ornament(W) ?? '') : ''}
+    `${weather}${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitted)}</text>` : ''}
+${title ? (dress?.ornament(W) ?? '') : ''}
 ${tile(0, s.cost, '≈' + fmtCost(t.cost))}${tile(1, s.tokens, fmtTokens(t.tokens))}${tile(2, s.time, fmtTime(t.time))}`,
   )
 }
@@ -984,7 +988,7 @@ export const register: Register = (on, options) => {
       }
       return (
         <Box flexDirection="column">
-          <Svg source={headerSvg(W, title, t)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title)} />
+          <Svg source={headerSvg(W, title, t, at)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title)} />
           {toggleCompact}
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
