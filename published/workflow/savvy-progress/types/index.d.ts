@@ -67,6 +67,8 @@ declare module 'claude-code' {
       theme: string
       /** What the agents panel shows; null until the first copy. */
       shown: PaneView | null
+      /** When the theme picker took the panel's focus, in ms; 0 while it has not. No drawing reads it. */
+      picking: number
     }
   }
 }

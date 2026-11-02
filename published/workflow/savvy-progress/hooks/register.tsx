@@ -17,6 +17,7 @@ const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, {
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const picked = atom({ plugin: 'savvy-progress', key: 'theme' } as const, 'auto')
 const shown = atom({ plugin: 'savvy-progress', key: 'shown' } as const, null)
+const picking = atom({ plugin: 'savvy-progress', key: 'picking' } as const, 0)
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
@@ -218,13 +219,17 @@ async function saveTheme($: EngineInterface, value: string): Promise<string | un
 // The agents panel draws `shown`, a copy of the live values the tick refreshes once
 // a second, never the live values themselves: every redraw sent the theme picker's
 // open list back to where it started, so while the picker has the focus the copy
-// waits, and nothing the panel reads changes. A pick, or the focus moving on, lets
-// it catch up; PICK_HOLD_MS is the most it waits.
-const PICK_HOLD_MS = 60_000
-let pickingSince = 0
+// waits, and nothing the panel reads changes.
+// The hold lasts as long as the focus, which stays on the picker however often its
+// list is opened again, and is gone only when the focus moves on (Esc, a click
+// elsewhere): PICK_HOLD_MS only guards against a focus that never comes back. It
+// lives in `picking`, which no drawing reads, so writing it redraws nothing, and
+// it outlives the reload a pick causes (the option's change restarts the plugin).
+const PICK_HOLD_MS = 5 * 60_000
 
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
-  if (!isForced && pickingSince && (await $.clock.now()) - pickingSince < PICK_HOLD_MS) return
+  const since = await read($, picking)
+  if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
   const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now) }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
@@ -750,6 +755,9 @@ async function togglePane($: EngineInterface): Promise<boolean> {
   }
   const at = await $.clock.now()
   await update($, now, () => at)
+  // A panel opened afresh has no picker with the focus.
+  await update($, picking, () => 0)
+  await showPanel($)
   await $.ui.open({ id: PANE, title: tr().pane })
   return true
 }
@@ -758,6 +766,7 @@ async function autoOpen($: EngineInterface, key: string): Promise<void> {
   const p = await read($, panel)
   if (p.autoOpenedFor === key) return
   await update($, panel, prev => ({ ...prev, autoOpenedFor: key }))
+  if (!(await $.ui.panes()).some(p => p.id === PANE)) await update($, picking, () => 0)
   void $.ui.open({ id: PANE, title: tr().pane })
 }
 
@@ -1073,15 +1082,16 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // The theme picker taking the panel's focus holds the panel still, writing nothing
-  // (a write would redraw it); the focus moving on lets it catch up.
+  // The theme picker taking the panel's focus holds the panel still; the focus
+  // moving on lets it catch up.
   on('ui.focus', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
     const result = await next(e)
     if (result.deny) return result
     if (e.element === 'theme' && (e.plugin ?? 'savvy-progress') === 'savvy-progress') {
-      pickingSince = await $.clock.now()
-    } else if (pickingSince) {
-      pickingSince = 0
+      const at = await $.clock.now()
+      await update($, picking, () => at)
+    } else if (await read($, picking)) {
+      await update($, picking, () => 0)
       await showPanel($)
     }
     return result
@@ -1103,13 +1113,15 @@ export const register: Register = (on, options) => {
         options={[{ value: 'auto', label: `${s.auto}: ${calendar}` }, ...THEMES.map(t => ({ value: t, label: THEME_LABEL[t] }))]}
         onSelect={value => {
           // The list is closed: the panel catches up and redraws in the new theme,
-          // then holds still again, the focus staying on the picker.
-          void showPanel($, true)
-            .then(() => pickTheme($, value, false))
-            .then(() => saveTheme($, value))
-            .then(async () => {
-              pickingSince = await $.clock.now()
-            })
+          // then holds still again, the focus staying on the picker. The hold is
+          // renewed before the option is saved, which reloads the plugin.
+          void (async () => {
+            await showPanel($, true)
+            await pickTheme($, value, false)
+            const at = await $.clock.now()
+            await update($, picking, () => at)
+            await saveTheme($, value)
+          })()
         }}
       />
     )

@@ -61,8 +61,9 @@ the mod needs.
   `Festa della Repubblica` or `natale`) or the theme picker in the panel redraws the panel at once and keeps the pick
   in the `theme` option until `auto` is chosen; `/savvy-theme` alone lists every theme. A pick from the picker or from
   `/config` also leaves the session a note, so savvy-flow's chat follows it from its next message. The panel draws a
-  copy of its values refreshed once a second, and while the picker has the focus (up to a minute) the copy waits, so
-  running agents do not redraw the open list back to its start; a pick or the focus moving on lets it catch up.
+  copy of its values refreshed once a second, and while the picker has the focus the copy waits, so running agents do
+  not redraw the open list back to its start, however often it is opened again and across the reload a pick causes; a
+  pick, or the focus moving on (Esc, a click elsewhere), lets it catch up, and five minutes at most.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.

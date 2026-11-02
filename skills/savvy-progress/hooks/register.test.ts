@@ -42,7 +42,11 @@ const flowOf = (over: Partial<Flow> = {}): Flow => ({
 const store = (on: On) => {
   const values = new Map<string, { value: unknown; version: number }>()
   const versionOf = (key: string): number => values.get(key)?.version ?? 0
-  on('state.get', ($, e) => ({ value: values.get(e.key) ?? { value: undefined, version: 0 } }))
+  const reads: string[] = []
+  on('state.get', ($, e) => {
+    reads.push(e.key)
+    return { value: values.get(e.key) ?? { value: undefined, version: 0 } }
+  })
   const written: string[] = []
   on('state.set', ($, e) => {
     written.push(e.key)
@@ -53,7 +57,8 @@ const store = (on: On) => {
   })
   return {
     seed: (key: string, value: unknown): void => void values.set(key, { value, version: versionOf(key) + 1 }),
-    // Every key the plugin wrote, in order.
+    // Every key the plugin read, and wrote, in order.
+    reads,
     written,
     agents: (): AgentRun[] => (values.get(AGENTS)?.value ?? []) as AgentRun[],
     flow: (): Flow | null | undefined => values.get(FLOW)?.value as Flow | null | undefined,
@@ -612,7 +617,7 @@ test('the panel draws a copy the tick refreshes, never the live values', { optio
   expect(await panelNow($)).toContain('90k')
 })
 
-test('the theme picker taking the focus writes nothing and holds the panel still, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
+test('the theme picker taking the focus holds the panel still, writing only what no drawing reads, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
   const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
   // The surface: the ring moves where it is asked.
   on('ui.focus', () => ({}))
@@ -623,10 +628,14 @@ test('the theme picker taking the focus writes nothing and holds the panel still
   await clock.advance(1000)
   const before = await panelNow($)
 
+  // A drawing redraws when what it read changes, and a redraw sends the open list
+  // back: the hold is written where no drawing reads.
+  const reads = state.reads.length
+  await panelNow($)
+  expect(state.reads.slice(reads)).not.toContain('picking')
   const writes = state.written.length
   await $.ui.focus(clicked('theme'))
-  // A write would redraw the panel, and a redraw sends the open list back.
-  expect(state.written.slice(writes)).toEqual([])
+  expect(state.written.slice(writes)).toEqual(['picking'])
   state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
   await clock.advance(3000)
   expect(state.written.slice(writes)).not.toContain('shown')
@@ -638,7 +647,7 @@ test('the theme picker taking the focus writes nothing and holds the panel still
   await ui.unmount()
 })
 
-test('a pick redraws the held panel in the new theme, and a minute lets it go', { options: { theme: 'auto' } }, async ($, on) => {
+test('a pick redraws the held panel in the new theme, and the hold outlives the reload the pick causes', { options: { theme: 'auto' } }, async ($, on) => {
   const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
   on('ui.focus', () => ({}))
   await start($)
@@ -651,9 +660,26 @@ test('a pick redraws the held panel in the new theme, and a minute lets it go', 
   await ui.select({ key: 'theme', value: 'halloween' })
   expect(await costumes(ui)).toContain('class="c-hw-careful run"')
 
-  // Still on the picker after the pick: held again, until a minute has gone by.
+  // The option's change restarts the plugin; the focus is still on the picker, so
+  // the panel stays held, a minute later too.
+  await start($)
   state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
-  await clock.advance(3000)
+  await clock.advance(61_000)
+  expect(await panelNow($)).not.toContain('90k')
+  await ui.unmount()
+})
+
+test('a focus that never comes back lets the panel go after five minutes', { options: { theme: 'auto' } }, async ($, on) => {
+  const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
+  on('ui.focus', () => ({}))
+  await start($)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await clock.advance(1000)
+
+  await $.ui.focus(clicked('theme'))
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
+  await clock.advance(4 * 60_000)
   expect(await panelNow($)).not.toContain('90k')
   await clock.advance(60_000)
   expect(await panelNow($)).toContain('90k')
