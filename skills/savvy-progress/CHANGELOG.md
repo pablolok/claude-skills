@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.2] - 2026-11-02
+- The theme picker's list no longer jumps on opening or reopening — the agents panel draws a copy of its values the tick refreshes once a second, and while the picker has the focus (up to a minute) the copy waits, the focus itself writing nothing; a pick or the focus moving on lets it catch up
+
+
 ## [1.7.1] - 2026-11-02
 - The theme picker's open list stays where it is scrolled — while the picker has the panel's focus the panel holds its view (up to twenty seconds), so running agents' redraws no longer send the list back; a pick redraws the held view in the new theme, the focus moving on lets it go
 

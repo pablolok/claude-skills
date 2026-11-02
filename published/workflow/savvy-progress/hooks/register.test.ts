@@ -43,7 +43,9 @@ const store = (on: On) => {
   const values = new Map<string, { value: unknown; version: number }>()
   const versionOf = (key: string): number => values.get(key)?.version ?? 0
   on('state.get', ($, e) => ({ value: values.get(e.key) ?? { value: undefined, version: 0 } }))
+  const written: string[] = []
   on('state.set', ($, e) => {
+    written.push(e.key)
     const version = versionOf(e.key)
     if (e.ifVersion !== undefined && e.ifVersion !== version) return { value: { isSet: false, version } }
     values.set(e.key, { value: e.value, version: version + 1 })
@@ -51,6 +53,8 @@ const store = (on: On) => {
   })
   return {
     seed: (key: string, value: unknown): void => void values.set(key, { value, version: versionOf(key) + 1 }),
+    // Every key the plugin wrote, in order.
+    written,
     agents: (): AgentRun[] => (values.get(AGENTS)?.value ?? []) as AgentRun[],
     flow: (): Flow | null | undefined => values.get(FLOW)?.value as Flow | null | undefined,
   }
@@ -585,7 +589,30 @@ test("the panel's picker lists every theme and a pick redraws it at once", { opt
   await ui.unmount()
 })
 
-test('the panel holds still while its theme picker has the focus, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
+// What the agents panel shows now: a fresh drawing beside the mounted one, as the
+// kit's state, beneath the plugin, redraws nothing by itself. Handlers get new
+// handles on every drawing; what is shown is what counts.
+const panelNow = async ($: Engine): Promise<string> => {
+  const again = await $.ui.mount({ ...PANE, surface: 'vscode' })
+  const tree = JSON.stringify(await again.drawn()).replace(/"handle":\d+/g, '')
+  await again.unmount()
+  return tree
+}
+
+test('the panel draws a copy the tick refreshes, never the live values', { options: { theme: 'auto' } }, async ($, on) => {
+  const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
+  await clock.advance(1000)
+  const before = await panelNow($)
+
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
+  expect(await panelNow($)).toBe(before)
+  await clock.advance(1000)
+  expect(await panelNow($)).toContain('90k')
+})
+
+test('the theme picker taking the focus writes nothing and holds the panel still, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
   const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
   // The surface: the ring moves where it is asked.
   on('ui.focus', () => ({}))
@@ -593,54 +620,43 @@ test('the panel holds still while its theme picker has the focus, so the open li
   state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
   state.seed(FLOW, flowOf())
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  // The kit's state sits beneath the plugin and redraws nothing: a fresh drawing
-  // beside it stands for the redraw the engine makes on a change.
-  const live = async (): Promise<string> => {
-    const again = await $.ui.mount({ ...PANE, surface: 'vscode' })
-    // Handlers get new handles on every drawing; what is shown is what counts.
-    const tree = JSON.stringify(await again.drawn()).replace(/"handle":\d+/g, '')
-    await again.unmount()
-    return tree
-  }
+  await clock.advance(1000)
+  const before = await panelNow($)
 
+  const writes = state.written.length
   await $.ui.focus(clicked('theme'))
-  const held = await live()
-  await clock.advance(3000)
+  // A write would redraw the panel, and a redraw sends the open list back.
+  expect(state.written.slice(writes)).toEqual([])
   state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
-  expect(await live()).toBe(held)
+  await clock.advance(3000)
+  expect(state.written.slice(writes)).not.toContain('shown')
+  expect(await panelNow($)).toBe(before)
 
-  // The focus moving on lets the panel catch up.
+  // The focus moving on lets the panel catch up at once.
   await $.ui.focus(clicked('compact'))
-  expect(await live()).not.toBe(held)
+  expect(await panelNow($)).toContain('90k')
   await ui.unmount()
 })
 
-test('twenty seconds let the held panel go, and a pick redraws it in the new theme', { options: { theme: 'auto' } }, async ($, on) => {
+test('a pick redraws the held panel in the new theme, and a minute lets it go', { options: { theme: 'auto' } }, async ($, on) => {
   const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
-  // The surface: the ring moves where it is asked.
   on('ui.focus', () => ({}))
   await start($)
   state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
   state.seed(FLOW, flowOf())
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-
-  const live = async (): Promise<string> => {
-    const again = await $.ui.mount({ ...PANE, surface: 'vscode' })
-    // Handlers get new handles on every drawing; what is shown is what counts.
-    const tree = JSON.stringify(await again.drawn()).replace(/"handle":\d+/g, '')
-    await again.unmount()
-    return tree
-  }
-
-  await $.ui.focus(clicked('theme'))
-  const held = await live()
-  await clock.advance(21_000)
-  expect(await live()).not.toBe(held)
+  await clock.advance(1000)
 
   await $.ui.focus(clicked('theme'))
   await ui.select({ key: 'theme', value: 'halloween' })
-  await clock.advance(1000)
   expect(await costumes(ui)).toContain('class="c-hw-careful run"')
+
+  // Still on the picker after the pick: held again, until a minute has gone by.
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
+  await clock.advance(3000)
+  expect(await panelNow($)).not.toContain('90k')
+  await clock.advance(60_000)
+  expect(await panelNow($)).toContain('90k')
   await ui.unmount()
 })
 
