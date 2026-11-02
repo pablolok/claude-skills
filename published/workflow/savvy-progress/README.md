@@ -29,25 +29,38 @@ the mod needs.
   own. The crab stays the crab, and each tier keeps its role in every theme: Fable is the rare one that floats or
   glides, Heavy digs and finds, Careful does the delicate work, Medium the everyday work, Light runs, Explore scouts;
   any other agent (and the bar) wears the theme's plain outfit.
-  - Christmas (December 1 – January 2): angel, Santa checking his list, elf wrapping a gift, baker with a gingerbread
-    man, reindeer, a stargazer following the star; snow falls.
-  - Befana (January 3–6): the patched kerchief; flying on the broom, the sack of coal, the stocking of sweets, a
-    wrapped sweet, sweeping, a lantern in the night.
-  - Carnival (the twelve days up to Shrove Tuesday): Venetian mask, Balanzone, Arlecchino juggling, Pulcinella with a
-    slice of pizza, party hat and horn, Capitan Spaventa; confetti falls.
-  - Easter (Palm Sunday to Easter Monday): bunny ears, an egg hunt, a painted egg, a chocolate egg in foil, a chick
-    hatched on the head, binoculars on the lookout for the bunny.
-  - Halloween (October 31 – November 1): vampire, skeleton, spider on its thread, bat, ghost, witch, jack-o'-lantern.
-  - Spring (from March 21): butterfly, digging the bed (and a worm), watering a seedling, potting a tulip, running
-    with a kite, a butterfly net; petals fall.
-  - Summer (from June 21): afloat on a swim ring, snorkel and fins, a sandcastle with its flag, a slice of
-    watermelon, surfing, a spyglass on the shore.
-  - Autumn (from September 23): the wise owl with a book, mushroom hunting, roasting chestnuts, the grape harvest,
-    raking leaves, a hike; leaves fall.
-  - Winter (from December 21): figure skating, ice fishing, knitting, hot cocoa, sledding, a polar explorer with a
-    lantern; snow falls. Now and then (a few seconds every half minute) a light flurry drifts down the panel's
-    header too, in the band right of the flow's title, and settles on the tiles: drawn beneath the title, the
-    ornament and the tiles, it never covers text or bars, and with `prefers-reduced-motion` it does not show.
+  The calendar is Italian. A holiday wins over a period, a period over the season it falls in:
+  - Holidays: New Year's Day (Jan 1: a wish on a shooting star, the new calendar, resolutions, lentils, the New Year's
+    dip), the Befana (Jan 6: the patched kerchief, the broom, the sack of coal, the stocking of sweets), Valentine's
+    Day (Feb 14: Cupid, chocolates, the love letter, roses, a heart balloon), Women's Day (Mar 8: mimosa), Father's
+    Day (Mar 19: St Joseph the carpenter, a zeppola), Easter and Easter Monday (bunny ears, the egg hunt, a painted
+    egg, a chocolate egg, a chick), Liberation Day (Apr 25: the flag flying, the partisan's red carnation, the
+    laurel wreath), Labour Day (May 1: the concert, hard hat and pickaxe, the tailor, the picnic), Mother's Day (the
+    second Sunday of May: the locket, breakfast in bed, the hand-made card, tulips), Republic Day (Jun 2: every figure
+    waves the tricolour; the Frecce Tricolori, the bersagliere, the flag hoisted, a tricolour gelato, the band's
+    drum), Ferragosto (Aug 15: the inflatable flamingo, the beach umbrella, skewers on the grill, pasta al forno, the
+    beach ball, the fireworks), Halloween (Oct 31: vampire, skeleton, spider, bat, ghost, witch), All Saints' Day
+    (Nov 1: halos, the procession candle, stained glass, the bell, the pilgrim), All Souls' Day (Nov 2, sober: muted
+    tones and slow, gentle motion; a lantern, chrysanthemums, votive candles, white flowers), Black Friday (the day
+    after the fourth Thursday of November: black and gold, the giant box, the card at the till, the laden cart), the
+    Immaculate Conception (Dec 8: the tree and the nativity scene go up), Christmas Eve, Christmas Day, St Stephen's
+    Day and New Year's Eve (Dec 24, 25, 26 and 31).
+  - Periods: Carnival (the twelve days up to Shrove Tuesday: Venetian mask, Arlecchino, Pulcinella; confetti), the
+    Easter holidays (Holy Thursday to Easter Tuesday: the trip out of town), the winter sales (Jan 7–20) and the
+    summer sales (two weeks from the first Saturday of July: bags, tags and bargains), the summer holidays (Jul 1 –
+    Aug 31: a hot-air balloon, the tent, sunscreen, the scooter), back to school (Sep 1–14: the mortarboard, the
+    backpack, the pencil, the apple, a paper plane), the Christmas season (Dec 8 – Jan 6: angel, Santa, elf, baker,
+    reindeer; snow falls).
+  - Seasons, from the 1st of the month: spring (March: butterfly, digging the bed, a seedling, a kite; petals fall),
+    summer (June: swim ring, snorkel, a sandcastle, watermelon, surfing), autumn (September: the wise owl, mushrooms,
+    chestnuts, the grape harvest, raking leaves; leaves fall), winter (December: skating, ice fishing, knitting, hot
+    cocoa, sledding; snow falls). Now and then in winter (a few seconds every half minute) a light flurry drifts down
+    the panel's header too, in the band right of the flow's title, and settles on the tiles: drawn beneath the title,
+    the ornament and the tiles, it never covers text or bars, and with `prefers-reduced-motion` it does not show.
+- **Choosing the theme**: `/savvy-theme <theme>` (an id such as `republic-day`, or its Italian name such as
+  `Festa della Repubblica` or `natale`) or the theme picker in the panel redraws the panel at once and keeps the pick
+  in the `theme` option until `auto` is chosen; `/savvy-theme` alone lists every theme. A pick from the picker or from
+  `/config` also leaves the session a note, so savvy-flow's chat follows it from its next message.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.
@@ -65,10 +78,9 @@ The cost is a rough estimate from token counts and a built-in per-model price ta
 
 - `language`: `auto` (default), `en` or `ru`. `auto` follows Claude Code's `language` setting, then the system
   locale, and falls back to English.
-- `theme`: `auto` (default), `classic`, or one theme pinned all year (`christmas`, `befana`, `carnival`, `easter`,
-  `halloween`, `spring`, `summer`, `autumn`, `winter`). `auto` follows the calendar above by the local date when the
-  session starts or the mod reloads; `classic` keeps the tiers' everyday costumes (astronaut, detective, engineer,
-  chef, racer, pirate).
+- `theme`: `auto` (default), `classic`, or one theme pinned until `auto` is chosen again (every id `/savvy-theme`
+  lists, from `new-year` to `winter`). `auto` follows the calendar above by the local date, and moves on when the date
+  does; `classic` keeps the tiers' everyday costumes (astronaut, detective, engineer, chef, racer, pirate).
 
 Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 `claude plugin install savvy-progress@pablolok-skills --config language=en --config theme=classic`.
@@ -79,9 +91,11 @@ Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 | :--- | :--- |
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
 | `hooks/hooks.json` | Names the hooks module. |
-| `hooks/register.tsx` | The module: the two tools, `/agents-info`, the bar and the panel. |
+| `hooks/register.tsx` | The module: the two tools, `/agents-info`, `/savvy-theme`, the bar and the panel with its theme picker. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
-| `hooks/themes.ts` | The calendar and the themes: costumes, motion, colors, the header's ornaments and weather. |
+| `hooks/themes.ts` | The calendar, the theme list and the seasons' and first holidays' costumes. |
+| `hooks/wardrobe.ts` | What every theme draws from: the palette, shared props, particles, header ornaments and weather. |
+| `hooks/dress-winter.ts`, `dress-spring.ts`, `dress-summer.ts`, `dress-autumn.ts` | The holidays' and periods' costumes, by season. |
 | `hooks/register.test.ts` | The module's own tests, run by `claude plugin test`. |
 | `types/index.d.ts` | Its `$.state` contract. |
 | `plugin-entry.json` | `{"strict": true}`: the marketplace entry lets Claude Code read the mod's own manifest. |

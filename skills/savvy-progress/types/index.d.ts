@@ -55,6 +55,8 @@ declare module 'claude-code' {
       agents: AgentRun[]
       panel: Panel
       now: number
+      /** The `theme` option's value as last picked: `auto` or a theme's name. */
+      theme: string
     }
   }
 }

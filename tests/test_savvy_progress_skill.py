@@ -17,12 +17,15 @@ SOURCE = REPO / "skills" / MOD
 PUBLISHED = REPO / "published" / "workflow" / MOD
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 MANIFEST = pathlib.Path(".claude-plugin") / "plugin.json"
-SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks/register.test.ts", "types/index.d.ts",
+SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks/register.test.ts", "hooks/sprite.ts",
+           "hooks/themes.ts", "hooks/wardrobe.ts", "hooks/dress-spring.ts", "hooks/dress-summer.ts",
+           "hooks/dress-autumn.ts", "hooks/dress-winter.ts", "types/index.d.ts",
            "plugin-entry.json",
            "metadata.json", "README.md", "LICENSE")
-#: What sessions and the savvy-flow skill call: the two tools (mcp__savvy-progress__<name>) and the command.
+#: What sessions and the savvy-flow skill call: the two tools (mcp__savvy-progress__<name>) and the commands.
 REGISTERED = ("name: 'progress'", "name: 'step'", "name: 'agents-info'", "'mcp__savvy-progress__progress'",
-              "'mcp__savvy-progress__step'", "on('command.run', { command: 'agents-info' }")
+              "'mcp__savvy-progress__step'", "on('command.run', { command: 'agents-info' }", "name: 'savvy-theme'",
+              "on('command.run', { command: 'savvy-theme' }")
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"

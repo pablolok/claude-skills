@@ -1,10 +1,11 @@
-import type { AgentInfo, On } from 'claude-code'
+import type { AgentInfo, CommandRunInput, ConfigSetInput, On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
-import { costOf, fmtTokens, windowOf } from './register'
-import { DRESSES, FLURRY_MS, easter, themeOf, themeOn } from './themes'
+import { costOf, fmtTokens, themeNamed, windowOf } from './register'
+import { pixels } from './sprite'
+import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
@@ -72,8 +73,25 @@ const engine = (on: On, listed: { infos: AgentInfo[] }, now = 10_000) => {
   on('agent.spawn', ($, e) => ({ model: 'claude-opus-5-5', agentId: e.description }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.panes', () => ({ value: [] }))
-  return { clock, state, asks: (): number => asks }
+  // What the plugin saved in `/config` and told the model, in order.
+  const saved: { key: string; value: unknown }[] = []
+  const told: string[] = []
+  on('config.set', ($, e) => {
+    saved.push({ key: e.key, value: e.value })
+    return { value: e.value }
+  })
+  on('session.append', ($, e, next) => {
+    for (const block of e.message.content) if (block.type === 'text') told.push(String(block.text))
+    return next(e)
+  })
+  return { clock, state, asks: (): number => asks, saved, told }
 }
+
+// The person typing `/savvy-theme <args>`, and picking `value` for the theme in /config.
+const typed = (args: string): CommandRunInput =>
+  ({ command: 'savvy-theme', args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+const picked = (value: string): ConfigSetInput =>
+  ({ key: 'savvy-progress.theme', value, previous: 'classic', provider: { plugin: 'savvy-progress', tier: 'user' }, origin: { kind: 'composer' } })
 
 const info = (id: string, status: AgentInfo['status']): AgentInfo => ({ id, status, description: id, type: 'savvy-flow:savvy-careful' })
 
@@ -273,42 +291,79 @@ test('Easter falls where the calendar puts it', () => {
   expect(easter(2038)).toEqual([4, 25])
 })
 
-test('the calendar picks the holiday first, then the season', () => {
+test('the calendar picks the holiday first, then the period, then the season', () => {
   const on = (y: number, m: number, d: number): string => themeOn(new Date(y, m - 1, d, 12).getTime())
-  expect(on(2026, 12, 1)).toBe('christmas')
-  expect(on(2026, 12, 25)).toBe('christmas')
+  // Winter and the Christmas season, its days on top.
+  expect(on(2026, 12, 1)).toBe('winter')
+  expect(on(2026, 12, 7)).toBe('winter')
+  expect(on(2026, 12, 8)).toBe('immaculate')
+  expect(on(2026, 12, 9)).toBe('christmas')
+  expect(on(2026, 12, 24)).toBe('christmas-eve')
+  expect(on(2026, 12, 25)).toBe('christmas-day')
+  expect(on(2026, 12, 26)).toBe('st-stephen')
+  expect(on(2026, 12, 27)).toBe('christmas')
+  expect(on(2026, 12, 31)).toBe('new-years-eve')
+  expect(on(2027, 1, 1)).toBe('new-year')
   expect(on(2027, 1, 2)).toBe('christmas')
-  expect(on(2027, 1, 3)).toBe('befana')
   expect(on(2027, 1, 6)).toBe('befana')
-  expect(on(2027, 1, 7)).toBe('winter')
-  // Shrove Tuesday 2026 is February 17: the twelve days up to it.
+  expect(on(2027, 1, 7)).toBe('winter-sales')
+  expect(on(2027, 1, 20)).toBe('winter-sales')
+  expect(on(2027, 1, 21)).toBe('winter')
+  // Shrove Tuesday 2026 is February 17: the twelve days up to it, Valentine's Day on top.
   expect(on(2026, 2, 5)).toBe('winter')
   expect(on(2026, 2, 6)).toBe('carnival')
+  expect(on(2026, 2, 14)).toBe('valentine')
   expect(on(2026, 2, 17)).toBe('carnival')
   expect(on(2026, 2, 18)).toBe('winter')
-  // Easter 2026 is April 5: Palm Sunday to Easter Monday.
-  expect(on(2026, 3, 28)).toBe('spring')
-  expect(on(2026, 3, 29)).toBe('easter')
+  expect(on(2024, 2, 29)).toBe('winter')
+  expect(on(2026, 3, 1)).toBe('spring')
+  expect(on(2026, 3, 8)).toBe('womens-day')
+  expect(on(2026, 3, 19)).toBe('fathers-day')
+  // Easter 2026 is April 5: the holidays from Holy Thursday to Easter Tuesday.
+  expect(on(2026, 4, 1)).toBe('spring')
+  expect(on(2026, 4, 2)).toBe('easter-holidays')
+  expect(on(2026, 4, 5)).toBe('easter')
   expect(on(2026, 4, 6)).toBe('easter')
-  expect(on(2026, 4, 7)).toBe('spring')
-  expect(on(2026, 3, 20)).toBe('winter')
-  expect(on(2026, 3, 21)).toBe('spring')
-  expect(on(2026, 6, 21)).toBe('summer')
-  expect(on(2026, 9, 22)).toBe('summer')
-  expect(on(2026, 9, 23)).toBe('autumn')
+  expect(on(2026, 4, 7)).toBe('easter-holidays')
+  expect(on(2026, 4, 8)).toBe('spring')
+  // Easter Sunday 2038 is April 25: Easter wins over Liberation Day.
+  expect(on(2038, 4, 25)).toBe('easter')
+  expect(on(2026, 4, 25)).toBe('liberation')
+  expect(on(2026, 5, 1)).toBe('labour-day')
+  expect(on(2026, 5, 10)).toBe('mothers-day')
+  expect(on(2026, 5, 17)).toBe('spring')
+  expect(on(2026, 5, 31)).toBe('spring')
+  expect(on(2026, 6, 1)).toBe('summer')
+  expect(on(2026, 6, 2)).toBe('republic-day')
+  expect(on(2026, 6, 30)).toBe('summer')
+  // July 2026 starts on a Wednesday: the sales run from Saturday the 4th for two weeks.
+  expect(on(2026, 7, 3)).toBe('summer-holidays')
+  expect(on(2026, 7, 4)).toBe('summer-sales')
+  expect(on(2026, 7, 17)).toBe('summer-sales')
+  expect(on(2026, 7, 18)).toBe('summer-holidays')
+  expect(on(2026, 8, 15)).toBe('ferragosto')
+  expect(on(2026, 8, 31)).toBe('summer-holidays')
+  expect(on(2026, 9, 1)).toBe('back-to-school')
+  expect(on(2026, 9, 14)).toBe('back-to-school')
+  expect(on(2026, 9, 15)).toBe('autumn')
   expect(on(2026, 10, 30)).toBe('autumn')
   expect(on(2026, 10, 31)).toBe('halloween')
-  expect(on(2026, 11, 1)).toBe('halloween')
-  expect(on(2026, 11, 2)).toBe('autumn')
-  expect(on(2026, 12, 21)).toBe('christmas')
+  expect(on(2026, 11, 1)).toBe('all-saints')
+  expect(on(2026, 11, 2)).toBe('all-souls')
+  expect(on(2026, 11, 3)).toBe('autumn')
+  // Black Friday follows the fourth Thursday: November 27 in 2026, the 29th (not the 22nd) in 2024.
+  expect(on(2026, 11, 27)).toBe('black-friday')
+  expect(on(2024, 11, 22)).toBe('autumn')
+  expect(on(2024, 11, 29)).toBe('black-friday')
+  expect(on(2026, 11, 30)).toBe('autumn')
 })
 
 test('the option pins a theme; auto and an unknown value follow the calendar', () => {
   const halloween = new Date(2026, 9, 31, 12).getTime()
   const june = new Date(2026, 5, 1, 12).getTime()
   expect(themeOf('auto', halloween)).toBe('halloween')
-  expect(themeOf('auto', june)).toBe('spring')
-  expect(themeOf('nonsense', june)).toBe('spring')
+  expect(themeOf('auto', june)).toBe('summer')
+  expect(themeOf('nonsense', june)).toBe('summer')
   expect(themeOf('christmas', june)).toBe('christmas')
   expect(themeOf('classic', halloween)).toBe('classic')
 })
@@ -342,6 +397,36 @@ test('in Halloween every crab wears a costume and moves, running or not', { opti
   expect(rows.planned).toContain('class="c-hw-medium idle"')
   expect(rows.running).toContain('@keyframes drop')
   expect(rows.header).toContain('class="web"')
+})
+
+test('every theme dresses all seven figures, each its own, and gives every prop a motion', () => {
+  const FIGURES = ['fable', 'heavy', 'careful', 'medium', 'light', 'explore', 'other']
+  // The body and its legs, and the spider's thread, which hangs still.
+  const BODY = new Set(['bd', 'la', 'lb', 'thr'])
+  const dresses = Object.entries(DRESSES)
+  expect(dresses.map(([theme]) => theme).sort()).toEqual(THEMES.filter(t => t !== 'classic').sort())
+  expect(new Set(dresses.map(([, d]) => d.prefix)).size).toBe(dresses.length)
+  const faults: string[] = []
+  for (const [theme, dress] of dresses) {
+    const css = THEME_CSS + dress.css
+    const drawn = (figure: string): Map<string, string[]> => {
+      const { f, groups } = pixels()
+      dress.costumes[figure]?.(f, '#888780')
+      return groups
+    }
+    const other = JSON.stringify([...drawn('other')])
+    for (const figure of FIGURES) {
+      const groups = drawn(figure)
+      const props = [...groups.keys()].flatMap(cls => cls.split(' ')).filter(cls => !BODY.has(cls))
+      if ((groups.get('bd') ?? []).length === 0) faults.push(`${theme} ${figure}: draws nothing`)
+      if (figure !== 'other' && JSON.stringify([...groups]) === other) faults.push(`${theme} ${figure}: wears other's costume`)
+      // A prop in a group of its own moves: some rule of the theme names its class.
+      for (const cls of props) if (!css.includes(`.${cls.replace(/^fx\d$/, 'fx')}`)) faults.push(`${theme} ${figure}: .${cls} has no motion`)
+      // With no prop, nor particles, the figure moves by a rule of its own.
+      if (props.length === 0 && !css.includes(`.c-${dress.prefix}-${figure}`)) faults.push(`${theme} ${figure}: stands still`)
+    }
+  }
+  expect(faults).toEqual([])
 })
 
 test('the classic theme keeps the crabs as they were', { options: { theme: 'classic' } }, async ($, on) => {
@@ -422,5 +507,89 @@ test('no other theme snows over the header, nor winter without a flow title', { 
   await ui.unmount()
 
   expect(header ?? '').not.toContain('class="fl ')
-  expect(Object.entries(DRESSES).filter(([, d]) => d.weather).map(([k]) => k)).toEqual(['winter'])
+  expect(Object.entries(DRESSES).filter(([, d]) => d?.weather).map(([k]) => k)).toEqual(['winter'])
+})
+
+// The crabs' costume classes in the mounted panel, read off its rows' drawings.
+const costumes = async (ui: { findAll: (q: { type: string }) => Promise<{ props: Record<string, unknown> }[]> }): Promise<string> =>
+  (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source)).join('')
+
+test('a theme is named by its id or its Italian name, any case, spaces or accents', () => {
+  expect(themeNamed('carnival')).toBe('carnival')
+  expect(themeNamed('  AUTO ')).toBe('auto')
+  expect(themeNamed('Festa del Papà')).toBe('fathers-day')
+  expect(themeNamed('Vigilia di Natale')).toBe('christmas-eve')
+  expect(themeNamed('natale')).toBe('christmas-day')
+  expect(themeNamed('periodo natalizio')).toBe('christmas')
+  expect(themeNamed("women's day")).toBe('womens-day')
+  expect(themeNamed('easter_holidays')).toBe('easter-holidays')
+  expect(themeNamed('nonsense')).toBeUndefined()
+})
+
+test('/savvy-theme redraws the panel at once and keeps the pick in the option', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state, saved, told } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+  state.seed(AGENTS, [run('w1')])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await costumes(ui)).toContain('class="c-careful run"')
+
+  const { text } = await $.command.run(typed('Carnevale'))
+
+  expect(text).toContain('Carnival')
+  expect(await costumes(ui)).toContain('class="c-cv-careful run"')
+  expect(saved).toEqual([{ key: 'savvy-progress.theme', value: 'carnival' }])
+  // The model saw the command and its answer: nothing more to tell it.
+  expect(told).toEqual([])
+  await ui.unmount()
+})
+
+test('/savvy-theme with no name lists every theme; an unknown name changes nothing', { options: { theme: 'classic' } }, async ($, on) => {
+  const { saved } = engine(on, { infos: [] })
+  await start($)
+
+  const listed = await $.command.run(typed(''))
+  const unknown = await $.command.run(typed('midsummer'))
+
+  expect(listed.text).toContain('Theme: Classic')
+  expect(listed.text).toContain('auto — ')
+  expect(listed.text).toContain('black-friday — Black Friday')
+  expect(listed.text).toContain('st-stephen — ')
+  expect(unknown.text).toContain('No theme named "midsummer"')
+  expect(saved).toEqual([])
+})
+
+test("the panel's picker lists every theme and a pick redraws it at once", { options: { theme: 'auto' } }, async ($, on) => {
+  const { state, saved, told } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+  state.seed(AGENTS, [run('w1')])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [picker] = await ui.findAll({ type: 'Select' })
+  const options = (picker?.props.options ?? []) as { value: string; label?: string }[]
+  expect(picker?.props.value).toBe('auto')
+  expect(options.map(o => o.value)).toContain('ferragosto')
+  expect(options).toHaveLength(33)
+  expect(options[0]?.label).toContain('Auto, by the calendar')
+
+  await ui.select({ key: 'theme', value: 'halloween' })
+
+  expect(await costumes(ui)).toContain('class="c-hw-careful run"')
+  expect(saved).toEqual([{ key: 'savvy-progress.theme', value: 'halloween' }])
+  // A pick the model did not see is told to it, so the chat can follow.
+  expect(told.join('')).toContain('the theme is now Halloween')
+  await ui.unmount()
+})
+
+test('a pick in /config redraws the panel too', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+  state.seed(AGENTS, [run('w1')])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+
+  await $.config.set(picked('winter'))
+
+  expect(await costumes(ui)).toContain('class="c-wi-careful run"')
+  await ui.unmount()
 })

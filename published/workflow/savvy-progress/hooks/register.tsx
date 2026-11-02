@@ -4,7 +4,7 @@ import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 import { CLAY, INK, crabBody, pixels, stamp } from './sprite'
 import type { Fill } from './sprite'
-import { DRESSES, THEME_CSS, costumeIn, themeOf } from './themes'
+import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, costumeIn, themeOf, themeOn } from './themes'
 import type { Dress, Theme } from './themes'
 
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
@@ -15,6 +15,7 @@ const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, {
   autoOpenedFor: '',
 })
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
+const picked = atom({ plugin: 'savvy-progress', key: 'theme' } as const, 'auto')
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
@@ -66,6 +67,8 @@ const STRINGS = {
     tasks: 'Tasks',
     review: 'Review',
     busy: 'running',
+    theme: 'Theme',
+    auto: 'Auto, by the calendar',
   },
   ru: {
     pane: 'Агенты',
@@ -94,6 +97,8 @@ const STRINGS = {
     tasks: 'Задачи',
     review: 'Ревью',
     busy: 'в работе',
+    theme: 'Тема',
+    auto: 'Авто, по календарю',
   },
 } as const
 
@@ -116,10 +121,98 @@ async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
 }
 
 // ---------------------------------------------------------------------------
-// Theme: the `theme` option, or the calendar's (`themes.ts`).
+// Theme: the `theme` option, or the calendar's (`themes.ts`). The option is
+// picked in `/config`, with `/savvy-theme` or in the panel's picker; its value
+// lives in the `theme` atom too, so a pick redraws the bar and the panel at once.
 
-// Module scope is fine here: session.start sets it again on every (re)load.
+const OPTION = 'savvy-progress.theme'
+
+// Module scope is fine here: every drawing sets it from the atom first.
 let theme: Theme = 'classic'
+
+async function applyTheme($: EngineInterface): Promise<void> {
+  theme = themeOf(await read($, picked), await $.clock.now())
+}
+
+// The command's names: a theme's own, `auto`, or its Italian name (the calendar's
+// holidays are Italian), with any case, spaces or accents.
+const ALIASES: Record<string, string> = {
+  classico: 'classic',
+  capodanno: 'new-year',
+  epifania: 'befana',
+  'saldi-invernali': 'winter-sales',
+  'san-valentino': 'valentine',
+  carnevale: 'carnival',
+  'festa-della-donna': 'womens-day',
+  'festa-del-papa': 'fathers-day',
+  'vacanze-pasquali': 'easter-holidays',
+  pasqua: 'easter',
+  pasquetta: 'easter',
+  liberazione: 'liberation',
+  'festa-dei-lavoratori': 'labour-day',
+  'primo-maggio': 'labour-day',
+  'festa-della-mamma': 'mothers-day',
+  'festa-della-repubblica': 'republic-day',
+  'vacanze-estive': 'summer-holidays',
+  'saldi-estivi': 'summer-sales',
+  'rientro-a-scuola': 'back-to-school',
+  ognissanti: 'all-saints',
+  defunti: 'all-souls',
+  'commemorazione-dei-defunti': 'all-souls',
+  immacolata: 'immaculate',
+  'periodo-natalizio': 'christmas',
+  vigilia: 'christmas-eve',
+  'vigilia-di-natale': 'christmas-eve',
+  natale: 'christmas-day',
+  'santo-stefano': 'st-stephen',
+  'san-silvestro': 'new-years-eve',
+  primavera: 'spring',
+  estate: 'summer',
+  autunno: 'autumn',
+  inverno: 'winter',
+}
+
+export const themeNamed = (name: string): string | undefined => {
+  const key = name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f']/g, '')
+    .replace(/[\s_]+/g, '-')
+  if (key === 'auto') return 'auto'
+  return THEMES.find(t => t === key) ?? ALIASES[key]
+}
+
+const describeTheme = (value: string, ms: number): string =>
+  value === 'auto' ? `auto (${THEME_LABEL[themeOn(ms)]})` : THEME_LABEL[themeOf(value, ms)]
+
+// One pick, from wherever it came: the atom redraws the bar and the panel; the
+// option keeps it across sessions (savvy-flow's chat reads it there). A pick
+// the model did not see happen (the picker, `/config`) is told to it in one line.
+async function pickTheme($: EngineInterface, value: string, isSeen: boolean): Promise<void> {
+  await update($, picked, () => value)
+  // The atom's readers redraw on the write; the bar and the panel also read the
+  // calendar, so ask for both again rather than lean on what they read.
+  $.ui.invalidate('ui.render')
+  if (isSeen) return
+  const text = `savvy-progress: the theme is now ${describeTheme(value, await $.clock.now())}; savvy-flow's chat follows it from the next message.`
+  await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }).catch(() => undefined)
+}
+
+// True while this plugin saves its own pick, which its `config.set` hook leaves alone.
+let isSaving = false
+
+async function saveTheme($: EngineInterface, value: string): Promise<string | undefined> {
+  isSaving = true
+  try {
+    const { deny } = await $.config.set({ key: OPTION, value })
+    return deny
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err)
+  } finally {
+    isSaving = false
+  }
+}
 
 const dressOf = (): Dress | undefined => (theme === 'classic' ? undefined : DRESSES[theme])
 
@@ -702,7 +795,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
-    theme = themeOf(options.theme, await $.clock.now())
+    await update($, picked, () => (typeof options.theme === 'string' ? options.theme : 'auto'))
+    await applyTheme($)
     await $.tool.register({
       name: 'progress',
       description:
@@ -754,6 +848,12 @@ export const register: Register = (on, options) => {
       name: 'agents-info',
       description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
     })
+    await $.command.register({
+      name: 'savvy-theme',
+      description: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
+      argumentHint: '[theme|auto]',
+      immediate: true,
+    })
 
     // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
     await update($, flow, f => (f?.isFinished ? null : f))
@@ -775,6 +875,27 @@ export const register: Register = (on, options) => {
       })().catch(() => undefined)
     })
     return started
+  })
+
+  on('command.run', { command: 'savvy-theme' }, async ($, e) => {
+    const at = await $.clock.now()
+    const asked = e.args.trim()
+    if (!asked) {
+      const rows = [`  auto — ${tr().auto}`, ...THEMES.map(t => `  ${t} — ${THEME_LABEL[t]}`)]
+      return { text: `Theme: ${describeTheme(await read($, picked), at)}.\n${rows.join('\n')}` }
+    }
+    const value = themeNamed(asked)
+    if (!value) return { text: `No theme named "${asked}". /savvy-theme with no name lists them.` }
+    await pickTheme($, value, true)
+    const deny = await saveTheme($, value)
+    return { text: `Theme: ${describeTheme(value, at)}.${deny ? ` Not kept for the next sessions: ${deny}` : ''}` }
+  })
+
+  // A pick in `/config`: the panel follows it at once (this plugin's own save is not one).
+  on('config.set', { key: OPTION }, async ($, e, next) => {
+    const result = await next(e)
+    if (!isSaving && typeof result.value === 'string') await pickTheme($, result.value, false)
+    return result
   })
 
   on('command.run', { command: 'agents-info' }, async $ => {
@@ -938,6 +1059,21 @@ export const register: Register = (on, options) => {
     const s = tr()
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
+    await applyTheme($)
+    // The theme picker, on every surface that draws one.
+    const Select = 'Select' in ui ? ui.Select : undefined
+    const calendar = THEME_LABEL[themeOn(await $.clock.now())]
+    const themePicker = Select && (
+      <Select
+        key="theme"
+        label={s.theme}
+        value={await read($, picked)}
+        options={[{ value: 'auto', label: `${s.auto}: ${calendar}` }, ...THEMES.map(t => ({ value: t, label: THEME_LABEL[t] }))]}
+        onSelect={value => {
+          void pickTheme($, value, false).then(() => saveTheme($, value))
+        }}
+      />
+    )
     const list = await read($, agents)
     const f = await read($, flow)
     const p: Panel = await read($, panel)
@@ -967,6 +1103,12 @@ export const register: Register = (on, options) => {
       />
     )
     const isEmpty = list.length === 0 && planned.length === 0
+    const controls = (
+      <Box flexDirection="row" alignItems="center" gap={1}>
+        {toggleCompact}
+        {themePicker}
+      </Box>
+    )
     const summary = `≈${fmtCost(t.cost)}, ${fmtTokens(t.tokens)} ${s.tokensWord}, ${fmtTime(t.time)}`
 
     if (e.surface === 'desktop' && 'Svg' in ui) {
@@ -982,14 +1124,14 @@ export const register: Register = (on, options) => {
         return (
           <Box flexDirection="column" gap={1}>
             <Svg source={compactSvg(W, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={32} />
-            {toggleCompact}
+            {controls}
           </Box>
         )
       }
       return (
         <Box flexDirection="column">
           <Svg source={headerSvg(W, title, t, at)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title)} />
-          {toggleCompact}
+          {controls}
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
           {running.map(a => (
@@ -1055,6 +1197,7 @@ export const register: Register = (on, options) => {
         <Text dimColor>
           ≈{fmtCost(t.cost)} · {fmtTokens(t.tokens)} {s.tokensWord} · {fmtTime(t.time)}
         </Text>
+        {themePicker}
         {p.isCompact ? (
           <Text wrap="truncate-end">
             {[...running, ...finished].map(a => (
@@ -1100,6 +1243,7 @@ export const register: Register = (on, options) => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const f = await read($, flow)
     if (f === null || e.props.hasSurvey) return next(e)
+    await applyTheme($)
 
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui

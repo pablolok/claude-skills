@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.0] - 2026-11-02
+- The full Italian calendar — every holiday (New Year's Day to New Year's Eve, Republic Day with every figure waving the tricolour, a sober All Souls' Day), the periods (Christmas season, winter and summer sales, Easter and summer holidays, back to school) and the seasons from the 1st of the month, a costume per tier for each; /savvy-theme <theme|auto> and a theme picker in the panel set it and redraw at once, the pick kept until auto
+
+
 ## [1.6.1] - 2026-11-02
 - Halloween is two days only — October 31 and November 1; the rest of autumn wears the autumn theme
 

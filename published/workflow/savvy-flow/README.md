@@ -37,9 +37,11 @@ fraction of the context, so a task that needs a skill, a browser or the web goes
 
 ## Themes
 
-The orchestrator's chat messages wear the theme of the day, in the same windows as the savvy-progress panel: a holiday
-while one is on (Christmas, the Befana, Carnival, Easter, Halloween), otherwise the season (spring, summer, autumn,
-winter). Each theme has a mascot per tier (in summer 🛟 Fable afloat, 🤿 Heavy diving, 🪣 Careful building a sandcastle, 🍉 Medium, 🏄 Light surfing), a mark of
+The orchestrator's chat messages wear the theme of the day, by the Italian calendar and in the same windows as the
+savvy-progress panel: a holiday while one is on (from New Year's Day and the Befana to Republic Day, Ferragosto, All
+Souls' Day — a sober one — and New Year's Eve), otherwise a period (Carnival, the Easter and summer holidays, the
+sales, back to school, the Christmas season), otherwise the season (spring, summer, autumn, winter, from the 1st of
+March, June, September and December). Each theme has a mascot per tier (in summer 🛟 Fable afloat, 🤿 Heavy diving, 🪣 Careful building a sandcastle, 🍉 Medium, 🏄 Light surfing), a mark of
 the orchestrator's own that also opens the progress bar's title (🌞), marks for accepted, returned and escalated tasks,
 and a closing line. Chat only: files, commits, briefs and task titles stay plain.
 With savvy-progress installed, the agents panel dresses its figures for the same themes, animated.
@@ -48,10 +50,11 @@ The theme is chosen when the flow starts, the first that applies:
 
 1. **Asked in chat** — "use the winter theme", "no theme": it holds for the rest of the session.
 2. **The panel's `theme` option** — one setting for both. The orchestrator reads savvy-progress's `theme` with
-   `claude plugin configure savvy-progress@pablolok-skills --json` (`inputs.theme`): a theme's name (`winter`,
-   `halloween`, …) pins it all year in chat too, `classic` keeps chat plain, `auto` follows the calendar. Set it with
-   `/plugin configure savvy-progress@pablolok-skills`.
-3. **The calendar** — the holiday or season of the day.
+   `claude plugin configure savvy-progress@pablolok-skills --json` (`inputs.theme`): a theme's id (`republic-day`,
+   `winter`, …) pins it in chat too until `auto` is chosen again, `classic` keeps chat plain, `auto` follows the
+   calendar. Set it with `/savvy-theme <theme|auto>`, the theme picker in the panel or `/config`: the panel redraws at
+   once, and a flow under way switches chat from its next message.
+3. **The calendar** — the holiday, period or season of the day.
 
 ## With savvy-progress
 

@@ -147,11 +147,18 @@ class TestThemes(unittest.TestCase):
         self.assertIn("`classic` means no theme in chat", self.text)
         self.assertIn("falls through to the calendar", self.text)
 
+    def test_a_theme_set_from_the_panel_switches_chat_from_the_next_message(self) -> None:
+        self.assertIn("`/savvy-theme <theme|auto>` or from the theme picker in the panel", self.text)
+        self.assertIn("switches chat to that theme from your next message", self.text)
+
+    def test_the_calendar_puts_a_holiday_over_a_period_and_a_period_over_its_season(self) -> None:
+        self.assertIn("A holiday wins over the period it falls in, a period over its season.", self.text)
+
     def test_every_theme_the_panel_can_pin_has_a_chat_row(self) -> None:
         options = json.loads(_read(PANEL_MANIFEST))["userConfig"]["theme"]["options"]
         for theme in set(options) - PANEL_NON_THEMES:
             with self.subTest(theme=theme):
-                self.assertIn(f"| {theme.capitalize()} |", self.text)
+                self.assertIn(f"| `{theme}` |", self.text)
 
 
 class TestLicence(unittest.TestCase):

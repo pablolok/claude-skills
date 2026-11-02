@@ -38,23 +38,48 @@ applies winning:
 1. **The user asks for one** (by name, or for none) → that one for the rest of the session, until they ask again.
 2. **The agents panel's `theme` option** (savvy-progress) → the same theme as the panel, so the two never disagree.
    Read it with one shell call, `claude plugin configure savvy-progress@pablolok-skills --json`: its
-   `inputs.theme`. A theme's name pins that theme all year; `classic` means no theme in chat (the panel's everyday
-   costumes have no chat counterpart); `auto`, any other value, or no answer (the plugin missing, the command
-   failing) falls through to the calendar.
-3. **The calendar**, by the session's current date: a holiday while one is on, otherwise the season, in the panel's
-   windows; a holiday wins over the season it falls in. With the date unknown, no theme.
+   `inputs.theme`. A theme's id pins that theme until it is set back to `auto`; `classic` means no theme in chat (the
+   panel's everyday costumes have no chat counterpart); `auto`, any other value, or no answer (the plugin missing, the
+   command failing) falls through to the calendar. The user sets the option in `/config`, with
+   `/savvy-theme <theme|auto>` or from the theme picker in the panel; a `/savvy-theme` run or the panel's note that
+   the theme changed, met during the flow, switches chat to that theme from your next message.
+3. **The calendar**, by the session's current date, in the panel's windows below: a holiday while one is on,
+   otherwise a period (the Christmas season, the sales, the school holidays, back to school), otherwise the season. A
+   holiday wins over the period it falls in, a period over its season. With the date unknown, no theme.
 
 | Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
 |-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
-| Christmas | December 1 – January 2 | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
-| Befana | January 3–6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
-| Carnival | the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
-| Easter | Palm Sunday – Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
-| Halloween | October 31 – November 1 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
-| Spring | from March 21 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
-| Summer | from June 21 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
-| Autumn | from September 23 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
-| Winter | from December 21 | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
+| `new-year` | New Year's Day, January 1 | 🌠 | 📅 | 📝 | 🥣 | 🏊 | 🗓️ | 🍀 · 🔁 · 🔥 | `🍀 A clean start to the year.` |
+| `befana` | Epiphany, January 6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
+| `winter-sales` | the winter sales, January 7–20 | 🎈 | 🧥 | 🏷️ | 🛍️ | 🛒 | 🧣 | 💸 · 🔖 · 🔥 | `🛍️ Every bargain bagged.` |
+| `valentine` | Valentine's Day, February 14 | 💘 | 🍫 | 💌 | 🌹 | 🎈 | 💝 | 💕 · 💔 · 🔥 | `💝 Done with love.` |
+| `carnival` | Carnival, the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
+| `womens-day` | Women's Day, March 8 | 👑 | 🌿 | 🎀 | 🍰 | 💐 | 🌼 | 💛 · 🍂 · 🔥 | `🌼 Mimosa for everyone.` |
+| `fathers-day` | Father's Day, March 19 | 🏅 | 🪚 | 🔨 | 🧁 | 🧰 | 👔 | ✅ · 🔩 · 🔥 | `👔 Built to last.` |
+| `easter-holidays` | the Easter holidays, Holy Thursday – Easter Tuesday | 🕊️ | 🥾 | 🧳 | 🍰 | 🚲 | 🧺 | 🌿 · 🗺️ · 🔥 | `🧺 Back from the trip, all packed away.` |
+| `easter` | Easter Sunday and Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
+| `liberation` | Liberation Day, April 25 | 🇮🇹 | 🌹 | 🌿 | 💐 | 🏃 | 🕊️ | 🌹 · 🧭 · 🔥 | `🕊️ Free and done.` |
+| `labour-day` | Labour Day, May 1 | 🎸 | ⛏️ | 🧵 | 🥪 | 🏃 | 🛠️ | 🔧 · 🪛 · 🔥 | `🛠️ Hard work, well done.` |
+| `mothers-day` | Mother's Day, the second Sunday of May | 💖 | ☕ | 💌 | 🎂 | 🌷 | 💐 | 💗 · 🩹 · 🔥 | `💐 Made with care, for her.` |
+| `republic-day` | Republic Day, June 2 | ✈️ | 🎺 | 🪢 | 🍨 | 🥁 | 🇮🇹 | 🟩 · 🟥 · 🔥 | `🇮🇹 Done, the flag flying.` |
+| `summer-sales` | the summer sales, two weeks from the first Saturday of July | 🪭 | 🛍️ | 👡 | 🕶️ | 👒 | 🏷️ | 💰 · 🔖 · 🔥 | `🛍️ Sold out, all done.` |
+| `summer-holidays` | the summer holidays, July 1 – August 31 | 🎈 | ⛺ | 🧴 | 🍝 | 🛵 | 🏖️ | 🌴 · 🧭 · 🔥 | `🏖️ Done, off on holiday.` |
+| `ferragosto` | Ferragosto, August 15 | 🦩 | ⛱️ | 🍢 | 🥘 | 🏐 | 🎆 | 🍉 · 🌊 · 🔥 | `🎆 Done, see you at the fireworks.` |
+| `back-to-school` | back to school, September 1–14 | 🎓 | 🎒 | ✏️ | 🍎 | 🛩️ | 📚 | ✔️ · 📝 · 🔥 | `📚 Homework done.` |
+| `halloween` | Halloween, October 31 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
+| `all-saints` | All Saints' Day, November 1 | 😇 | 🕯️ | 🪟 | 🍪 | 🔔 | ✨ | 🌟 · 🙏 · 🔥 | `✨ All saints, all done.` |
+| `all-souls` | All Souls' Day, November 2 | 🏮 | 🌼 | 🕯️ | 💮 | 💧 | 🤍 | ✔️ · ↩️ · ⬆️ | `🤍 Done, quietly.` |
+| `black-friday` | Black Friday, the day after the fourth Thursday of November | 🪙 | 📦 | 💳 | 🛍️ | 🛒 | 🖤 | 💰 · 🧾 · 🔥 | `🖤 Every deal closed.` |
+| `immaculate` | the Immaculate Conception, December 8 | 🌟 | 🌲 | 🐑 | 🎀 | 💡 | ⭐ | ✨ · 🧶 · 🔥 | `⭐ The tree is up.` |
+| `christmas` | the Christmas season, December 8 – January 6, outside its own days | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
+| `christmas-eve` | Christmas Eve, December 24 | 💫 | 🐟 | 🎁 | 🥛 | 🛷 | 🌟 | 🔔 · 📜 · 🔥 | `🌟 Everything ready for tonight.` |
+| `christmas-day` | Christmas Day, December 25 | 🎺 | 🎁 | 🎀 | 🍲 | 🚗 | 🔔 | 🎉 · 🧦 · 🔥 | `🎁 Merry Christmas, all unwrapped.` |
+| `st-stephen` | St Stephen's Day, December 26 | 💤 | 🍗 | 🔢 | 🍞 | 👟 | 🛋️ | 😌 · 🍽️ · 🔥 | `🛋️ Done, back to the leftovers.` |
+| `new-years-eve` | New Year's Eve, December 31 | 🎆 | 🍖 | 🍾 | 🥂 | 🎇 | 🕛 | ✨ · ⏳ · 🔥 | `🥂 Counted down and done.` |
+| `spring` | spring, March 1 – May 31 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
+| `summer` | summer, June 1 – August 31 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
+| `autumn` | autumn, September 1 – November 30 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
+| `winter` | winter, December 1 – the end of February | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
 
 - Each tier's mascot leads its tasks in the plan and its name in the close's tiers line. The mascots follow the
   roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
@@ -62,6 +87,7 @@ applies winning:
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.
 - The progress bar's `title` starts with your mark, the same on every call (a new title starts a new flow).
 - The close report opens with your mark and ends with the theme's closing line, in the session's language.
+- `all-souls` is sober: a calm tone, no exclamation marks, and its marks only where these rules put them.
 
 It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
 put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs

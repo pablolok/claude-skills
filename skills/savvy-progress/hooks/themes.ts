@@ -1,19 +1,57 @@
-// The figures' themes: the holidays and seasons the crab dresses up for, all drawn on
-// the sprite grid of `sprite.ts`. The crab stays the crab: each theme adds what it
-// wears and holds, and a motion of its own; a running figure moves at full pace,
-// any other one idles, so planned and finished rows move too. Every period divides
-// one second: a running row is redrawn once a second and restarts them in phase.
+// The figures' themes: the holidays, periods and seasons the crab dresses up for,
+// all drawn on the sprite grid of `sprite.ts`. The crab stays the crab: each theme
+// adds what it wears and holds, and a motion of its own; a running figure moves at
+// full pace, any other one idles, so planned and finished rows move too. Every
+// period divides one second: a running row is redrawn once a second and restarts
+// them in phase.
 
-import { INK, crabBody, mirror, pixels, stamp } from './sprite'
+import { INK, crabBody, mirror, stamp } from './sprite'
 import type { Costume, Fill } from './sprite'
+import {
+  BONE, BLOOD, BRASS, BRICK, BROWN, FIG, FROST, GLASS, GLOW, GOLD, GRAPE, GREEN, IVORY, KRAFT, LEAF, LILAC, LINE,
+  MELON, METAL, NIGHT, OLIVE, PETAL, PINE, PINK, PUMPKIN, RUST, SAND, SAND_SHADE, SHADE, SHAWL, SKY, SOIL, STRAW,
+  STRAW_SHADE, TERRACOTTA, WATER, YOLK, confetti, fall, flurry, ornament, snow, style, tierMotion, tint,
+} from './wardrobe'
+import type { Dress } from './wardrobe'
 
+import { easterHolidays, fathersDay, labourDay, liberation, mothersDay, valentine, womensDay } from './dress-spring'
+import { christmasDay, christmasEve, immaculate, newYear, newYearsEve, stStephen, winterSales } from './dress-winter'
+import { backToSchool, ferragosto, republicDay, summerHolidays, summerSales } from './dress-summer'
+import { allSaints, allSouls, blackFriday } from './dress-autumn'
+
+export { FLURRY_MS, THEME_CSS } from './wardrobe'
+export type { Dress } from './wardrobe'
+
+// In the calendar's order: the `theme` option's picker and `/savvy-theme` list them so.
 export const THEMES = [
   'classic',
-  'halloween',
-  'christmas',
+  'new-year',
   'befana',
+  'winter-sales',
+  'valentine',
   'carnival',
+  'womens-day',
+  'fathers-day',
+  'easter-holidays',
   'easter',
+  'liberation',
+  'labour-day',
+  'mothers-day',
+  'republic-day',
+  'summer-holidays',
+  'summer-sales',
+  'ferragosto',
+  'back-to-school',
+  'halloween',
+  'all-saints',
+  'all-souls',
+  'black-friday',
+  'immaculate',
+  'christmas',
+  'christmas-eve',
+  'christmas-day',
+  'st-stephen',
+  'new-years-eve',
   'spring',
   'summer',
   'autumn',
@@ -22,8 +60,44 @@ export const THEMES = [
 
 export type Theme = (typeof THEMES)[number]
 
+// What the picker shows: the name and when the calendar wears it.
+export const THEME_LABEL: Record<Theme, string> = {
+  classic: 'Classic — no theme',
+  'new-year': "New Year's Day — Jan 1",
+  befana: 'Epiphany, the Befana — Jan 6',
+  'winter-sales': 'Winter sales — Jan 7–20',
+  valentine: "Valentine's Day — Feb 14",
+  carnival: 'Carnival — 12 days to Shrove Tuesday',
+  'womens-day': "Women's Day — Mar 8",
+  'fathers-day': "Father's Day — Mar 19",
+  'easter-holidays': 'Easter holidays — Holy Thursday to Easter Tuesday',
+  easter: 'Easter and Easter Monday',
+  liberation: 'Liberation Day — Apr 25',
+  'labour-day': 'Labour Day — May 1',
+  'mothers-day': "Mother's Day — second Sunday of May",
+  'republic-day': 'Republic Day — Jun 2',
+  'summer-holidays': 'Summer holidays — Jul 1 – Aug 31',
+  'summer-sales': 'Summer sales — two weeks from the first Saturday of July',
+  ferragosto: 'Ferragosto — Aug 15',
+  'back-to-school': 'Back to school — Sep 1–14',
+  halloween: 'Halloween — Oct 31',
+  'all-saints': "All Saints' Day — Nov 1",
+  'all-souls': "All Souls' Day — Nov 2",
+  'black-friday': 'Black Friday — the day after the fourth Thursday of November',
+  immaculate: 'Immaculate Conception — Dec 8',
+  christmas: 'Christmas season — Dec 8 – Jan 6',
+  'christmas-eve': 'Christmas Eve — Dec 24',
+  'christmas-day': 'Christmas Day — Dec 25',
+  'st-stephen': "St Stephen's Day — Dec 26",
+  'new-years-eve': "New Year's Eve — Dec 31",
+  spring: 'Spring — Mar 1 – May 31',
+  summer: 'Summer — Jun 1 – Aug 31',
+  autumn: 'Autumn — Sep 1 – Nov 30',
+  winter: 'Winter — Dec 1 – end of February',
+}
+
 // ---------------------------------------------------------------------------
-// Calendar: a holiday wins over the season it falls in.
+// Calendar: a holiday wins over a period, a period over the season it falls in.
 
 const DAY = 86_400_000
 
@@ -45,182 +119,71 @@ export const easter = (year: number): [number, number] => {
   return [Math.floor(n / 31), (n % 31) + 1]
 }
 
-// The theme of a day, by the engine's local date:
-// Christmas December 1 – January 2, Befana January 3–6, Carnival the twelve days
-// up to Shrove Tuesday, Easter from Palm Sunday to Easter Monday, Halloween
-// October 31 – November 1; otherwise the (northern) season, from the 21st of
-// March, the 21st of June, the 23rd of September and the 21st of December.
+// The holidays on a fixed date, by month * 100 + day.
+const FIXED_DAYS: Record<number, Theme> = {
+  101: 'new-year',
+  106: 'befana',
+  214: 'valentine',
+  308: 'womens-day',
+  319: 'fathers-day',
+  425: 'liberation',
+  501: 'labour-day',
+  602: 'republic-day',
+  815: 'ferragosto',
+  1031: 'halloween',
+  1101: 'all-saints',
+  1102: 'all-souls',
+  1208: 'immaculate',
+  1224: 'christmas-eve',
+  1225: 'christmas-day',
+  1226: 'st-stephen',
+  1231: 'new-years-eve',
+}
+
+const SATURDAY = 6
+
+// The theme of a day, by the engine's local date, the first that applies:
+// Easter Sunday and Monday; a holiday on a fixed date; Mother's Day (the second
+// Sunday of May) and Black Friday (the day after the fourth Thursday of November);
+// Carnival (the twelve days up to Shrove Tuesday); the Easter holidays (Holy
+// Thursday to Easter Tuesday); the Christmas season (December 8 – January 6); back
+// to school (September 1–14); the winter sales (January 7–20); the summer sales
+// (two weeks from the first Saturday of July); the summer holidays (July and
+// August); otherwise the meteorological season, from the 1st of March, June,
+// September and December.
 export const themeOn = (ms: number): Theme => {
   const date = new Date(ms)
   const year = date.getFullYear()
   const month = date.getMonth() + 1
   const day = date.getDate()
+  const weekday = date.getDay()
   const md = month * 100 + day
-  if (md >= 103 && md <= 106) return 'befana'
-  if (md >= 1201 || md <= 102) return 'christmas'
   const [em, ed] = easter(year)
   const fromEaster = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(year, em - 1, ed)) / DAY)
-  if (fromEaster >= -7 && fromEaster <= 1) return 'easter'
+  if (fromEaster === 0 || fromEaster === 1) return 'easter'
+  const fixed = FIXED_DAYS[md]
+  if (fixed) return fixed
+  if (month === 5 && weekday === 0 && day >= 8 && day <= 14) return 'mothers-day'
+  if (month === 11 && weekday === 5 && day >= 23 && day <= 29) return 'black-friday'
   if (fromEaster >= -58 && fromEaster <= -47) return 'carnival'
-  if (md === 1031 || md === 1101) return 'halloween'
-  if (md >= 321 && md <= 620) return 'spring'
-  if (md >= 621 && md <= 922) return 'summer'
-  if (md >= 923 && md <= 1220) return 'autumn'
+  if (fromEaster >= -3 && fromEaster <= 2) return 'easter-holidays'
+  if (md >= 1208 || md <= 106) return 'christmas'
+  if (md >= 901 && md <= 914) return 'back-to-school'
+  if (md >= 107 && md <= 120) return 'winter-sales'
+  if (month === 7) {
+    const firstSaturday = 1 + ((SATURDAY - new Date(year, 6, 1).getDay() + 7) % 7)
+    if (day >= firstSaturday && day < firstSaturday + 14) return 'summer-sales'
+  }
+  if (month === 7 || month === 8) return 'summer-holidays'
+  if (month >= 3 && month <= 5) return 'spring'
+  if (month >= 6 && month <= 8) return 'summer'
+  if (month >= 9 && month <= 11) return 'autumn'
   return 'winter'
 }
 
 // The `theme` option: a named theme pins it, anything else follows the calendar.
 export const themeOf = (option: unknown, ms: number): Theme =>
   THEMES.find(t => t === option) ?? themeOn(ms)
-
-// ---------------------------------------------------------------------------
-// Palette: warm and flat, around the crab's clay. A color written `.name` is
-// painted by a CSS class, so it can lighten in the dark, where ink would vanish.
-
-const IVORY = '#F4F1EA'
-const SHADE = '#D6D1C4'
-const GOLD = '#E8B54A'
-const BRICK = '#B8433A'
-const PINE = '#4F7A57'
-const OLIVE = '#788C5D'
-const KRAFT = '#C9A06A'
-const BROWN = '#8A5A3B'
-const SKY = '#6A9BCC'
-const FIG = '#C46686'
-const PINK = '#EBA9B8'
-const LILAC = '#B9B0DA'
-const YOLK = '#F2C94C'
-const RUST = '#C66A3D'
-const FROST = '#9DB8CC'
-const STRAW = '#E3C887'
-const STRAW_SHADE = '#C9AB66'
-const PUMPKIN = '#F28C28'
-const BONE = '#EDE6D6'
-const GLOW = '#FFD54A'
-const BLOOD = '#D0453F'
-const NIGHT = '.hn'
-const SHAWL = '.bs'
-const OTHER_GREY = '#888780'
-const WATER = '#7FB3D5'
-const SAND = '#E8CF9B'
-const SAND_SHADE = '#C9AE73'
-const GREEN = '#6E9B4A'
-const SOIL = '#7A5236'
-const METAL = '#A7ABB2'
-const LINE = '#C9CCD2'
-const BRASS = '#C9A050'
-const TERRACOTTA = '#C46A4A'
-const GRAPE = '#6B4C8F'
-const MELON = '#E0525A'
-const GLASS = 'rgba(169,214,245,.45)'
-
-// The tier's color, or `fallback` for an agent with no tier (its grey would read as dull).
-const tint = (t: string, fallback: string): string => (t === OTHER_GREY ? fallback : t)
-
-// Three particles falling through the figure's box, a third of a second apart.
-const fall = (f: Fill, rows: string[], colors: string[], xs: number[] = [3, 14, 25]): void =>
-  xs.forEach((x, i) => stamp(f, x, -3, rows, { o: colors[i % colors.length] ?? '' }, `fx fx${i}`))
-
-const FLAKE = ['.o.', 'ooo', '.o.']
-const PETAL = ['oo']
-const LEAF = ['.o', 'oo']
-const CONFETTI = ['o', 'o']
-
-const snow = (f: Fill): void => fall(f, FLAKE, [FROST])
-const confetti = (f: Fill): void => fall(f, CONFETTI, [FIG, SKY, GOLD])
-
-// A header ornament: a small pixel sprite in the top-right corner, drawn twice the
-// figures' size; `cls` names its motion.
-const ornament =
-  (rows: string[], map: Record<string, string>, cls: string) =>
-  (W: number): string => {
-    const { f, groups } = pixels()
-    stamp(f, 0, 0, rows, map)
-    const width = Math.max(...rows.map(r => r.length))
-    return `<g transform="translate(${W - 8 - width * 2},2) scale(2)" shape-rendering="crispEdges"><g class="orn ${cls}">${(groups.get('bd') ?? []).join('')}</g></g>`
-  }
-
-// Weather over the header: now and then, for a few seconds, flakes drift down the
-// band left free by the title and the ornament (x from `from` to `to`) and settle
-// on the tiles. The layer is drawn first, so text, tiles and bars paint over it.
-// Its cycle is far longer than a second, so the phase rides in the drawing: a
-// header redrawn at `at` goes on where the last one was instead of restarting.
-export const FLURRY_MS = 30_000
-// Each flake's start within the cycle, in ms: each falls for three seconds (`flurry`
-// in winter's CSS), so the flurry lasts about five; unseen the rest of the cycle and
-// with reduced motion.
-const FLURRY_STARTS = [0, 1400, 600, 2000, 300, 1700, 900, 2300, 1100, 2600]
-const FLURRY_GAP = 28
-
-// Three sizes in turn: a large flake, a speck, a small flake (pixels at that scale).
-const FLURRY_SIZES: [string[], number][] = [[FLAKE, 2], [['o'], 2], [FLAKE, 1]]
-
-const flurry = (from: number, to: number, at: number): string => {
-  const n = Math.min(FLURRY_STARTS.length, Math.floor((to - from) / FLURRY_GAP))
-  if (n < 1) return ''
-  const step = (to - from) / n
-  const phase = ((at % FLURRY_MS) + FLURRY_MS) % FLURRY_MS
-  const flakes = FLURRY_STARTS.slice(0, n).map((start, i) => {
-    const [rows, scale] = FLURRY_SIZES[i % FLURRY_SIZES.length] ?? [FLAKE, 1]
-    const { f, groups } = pixels()
-    stamp(f, 0, 0, rows, { o: FROST })
-    const x = Math.round(from + step * i + ((i * 7) % 11))
-    // Two classes outrank `.fl`, whose `animation` shorthand would reset the delay.
-    return {
-      css: `.fl.fl${i}{animation-delay:${start - phase}ms}`,
-      svg: `<g class="fl fl${i}"><g transform="translate(${x},-6) scale(${scale})">${(groups.get('bd') ?? []).join('')}</g></g>`,
-    }
-  })
-  return `<style>${flakes.map(k => k.css).join('')}</style><g shape-rendering="crispEdges">${flakes.map(k => k.svg).join('')}</g>`
-}
-
-// ---------------------------------------------------------------------------
-// The themes. `costumes` is keyed by figure (a tier, `explore`, `other`); a figure
-// with no costume of its own wears `other`. `prefix` names the theme's classes.
-
-export type Dress = {
-  prefix: string
-  costumes: Record<string, Costume>
-  css: string
-  accent: string
-  sparkle: [string, string]
-  glyph: string
-  ornament: (W: number) => string
-  // The header's weather, in the free band from `from` to `to` at the time `at`.
-  weather?: (from: number, to: number, at: number) => string
-}
-
-// Every tier keeps its character: Fable floats, Light runs at double pace.
-const tierMotion = (p: string): string =>
-  `.c-${p}-fable.run,.c-${p}-fable.idle{animation:float 1s ease-in-out infinite}` +
-  `.c-${p}-fable.run .la,.c-${p}-fable.run .lb,.c-${p}-fable.run .bd{animation:none}` +
-  `.c-${p}-light.run .la{animation-duration:.25s}.c-${p}-light.run .lb{animation-duration:.25s;animation-delay:-.125s}`
-
-// Shared by every theme, on top of the classic crab's CSS.
-export const THEME_CSS = `<style>
-.hn{fill:#2A2530}.hns{fill:#2A2530;stroke:#2A2530}.web{stroke:#b4b4b0}.bs{fill:#5E5470}
-@media (prefers-color-scheme: dark){.hn{fill:#6E6380}.hns{fill:#8A7F9A;stroke:#8A7F9A}.web{stroke:#5a5a5a}.bs{fill:#857A99}}
-.idle g{transform-box:fill-box}
-@keyframes glow{50%{opacity:.35}}@keyframes drop{50%{transform:translateY(3px)}}@keyframes hem{50%{opacity:0}}
-@keyframes flap{50%{transform:scaleY(.35)}}@keyframes flapL{50%{transform:rotate(28deg)}}@keyframes flapR{50%{transform:rotate(-28deg)}}
-@keyframes flicker{25%{opacity:.5}50%{opacity:1}75%{opacity:.7}}@keyframes swing{50%{transform:rotate(-20deg)}}@keyframes wob{50%{transform:rotate(-8deg)}}
-@keyframes rattle{25%{transform:translate(-1px,0)}50%{transform:translate(0,1px)}75%{transform:translate(1px,0)}}
-@keyframes hop{50%{transform:translateY(-2px)}}@keyframes flutter{50%{transform:scaleX(.3)}}@keyframes toot{50%{transform:scaleX(1.8)}}
-@keyframes sway{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-@keyframes spin45{to{transform:rotate(45deg)}}@keyframes spin90{to{transform:rotate(90deg)}}
-@keyframes fall{0%{transform:translateY(0);opacity:0}15%,80%{opacity:1}100%{transform:translateY(27px);opacity:0}}
-@keyframes dig{50%{transform:translateY(2px)}}@keyframes drip{0%{transform:translateY(0);opacity:1}100%{transform:translateY(8px);opacity:0}}
-@keyframes rise{0%{transform:translateY(0);opacity:0}20%{opacity:1}100%{transform:translateY(-6px);opacity:0}}@keyframes glide{0%,100%{transform:translateX(-2px)}50%{transform:translateX(2px)}}
-@keyframes juggle{50%{transform:translateY(-4px)}}@keyframes slide{50%{transform:translateX(-2px)}}@keyframes click{50%{transform:translate(1px,-1px)}}@keyframes zoom{25%{transform:translateX(-1px)}75%{transform:translateX(1px)}}
-@keyframes drift{0%{transform:translate(0,0);opacity:0}15%{opacity:1}50%{transform:translate(2px,13px)}80%{opacity:1}100%{transform:translate(-1px,27px);opacity:0}}
-.run .gl,.idle .gl{animation:glow 1s ease-in-out infinite}
-.run .fx,.idle .fx{animation:fall 1s linear infinite}.run .fx1,.idle .fx1{animation-delay:-.33s}.run .fx2,.idle .fx2{animation-delay:-.66s}
-.orn{transform-box:fill-box;transform-origin:50% 0;animation:sway 1s ease-in-out infinite}
-.spin{animation:drop 1s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.run,.run g,.idle,.idle g,.spin,.orn,.fl{animation:none!important}}
-</style>`
-
-const style = (rules: string): string => `<style>${rules}</style>`
 
 // --- Halloween -------------------------------------------------------------
 
@@ -463,11 +426,11 @@ const befana: Dress = {
       kerchief(f, t)
       stamp(f, 23, 5, ['w.tt.w', 'wwttww', 'w.tt.w'], { w: GOLD, t: tint(t, FIG) }, 'it')
     },
-    // Light: sweeps at double pace.
+    // Light: runs the stocking round at double pace, sweets peeking out of the top.
     light: (f, t) => {
       crabBody(f)
       kerchief(f, t)
-      broom(f)
+      stamp(f, 23, 12, ['.y.g.', 'wwww.', 'rrrr.', 'rrrr.', 'rrrr.', 'rrrrr', '.rrrr'], { y: YOLK, g: GREEN, w: IVORY, r: BRICK }, 'it')
     },
     // Explore: looks for the chimneys by lantern light.
     explore: (f, t) => {
@@ -628,10 +591,10 @@ const easterDress: Dress = {
       f(8, 11, 4, 3, NIGHT); f(18, 11, 4, 3, NIGHT); f(12, 12, 6, 1, NIGHT)
       f(9, 12, 1, 1, '#A9D6F5', 'gl'); f(19, 12, 1, 1, '#A9D6F5', 'gl')
     },
-    // Any other agent, and the bar: half an eggshell for a hat.
+    // Any other agent, and the bar: half an eggshell for a hat; it wobbles.
     other: f => {
       crabBody(f)
-      stamp(f, 8, 6, ['w..w..w..w..w.', 'ww.ww.ww.ww.ww', 'wwwwwwwwwwwwww', 'ewwwwwwwwwwwwe'], { w: IVORY, e: SHADE })
+      stamp(f, 8, 6, ['w..w..w..w..w.', 'ww.ww.ww.ww.ww', 'wwwwwwwwwwwwww', 'ewwwwwwwwwwwwe'], { w: IVORY, e: SHADE }, 'it')
     },
   },
   css: style(`${tierMotion('ea')}
@@ -639,6 +602,7 @@ const easterDress: Dress = {
 .c-ea-heavy .it{transform-origin:50% 100%}.c-ea-heavy.run .it{animation:swing .5s ease-in-out infinite}.c-ea-heavy.idle .it{animation:swing 1s ease-in-out infinite}
 .c-ea-careful.run .it{transform-origin:50% 100%;animation:twist .5s ease-in-out infinite}
 .c-ea-medium .egg{transform-origin:50% 100%;animation:sway 1s ease-in-out infinite}
+.c-ea-other .it{transform-origin:50% 100%;animation:wob 1s ease-in-out infinite}
 .c-ea-light.run .chick{animation:hop .25s steps(1) infinite}.c-ea-light.idle .chick{animation:hop 1s steps(1) infinite}
 .o-wobble{transform-origin:50% 100%;animation:sway 1s ease-in-out infinite}`),
 }
@@ -984,6 +948,28 @@ export const DRESSES: Record<Exclude<Theme, 'classic'>, Dress> = {
   summer,
   autumn,
   winter,
+  'new-year': newYear,
+  'winter-sales': winterSales,
+  immaculate,
+  'christmas-eve': christmasEve,
+  'christmas-day': christmasDay,
+  'st-stephen': stStephen,
+  'new-years-eve': newYearsEve,
+  valentine,
+  'womens-day': womensDay,
+  'fathers-day': fathersDay,
+  'easter-holidays': easterHolidays,
+  liberation,
+  'labour-day': labourDay,
+  'mothers-day': mothersDay,
+  'republic-day': republicDay,
+  'summer-holidays': summerHolidays,
+  'summer-sales': summerSales,
+  ferragosto,
+  'back-to-school': backToSchool,
+  'all-saints': allSaints,
+  'all-souls': allSouls,
+  'black-friday': blackFriday,
 }
 
 // The figure a theme draws: its own costume, or the theme's `other`.

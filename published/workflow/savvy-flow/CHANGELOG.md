@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.0] - 2026-11-02
+- Chat themes for the whole Italian calendar — a row with mascots, marks and closing line for every holiday, period and season the panel wears; /savvy-theme or the panel's picker switches chat from the next message; All Souls' Day stays sober
+
+
 ## [1.9.1] - 2026-11-02
 - Halloween in chat is two days only — October 31 and November 1, as in the agents panel
 
