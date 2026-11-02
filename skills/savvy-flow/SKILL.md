@@ -50,7 +50,7 @@ applies winning:
 | Befana | January 3–6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
 | Carnival | the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
 | Easter | Palm Sunday – Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
-| Halloween | October 15 – November 7 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
+| Halloween | October 31 – November 1 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
 | Spring | from March 21 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
 | Summer | from June 21 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
 | Autumn | from September 23 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |

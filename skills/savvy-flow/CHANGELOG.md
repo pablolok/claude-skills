@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.1] - 2026-11-02
+- Halloween in chat is two days only — October 31 and November 1, as in the agents panel
+
+
 ## [1.9.0] - 2026-11-02
 - Theme in chat chosen by the user's ask, then the agents panel's theme option (one setting for both), then the calendar
 

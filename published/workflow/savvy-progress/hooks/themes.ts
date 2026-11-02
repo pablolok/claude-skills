@@ -48,7 +48,7 @@ export const easter = (year: number): [number, number] => {
 // The theme of a day, by the engine's local date:
 // Christmas December 1 – January 2, Befana January 3–6, Carnival the twelve days
 // up to Shrove Tuesday, Easter from Palm Sunday to Easter Monday, Halloween
-// October 15 – November 7; otherwise the (northern) season, from the 21st of
+// October 31 – November 1; otherwise the (northern) season, from the 21st of
 // March, the 21st of June, the 23rd of September and the 21st of December.
 export const themeOn = (ms: number): Theme => {
   const date = new Date(ms)
@@ -62,7 +62,7 @@ export const themeOn = (ms: number): Theme => {
   const fromEaster = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(year, em - 1, ed)) / DAY)
   if (fromEaster >= -7 && fromEaster <= 1) return 'easter'
   if (fromEaster >= -58 && fromEaster <= -47) return 'carnival'
-  if (md >= 1015 && md <= 1107) return 'halloween'
+  if (md === 1031 || md === 1101) return 'halloween'
   if (md >= 321 && md <= 620) return 'spring'
   if (md >= 621 && md <= 922) return 'summer'
   if (md >= 923 && md <= 1220) return 'autumn'

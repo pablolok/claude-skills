@@ -37,7 +37,7 @@ the mod needs.
     slice of pizza, party hat and horn, Capitan Spaventa; confetti falls.
   - Easter (Palm Sunday to Easter Monday): bunny ears, an egg hunt, a painted egg, a chocolate egg in foil, a chick
     hatched on the head, binoculars on the lookout for the bunny.
-  - Halloween (October 15 – November 7): vampire, skeleton, spider on its thread, bat, ghost, witch, jack-o'-lantern.
+  - Halloween (October 31 – November 1): vampire, skeleton, spider on its thread, bat, ghost, witch, jack-o'-lantern.
   - Spring (from March 21): butterfly, digging the bed (and a worm), watering a seedling, potting a tulip, running
     with a kite, a butterfly net; petals fall.
   - Summer (from June 21): afloat on a swim ring, snorkel and fins, a sandcastle with its flag, a slice of

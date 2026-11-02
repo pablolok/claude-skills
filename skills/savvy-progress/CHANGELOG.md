@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.6.1] - 2026-11-02
+- Halloween is two days only — October 31 and November 1; the rest of autumn wears the autumn theme
+
+
 ## [1.6.0] - 2026-11-02
 - Winter's flurry over the agents panel — now and then, for a few seconds every half minute, light snow drifts down the header's free band right of the flow's title and settles on the tiles, drawn beneath the title, ornament and tiles so it covers no text or bar; its phase follows the clock, so the once-a-second redraw does not restart it; prefers-reduced-motion hides it
 
