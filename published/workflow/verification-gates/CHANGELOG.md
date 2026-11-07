@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.2] - 2026-11-07
+- A runner that cannot load the project's config is not a result: install the dependencies first.
+
+
 ## [1.1.1] - 2026-10-30
 - A feature built to run over long real input gets one run on the real full-length input before done
 

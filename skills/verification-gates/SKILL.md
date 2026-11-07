@@ -40,7 +40,10 @@ unverified, not a fresh green. One reviewer per diff is the default unless the p
 
 1. The required automated gates were **identified from the repository** (docs, scripts, CI config,
    explicit instructions) — not guessed.
-2. Each required gate was actually run (by you or the user), or its absence is called out.
+2. Each required gate was actually run (by you or the user), or its absence is called out. A runner that cannot
+   load the project's config ("cannot find package" for the test framework itself) is not a result: the dependencies
+   are not installed, and a package runner (`npx`, `bunx`) fetched a loose copy. Run the project's install command
+   first, then the gate.
 3. Required **tests** passed.
 4. Required **linting / type-checking / static analysis** passed.
    Check that the type check covers test files; if the project's config includes only sources, new tests are never
