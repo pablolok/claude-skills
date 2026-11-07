@@ -279,16 +279,31 @@ const merge = (prev: Flow | null, input: ProgressInput): Flow => {
   }
 }
 
-const label = (f: Flow): string => {
+// The bar says what the agents panel says: `active` is every run the panel lists
+// as running, of any type (a reviewer, a verifier, Explore), not only the plan's
+// workers that `f.running` counts for the faint layer. The accepted tasks stay
+// `done/total`, the orchestrator's own count; what runs is told beside them.
+const runningOf = (list: AgentRun[]): number => list.filter(a => a.status === 'running').length
+
+const label = (f: Flow, active = 0): string => {
   const s = tr()
   if (f.isFinished) return s.done
   if (f.phase === 'plan') return s.plan
   if (f.phase === 'design') return s.design
-  const count = f.total ? `${f.done}/${f.total}` : `${f.running} ${s.busy}`
+  const busy = Math.max(active, f.running)
+  const count = f.total ? `${f.done}/${f.total}${busy ? ` · ${busy} ${s.busy}` : ''}` : `${busy} ${s.busy}`
   return `${f.phase === 'review' ? s.review : s.tasks} ${count}`
 }
 
-const ratio = (f: Flow): number => (f.isFinished ? 1 : f.total ? f.done / f.total : 0)
+// Every task accepted is 100% only once nothing runs: a review still under way
+// keeps the bar, and its percent, short of the end.
+const RUNNING_CAP = 0.99
+
+const ratio = (f: Flow, active = 0): number => {
+  if (f.isFinished) return 1
+  const accepted = f.total ? f.done / f.total : 0
+  return Math.max(active, f.running) ? Math.min(accepted, RUNNING_CAP) : accepted
+}
 
 // Deterministic noise so the dither does not shimmer between redraws.
 const noise = (x: number, y: number): number => {
@@ -327,7 +342,7 @@ const fitText = (s: string, size: number, maxW: number): string => {
   return out + '…'
 }
 
-const rowSvg = (f: Flow, W: number, isWorking: boolean): string => {
+const rowSvg = (f: Flow, W: number, active: number): string => {
   // The title takes what it needs, up to 40% of the row; the bar takes the rest.
   const title = fitText(f.title, 13, Math.max(60, W * 0.4))
   const BAR_X = Math.round(16 + textWidth(title, 13) + 12)
@@ -335,7 +350,7 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean): string => {
   const color = f.isFinished ? DONE : accent()
   const sparkle = f.isFinished ? undefined : dressOf()?.sparkle
   const y0 = (H - BAR_H) / 2
-  const fillW = Math.round(BAR_W * ratio(f))
+  const fillW = Math.round(BAR_W * ratio(f, active))
   const runW = f.total ? Math.round((BAR_W * Math.min(f.total, f.done + f.running)) / f.total) : 0
   const dots: string[] = []
 
@@ -362,10 +377,10 @@ const rowSvg = (f: Flow, W: number, isWorking: boolean): string => {
     if (x > fillW + 4) ticks.push(`<rect x="${x}" y="${BAR_H / 2 - 4}" width="1.5" height="8" rx="0.75"/>`)
   }
 
-  const text = label(f)
+  const text = label(f, active)
   const pillW = Math.round(18 + text.length * 6.6)
   const pillX = Math.max(0, Math.min(BAR_W - pillW, fillW - pillW))
-  const percent = `${Math.round(ratio(f) * 100)}%`
+  const percent = `${Math.round(ratio(f, active) * 100)}%`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <style>
@@ -392,12 +407,12 @@ ${sparkle ? `.dusk .t1{fill:${sparkle[0]}}.dusk .t3{fill:${sparkle[1]}}` : ''}
 <text x="${pillX + pillW / 2}" y="${BAR_H / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#ffffff">${xml(text)}</text>
 </g>
 <text class="m" x="${W - CRAB_W - 6}" y="${H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="12.5" font-variant-numeric="tabular-nums">${percent}</text>
-${crabCss()}${crab(W - CRAB_W + 1, 0, 'other', false, isWorking, 0.8)}
+${crabCss()}${crab(W - CRAB_W + 1, 0, 'other', false, active > 0, 0.8)}
 </svg>`
 }
 
-const barText = (f: Flow, width: number): string => {
-  const filled = Math.round(width * ratio(f))
+const barText = (f: Flow, width: number, active: number): string => {
+  const filled = Math.round(width * ratio(f, active))
   return '█'.repeat(filled) + '░'.repeat(Math.max(0, width - filled))
 }
 
@@ -941,7 +956,7 @@ export const register: Register = (on, options) => {
     await syncRunning($)
     const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
-    return { result: `ok: ${label(next ?? blank())}` }
+    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}` }
   })
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
@@ -1301,12 +1316,13 @@ export const register: Register = (on, options) => {
     const ui = $.ui.resolve(e)
     const { Box, Text, Button } = ui
     const list = await read($, agents)
+    // The panel's rows: running, finished and planned.
     const crew = list.length + plannedOf(f, list).length
-    const isWorking = list.some(a => a.status === 'running')
+    const active = runningOf(list)
     const crewButton = (
       <Button key="savvy-agents" label={`×${crew}`} plain onPress={() => void togglePane($)} />
     )
-    const percent = `${Math.round(ratio(f) * 100)}%`
+    const percent = `${Math.round(ratio(f, active) * 100)}%`
     const dismiss = (
       <Button
         key="savvy-dismiss"
@@ -1324,7 +1340,7 @@ export const register: Register = (on, options) => {
       const width = Math.max(180, Math.min(1600, (e.props.bodyColumns || 100) * 8 - 96))
       return (
         <Box flexDirection="row" alignItems="center" gap={1}>
-          <Svg source={rowSvg(f, width, isWorking)} alt={`${f.title}: ${label(f)}, ${percent}`} width={width} height={H} />
+          <Svg source={rowSvg(f, width, active)} alt={`${f.title}: ${label(f, active)}, ${percent}`} width={width} height={H} />
           {crewButton}
           {dismiss}
         </Box>
@@ -1340,8 +1356,8 @@ export const register: Register = (on, options) => {
           <Text color={f.isFinished ? DONE : ACCENT}>● </Text>
           <Text wrap="truncate-end">{f.title}</Text>
         </Box>
-        <Text color={f.isFinished ? DONE : ACCENT}>{barText(f, width)}</Text>
-        <Text bold>{label(f)}</Text>
+        <Text color={f.isFinished ? DONE : ACCENT}>{barText(f, width, active)}</Text>
+        <Text bold>{label(f, active)}</Text>
         <Text dimColor>{percent}</Text>
         {dressOf() ? <Text>{dressOf()?.glyph}</Text> : <Text color={CLAY}>▣</Text>}
         {crewButton}

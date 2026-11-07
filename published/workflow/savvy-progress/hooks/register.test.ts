@@ -698,3 +698,49 @@ test('a pick in /config redraws the panel too', { options: { theme: 'classic' } 
   expect(await costumes(ui)).toContain('class="c-wi-careful run"')
   await ui.unmount()
 })
+
+// The bar above the prompt on the desktop, as its drawing's alt reads it: `title: label, percent`.
+const bar = async ($: Engine): Promise<string> => {
+  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: { bodyColumns: 100, hasSurvey: false } })
+  const [row] = await ui.findAll({ type: 'Svg' })
+  await ui.unmount()
+  return String(row?.props.alt)
+}
+
+test('the bar says an agent outside the plan is running, as the panel does, and never 100% while it runs', async ($, on) => {
+  const listed = { infos: [] as AgentInfo[] }
+  const { clock, state } = engine(on, listed, 0)
+  await start($)
+  const progress = (input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__progress', title: 'About', ...input })
+  await progress({ total: 1, tasks: [{ title: 'Foundations', tier: 'careful' }], phase: 'delegate' })
+  await spawn($, 'Foundations')
+  listed.infos = [info('Foundations', 'completed')]
+  await clock.advance(5000)
+  await progress({ done: 1, total: 1, tasks: [], phase: 'review' })
+  expect(await bar($)).toBe('About: Review 1/1, 100%')
+
+  // A review of the diff: an agent of no tier, not a task of the plan.
+  await spawn($, 'Review of the diff', 'code-reviewer')
+  listed.infos = [info('Foundations', 'completed'), info('Review of the diff', 'running')]
+  expect(await bar($)).toBe('About: Review 1/1 · 1 running, 99%')
+  expect((await progress({ phase: 'review' })).result).toBe('ok: Review 1/1 · 1 running')
+  // The faint layer still counts the plan's workers alone.
+  expect(state.flow()?.running).toBe(0)
+
+  listed.infos = [info('Foundations', 'completed'), info('Review of the diff', 'completed')]
+  await clock.advance(5000)
+  expect(await bar($)).toBe('About: Review 1/1, 100%')
+  await progress({ finished: true })
+  expect(await bar($)).toBe('About: Done, 100%')
+})
+
+test("the bar's running count is every run the panel lists as running, the plan's workers too", async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await report($)
+  await spawn($, 'w1')
+  await spawn($, 'e1', 'Explore')
+
+  expect(state.flow()?.running).toBe(1)
+  expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 2 running, 0%')
+})

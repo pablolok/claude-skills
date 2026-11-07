@@ -19,8 +19,12 @@ the mod needs.
 
 ## What it draws
 
-- **Progress bar**: the flow's title, phase, accepted tasks out of planned, and a button with the crew size that opens
-  the panel. It appears once something reports progress (savvy-flow does) or a `savvy-*` worker starts.
+- **Progress bar**: the flow's title, phase, accepted tasks out of planned, and a button with the crew size (the
+  panel's rows: running, finished and planned) that opens the panel. It appears once something reports progress
+  (savvy-flow does) or a `savvy-*` worker starts. It says what the panel says: every agent the panel lists as running,
+  of any type (a reviewer or a verifier outside the plan too), is counted beside the tasks (`Review 1/1 · 1 running`),
+  and while one runs the bar stops at 99%, so every task accepted reads 100% only once nothing runs. The faint layer
+  past the fill stays the plan's own workers, handed a task and not yet accepted.
 - **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model, effort, task
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
   them.

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.7.4] - 2026-11-07
+- The bar says what the agents panel says — every agent the panel lists as running, a reviewer or verifier outside the plan too, is counted beside the accepted tasks (Review 1/1 · 1 running), and while one runs the bar stops at 99% instead of reading 100%; the progress tool's answer says the same
+
+
 ## [1.7.3] - 2026-11-02
 - The theme picker's list no longer jumps while agents run: the panel holds still for as long as the picker has the focus, across the reload a pick causes
 
