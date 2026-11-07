@@ -13,6 +13,7 @@ green. Read the **control counts** each prints: "0 broken" without "out of how m
 | `architecture-shape.mjs` | every stable doc has its open-defects and contributions sections, and an owner cell per defect |
 | `backlog-coherence.mjs` | an entry lives in one place: never open and closed at once, never twice in one register |
 | `closed-defects.mjs` | a defect row with a state says what the entry that closes it says |
+| `phase-tables.mjs` | an entry in progress whose card or own doc lists three or more numbered steps (outside fenced code) has a phase table the dashboard reads; an entry not started is only listed |
 | `related-docs.mjs [HEAD]` | not a gate (always exit 0): the live docs that cite the entry or name a file a change touched |
 
 Run `check-doc-refs` and `backlog-coherence` after every `add` and `done`; all the gates before closing an entry.

@@ -118,6 +118,62 @@ test("the docs to read for phases are the open entries' own docs", () => {
   assert.deepEqual(docLinks("[a](../x.md) · [web](https://example.com)", "docs/implementations"), [{ label: "a", path: "docs/x.md" }]);
 });
 
+test("the docs to read also include those the history's whole closes link, never a phase line's", () => {
+  const history = `${HISTORY}- **BKLG-002 P1** parse · **Done**: 2026-10-01 · [notes](archive/p1/notes.md)\n`;
+  assert.deepEqual(docsToRead(REGISTER, config, history), [
+    "docs/implementations/bugs/retry/plan.md",
+    "docs/implementations/features/import/spec.md",
+    "docs/implementations/archive/first/report.md",
+  ]);
+});
+
+test("⭐ a closed entry's phases still count in the totals: its open rows as dropped, the open entries' counts unchanged", () => {
+  const report = "| | state |\n|---|---|\n| **P1** a | ✅ |\n| **P2** b | ✅ — shipped |\n| **P3** c | ⏳ half |\n| **P4** d | 📋 |\n| **P5** e | ⛔ dropped |";
+  const card = "### BKLG-005 — Card kept whole\n**Done**: 2026-09-20\n\n| | state |\n|---|---|\n| **C1** only in the card | ✅ |\n| **C2** never started | 📋 |\n";
+  const withClosed = buildBoard({
+    backlog: REGISTER,
+    history: `${HISTORY}\n${card}`,
+    config,
+    docTexts: new Map([
+      ["docs/implementations/features/import/spec.md", SPEC],
+      ["docs/implementations/archive/first/report.md", report],
+    ]),
+  });
+  // The open side alone is the shared board's: done 1, active 2, dropped 1, planned 1.
+  assert.deepEqual(withClosed.totals.phases, { done: 1 + 2 + 1, active: 2, dropped: 1 + 3 + 1, planned: 1 });
+  assert.deepEqual(withClosed.entries.map((e) => e.phaseCounts), board.entries.map((e) => e.phaseCounts));
+  // Control: the same history with no closed docs read counts only the card's rows.
+  const unread = buildBoard({ backlog: REGISTER, history: `${HISTORY}\n${card}`, config, docTexts: new Map([["docs/implementations/features/import/spec.md", SPEC]]) });
+  assert.deepEqual(unread.totals.phases, { done: 1 + 1, active: 2, dropped: 1 + 1, planned: 1 });
+});
+
+test("· a phase line of the history adds no phases, and an id both open and closed is counted once, open", () => {
+  const history = `- **BKLG-002 P1** parse · **Done**: 2026-10-01 · [notes](archive/p1/notes.md)\n- **BKLG-003** closed and open at once · [r](archive/x/r.md)\n`;
+  const twice = buildBoard({
+    backlog: REGISTER,
+    history,
+    config,
+    docTexts: new Map([
+      ["docs/implementations/features/import/spec.md", SPEC],
+      ["docs/implementations/archive/p1/notes.md", "| **N1** x | ✅ |"],
+      ["docs/implementations/archive/x/r.md", "| **R1** x | ✅ |"],
+    ]),
+  });
+  assert.deepEqual(twice.totals.phases, board.totals.phases);
+});
+
+test("· a closed line linking an open entry's live spec or the register adds nothing: those phases are the open side's", () => {
+  const history = "- **BKLG-007** a spike — see [the spec](features/import/spec.md) and [the card](BACKLOG.md#BKLG-002)\n";
+  const cites = buildBoard({
+    backlog: REGISTER,
+    history,
+    config,
+    docTexts: new Map([["docs/implementations/features/import/spec.md", SPEC], ["docs/implementations/BACKLOG.md", REGISTER]]),
+  });
+  assert.deepEqual(cites.totals.phases, board.totals.phases);
+  assert.ok(!docsToRead(REGISTER, config, history).includes("docs/implementations/BACKLOG.md"));
+});
+
 test("statuses and priorities are read canonically; totals add up", () => {
   assert.deepEqual(board.totals, {
     open: 4, inProgress: 1, blocked: 1, notStarted: 2, closed: 1, pending: 2,

@@ -9,6 +9,8 @@
  * Status/Priority words are the project's (`canonicalField`); this module only adds what the dashboard asks of them:
  *
  *   - **phases** — the rows of an entry's phase table (in its card or its own docs) whose state cell opens with a mark;
+ *     the totals count the closed entries' phases too (their history line or card and the docs it links), so closing
+ *     an entry never lowers the share done;
  *   - **pending** — the `## Pending <kind>` ledgers above the open section, one item per list line;
  *   - **links between entries** — what a blocked entry waits on (the ids its Status names), who cites whom;
  *   - **next** — the open entries not started: first what blocked entries wait on (a review's strongest criterion it
@@ -117,7 +119,7 @@ export function docLinks(value, docsDir) {
 }
 
 /** The docs of an entry that are its own (a link into `archive/` is someone else's finished report). */
-const ownDocs = (docs, docsDir) => docs.filter((d) => !d.path.startsWith(`${docsDir}/archive/`));
+export const ownDocs = (docs, docsDir) => docs.filter((d) => !d.path.startsWith(`${docsDir}/archive/`));
 
 /**
  * The `## Pending <kind>` ledgers: each top-level list line an item, with the entries it cites.
@@ -209,6 +211,25 @@ export function closedEntries(text, config = DEFAULTS) {
   });
 }
 
+/**
+ * The phases of the entries closed whole (a history line per phase closes that phase only: its entry, still open,
+ * counts its own), each read once — from its history line or card and the docs that line links, archived ones
+ * included: once closed, those are its own. A closed entry has no work left, so a row neither done nor dropped is
+ * counted dropped. An id still open as well is left to the open side (a contradiction for `backlog-coherence`), and so
+ * is a doc an open entry reads (a closed line citing a live spec) or a register itself: none is counted twice.
+ * @param {ReturnType<typeof closedEntries>} closed
+ * @param {Set<string>} openIds
+ * @param {Map<string,string>} docTexts
+ * @param {(path:string)=>boolean} counted whether a doc's phases are already the open side's
+ */
+function closedPhases(closed, openIds, docTexts, counted) {
+  const seen = new Set();
+  return closed
+    .filter((c) => c.phase === "" && !openIds.has(c.id) && !seen.has(c.id) && seen.add(c.id))
+    .flatMap((c) => uniquePhases([phasesIn(c.text), ...c.docs.filter((d) => !counted(d.path)).map((d) => phasesIn(docTexts.get(d.path) ?? ""))]))
+    .map((p) => (p.state === "done" || p.state === "dropped" ? p : { ...p, state: "dropped" }));
+}
+
 /** Rank of a canonical priority: high first; none last. */
 const priorityRank = (p) => (p ? PRIORITIES.indexOf(p) : PRIORITIES.length);
 
@@ -276,6 +297,9 @@ function nextUp(entries) {
 /** Newest activity first; an entry never touched by a commit after those that were. */
 const byLastTouched = (a, b) => String(b.last?.date ?? "").localeCompare(String(a.last?.date ?? "")) || priorityRank(a.priority) - priorityRank(b.priority);
 
+/** The two registers' paths: a link into them is a citation, never a doc with phases of its own. */
+const registerFiles = (config) => [`${config.docsDir}/BACKLOG.md`, `${config.docsDir}/BACKLOG-HISTORY.md`];
+
 /**
  * The whole board.
  * @param {{backlog:string, history:string, config?:object, docTexts?:Map<string,string>, commits?:ReturnType<import("./dashboard-activity.mjs").parseLog>}} input
@@ -287,7 +311,11 @@ export function buildBoard({ backlog, history, config = DEFAULTS, docTexts = new
   const pending = pendingLedgers(backlog, config);
   const inProgress = entries.filter((e) => e.status === "in-progress").sort(byLastTouched);
   const blocked = entries.filter((e) => e.status === "blocked");
-  const phases = phaseCounts(entries.flatMap((e) => e.phases));
+  const openDocs = new Set([...registerFiles(config), ...entries.flatMap((e) => ownDocs(e.docs, config.docsDir).map((d) => d.path))]);
+  const phases = phaseCounts([
+    ...entries.flatMap((e) => e.phases),
+    ...closedPhases(closed, new Set(entries.map((e) => e.id)), docTexts, (p) => openDocs.has(p)),
+  ]);
   return {
     totals: {
       open: entries.length,
@@ -309,7 +337,16 @@ export function buildBoard({ backlog, history, config = DEFAULTS, docTexts = new
   };
 }
 
-/** The root-relative docs the board reads phases from: every open entry's own docs. */
-export function docsToRead(backlog, config = DEFAULTS) {
-  return [...new Set(openEntries(backlog, config).flatMap((e) => ownDocs(docLinks(e.fields.Doc, config.docsDir), config.docsDir).map((d) => d.path)))];
+/**
+ * The root-relative docs the board reads phases from: every open entry's own docs, then the docs the history's whole
+ * closes link (usually in `archive/`), so a closed entry's phases still count.
+ * @param {string} backlog BACKLOG.md
+ * @param {object} config
+ * @param {string} history BACKLOG-HISTORY.md ("" reads the open entries' docs only)
+ */
+export function docsToRead(backlog, config = DEFAULTS, history = "") {
+  const open = openEntries(backlog, config).flatMap((e) => ownDocs(docLinks(e.fields.Doc, config.docsDir), config.docsDir));
+  const closed = closedEntries(history, config).filter((c) => c.phase === "").flatMap((c) => c.docs);
+  const registers = new Set(registerFiles(config));
+  return [...new Set([...open, ...closed].map((d) => d.path))].filter((rel) => !registers.has(rel));
 }

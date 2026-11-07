@@ -252,6 +252,43 @@ test('on the entry page every phase is pressable and opens its detail in place',
   expect(await ui.find({ type: 'Text', text: /P2 · / })).toBeUndefined()
 })
 
+/** The snapshot of a register whose entries declare no phase table: nothing to count, so no share to show. */
+const NO_PHASES = {
+  ...SNAPSHOT,
+  board: {
+    ...SNAPSHOT.board,
+    totals: { ...SNAPSHOT.board.totals, phases: { done: 0, active: 0, dropped: 0, planned: 0 } },
+    entries: SNAPSHOT.board.entries.map((e) => ({ ...e, phases: [], phaseCounts: { done: 0, active: 0, dropped: 0, planned: 0 } })),
+  },
+}
+/** A zero percent standing alone (not the end of 100%). */
+const ZERO_PERCENT = /(^|[^\d])0%/
+
+test('with no phase table the phases share is a dash with its reason, never 0%, in the drawing and its alt', async ($, on) => {
+  stubs(on, [], { exitCode: 0, stdout: JSON.stringify(NO_PHASES), stderr: '' })
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const drawings = await desktop.findAll({ type: 'Svg' })
+  const ring = drawings.find((d) => d.props.source.includes('stroke-dasharray'))
+  expect(ring).toBeDefined()
+  expect(ring.props.source).toContain('>—</text>')
+  expect(ring.props.source).toContain('>33%</text>') // control: the entries closed still have a share (1 of 3)
+  expect(ring.props.source.match(/stroke-dasharray/g).length).toBe(1) // the empty ring draws no arc, not even a dot
+  expect(drawings.some((d) => ZERO_PERCENT.test(d.props.source) || ZERO_PERCENT.test(d.props.alt))).toBe(false)
+  expect(ring.props.alt).toContain('—')
+  expect(ring.props.alt).not.toContain('(0 ') // the caption says why there is no share, not "0 of 0"
+  expect(drawings.some((d) => /0\/0/.test(d.props.source) || /0\/0/.test(d.props.alt))).toBe(false)
+})
+
+test('control: with phases the share is a percent, not a dash', async ($, on) => {
+  stubs(on, [])
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const ring = (await desktop.findAll({ type: 'Svg' })).find((d) => d.props.source.includes('stroke-dasharray'))
+  expect(ring.props.source).toContain('>33%</text>') // phases: 1 done of 3 not dropped
+  expect(ring.props.source).not.toContain('>—</text>')
+})
+
 test('a dropped phase is drawn apart from one not started: its own fill and its own mark', async ($, on) => {
   stubs(on, [])
   await $.command.run({ command: 'backlog-dashboard', args: '' })

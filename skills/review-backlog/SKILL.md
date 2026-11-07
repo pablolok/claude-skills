@@ -34,6 +34,7 @@ exit code** — `node gate.mjs | tail` reports `tail`'s status, and `| head` is 
 | `architecture-shape.mjs` | every stable doc has its two canonical sections and an owner cell per defect |
 | `backlog-coherence.mjs` | an entry lives in one place: never open and closed at once, never twice in one register |
 | `closed-defects.mjs` | a defect whose closing entry is closed is no longer listed open |
+| `phase-tables.mjs` | an entry in progress with three or more numbered steps has a phase table the dashboard reads (entries not started: listed, not red) |
 
 Plus any gate the project's preamble or CLAUDE.md adds. Read each one's **control count**: "0 broken" without "out
 of how many examined" cannot be told apart from "didn't look".

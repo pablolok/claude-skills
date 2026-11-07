@@ -21,6 +21,7 @@ const WORDS = {
     priorities: { high: "high", medium: "medium", low: "low" },
     showAll: (n) => `Show all ${n}`, nothingPending: "Nothing waiting.", nothing: "Nothing here.",
     offline: "The dashboard server is not answering.", ofTotal: (a, b) => `${a} of ${b}`,
+    noEntries: "no entries yet", noPhases: "no phases declared",
   },
   it: {
     overview: "Panoramica", entries: "Voci", docs: "Documenti", activity: "Attività",
@@ -38,6 +39,7 @@ const WORDS = {
     priorities: { high: "alta", medium: "media", low: "bassa" },
     showAll: (n) => `Mostra tutte (${n})`, nothingPending: "Niente in attesa.", nothing: "Niente qui.",
     offline: "Il server della dashboard non risponde.", ofTotal: (a, b) => `${a} su ${b}`,
+    noEntries: "nessuna voce ancora", noPhases: "nessuna fase dichiarata",
   },
 };
 const LANG = (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
@@ -208,6 +210,8 @@ function bar(counts, total = PHASE_STATES.reduce((n, s) => n + (counts[s] ?? 0),
 }
 const legend = (counts) => `<div class="legend small muted">${PHASE_STATES.filter((s) => counts[s]).map((s) => `<span class="${s}">${esc(T.states[s])} ${counts[s]}</span>`).join("")}</div>`;
 const phaseTotal = (c) => PHASE_STATES.reduce((n, s) => n + (c[s] ?? 0), 0);
+/** A share as the page writes it: `42%`, or a dash when there is nothing to count (0 of 0 is no share, not 0%). */
+const share = (a, b) => (b ? `${Math.round((100 * a) / b)}%` : T.none);
 
 function currentPhase(e) {
   const p = e.phases.find((x) => x.state === "active");
@@ -242,11 +246,11 @@ const Views = {
     const ph = t.phases;
     const phaseCount = phaseTotal(ph) - (ph.dropped ?? 0);
     const kpis = `<div class="kpis">
-      <div class="kpi wide"><div class="l">${esc(T.progress)}</div><div class="n">${all ? Math.round((100 * t.closed) / all) : 0}%</div>
-        <div class="small muted">${esc(T.ofTotal(t.closed, all))}</div>
+      <div class="kpi wide"><div class="l">${esc(T.progress)}</div><div class="n">${esc(share(t.closed, all))}</div>
+        <div class="small muted">${esc(all ? T.ofTotal(t.closed, all) : T.noEntries)}</div>
         ${bar({ done: t.closed, active: t.inProgress, planned: t.notStarted, dropped: t.blocked }, all)}</div>
-      <div class="kpi wide"><div class="l">${esc(T.phases)}</div><div class="n">${phaseCount ? Math.round((100 * ph.done) / phaseCount) : 0}%</div>
-        <div class="small muted">${esc(T.ofTotal(ph.done, phaseCount))}</div>${bar(ph)}</div>
+      <div class="kpi wide"><div class="l">${esc(T.phases)}</div><div class="n">${esc(share(ph.done, phaseCount))}</div>
+        <div class="small muted">${esc(phaseTotal(ph) ? T.ofTotal(ph.done, phaseCount) : T.noPhases)}</div>${bar(ph)}</div>
       <a class="kpi card" href="#/entries?status=in-progress"><div class="l">${esc(T.inProgress)}</div><div class="n">${t.inProgress}</div></a>
       <a class="kpi card" href="#/entries?status=open"><div class="l">${esc(T.notStarted)}</div><div class="n">${t.notStarted}</div></a>
       <a class="kpi card" href="#/entries?status=blocked"><div class="l">${esc(T.blocked)}</div><div class="n">${t.blocked}</div></a>

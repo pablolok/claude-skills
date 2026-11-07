@@ -89,6 +89,7 @@ More than two named steps → one row per step, `| **P1** <step> | ✅ — <evid
 step's name in bold and the state cell opens with its mark (`✅` done · `⏳` in progress · `⛔` dropped, with the reason
 · `📋` not started) — in any other form the dashboard does not count the row. A dropped step stays; a step partly
 done is `⏳`. No table on a single-step entry. **Read `references/phase-tables.md` before writing or editing one.**
+The `phase-tables` gate fails an entry in progress whose card or doc lists three or more numbered steps with no table.
 
 ## Pending ledger — never lose an unverified (or undeployed) change
 
@@ -144,7 +145,7 @@ bare id in a project that declares `"citation": "bare"`.
 Run each **plain, then read its exit code** (never through `| tail`, which reports its own status) and its **control
 counts** ("0 broken" without "out of how many" is indistinguishable from "didn't look"). `check-doc-refs` and
 `backlog-coherence` after every `add` and `done`; all of them — `backlog-anchor --all`, `architecture-shape`,
-`closed-defects`, `related-docs` too — before closing an entry. A reference that is not a file of the repo goes in
+`closed-defects`, `phase-tables`, `related-docs` too — before closing an entry. A reference that is not a file of the repo goes in
 `pathExceptions` **with its reason**, never by weakening a rule. Read `references/gates.md` for what each gate asks,
 running them outside a session (CI, git hooks), a register in another language, and how the next id is chosen.
 

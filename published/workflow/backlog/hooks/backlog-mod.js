@@ -43,6 +43,7 @@ const WORDS = {
     tabs: ['Overview', 'In progress', 'Next', 'To verify', 'Documents', 'Activity'],
     refresh: 'Refresh', back: 'Back', loading: 'Reading the register…', updated: 'updated',
     closed: 'Entries closed', phases: 'Phases done', of: (a, b) => `${a} of ${b}`,
+    noEntries: 'no entries yet', noPhases: 'no phases declared',
     counts: (t) => `${t.inProgress} in progress · ${t.notStarted} not started · ${t.blocked} blocked · ${t.pending} to verify`,
     now: 'Working on now', inProgress: 'In progress', next: 'Next up', pending: 'To verify', activity: 'Recent commits', recentClosed: 'Recently closed',
     nextHint: 'What blocked entries wait on first, then the written priority, then the oldest. A hint: the move is the backlog review\'s call.',
@@ -70,6 +71,7 @@ const WORDS = {
     tabs: ['Panoramica', 'In corso', 'Prossimi', 'Da verificare', 'Documenti', 'Attività'],
     refresh: 'Aggiorna', back: 'Indietro', loading: 'Leggo il registro…', updated: 'aggiornato',
     closed: 'Voci chiuse', phases: 'Fasi completate', of: (a, b) => `${a} su ${b}`,
+    noEntries: 'nessuna voce ancora', noPhases: 'nessuna fase dichiarata',
     counts: (t) => `${t.inProgress} in corso · ${t.notStarted} da iniziare · ${t.blocked} bloccate · ${t.pending} da verificare`,
     now: 'Ci si sta lavorando', inProgress: 'In corso', next: 'Prossimi', pending: 'Da verificare', activity: 'Commit recenti', recentClosed: 'Chiuse di recente',
     nextHint: 'Prima ciò che le voci bloccate aspettano, poi la priorità scritta, poi la più vecchia. È un suggerimento: la mossa la decide la revisione del backlog.',
@@ -140,7 +142,22 @@ const statusNote = (text) => {
   return m ? m[1] : ''
 }
 const phaseTotal = (c) => PHASES.reduce((n, p) => n + (c[p.state] ?? 0), 0)
-const percent = (a, b) => (b ? Math.round((100 * a) / b) : 0)
+/** A share in whole percent, or null when there is nothing to count: 0 of 0 is no share, not 0%. */
+const percent = (a, b) => (b ? Math.round((100 * a) / b) : null)
+/** A share as the pane writes it: `42%`, or a dash when there is nothing to count. */
+const shown = (pct) => (pct === null ? '—' : `${pct}%`)
+/**
+ * The overview's two shares, each with its caption: entries closed of all, phases done of those not dropped (the
+ * closed entries' too). With nothing to count the share is a dash and the caption says why.
+ */
+function overviewShares(t) {
+  const all = t.open + t.closed
+  const counted = phaseTotal(t.phases) - (t.phases.dropped ?? 0)
+  return {
+    closed: { pct: percent(t.closed, all), detail: all ? T.of(t.closed, all) : T.noEntries },
+    phases: { pct: percent(t.phases.done, counted), detail: phaseTotal(t.phases) ? T.of(t.phases.done, counted) : T.noPhases },
+  }
+}
 
 const STEPS = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]]
 function ago(iso, nowMs) {
@@ -354,15 +371,18 @@ function segmentedBar(x, y, width, height, counts, clipId) {
   )
 }
 
-/** A progress ring with its percentage in the middle and a caption under it. */
+/** A progress ring with its percentage in the middle (a dash and an empty ring when there is none) and a caption under it. */
 function progressRing(cx, cy, radius, pct, color, caption, detail) {
   const circle = 2 * Math.PI * radius
-  const arc = (circle * Math.max(0, Math.min(100, pct))) / 100
+  const arc = (circle * Math.max(0, Math.min(100, pct ?? 0))) / 100
+  // No share, no arc: a round cap on an empty arc still draws a dot that reads as a start.
+  const progress = pct === null ? '' :
+    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" ` +
+    `stroke-dasharray="${arc.toFixed(1)} ${circle.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`
   return (
     `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" class="k" stroke-width="9"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" ` +
-    `stroke-dasharray="${arc.toFixed(1)} ${circle.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>` +
-    `<text x="${cx}" y="${cy + 7}" text-anchor="middle" font-size="21" font-weight="700" class="t">${pct}%</text>` +
+    progress +
+    `<text x="${cx}" y="${cy + 7}" text-anchor="middle" font-size="21" font-weight="700" class="t">${shown(pct)}</text>` +
     `<text x="${cx}" y="${cy + radius + 24}" text-anchor="middle" font-size="13" font-weight="600" class="t">${xml(caption)}</text>` +
     `<text x="${cx}" y="${cy + radius + 41}" text-anchor="middle" font-size="12" class="m">${xml(detail)}</text>`
   )
@@ -375,12 +395,11 @@ const statTile = (x, y, value, label, color) =>
 
 /** The overview's header card: two rings and the four counts. */
 function overviewCard(t) {
-  const all = t.open + t.closed
-  const counted = phaseTotal(t.phases) - (t.phases.dropped ?? 0)
+  const share = overviewShares(t)
   const body =
     `<rect x="0.5" y="0.5" width="${SVG_WIDTH - 1}" height="177" rx="14" class="c"/>` +
-    progressRing(78, 66, 40, percent(t.closed, all), INK.green, T.closed, T.of(t.closed, all)) +
-    progressRing(222, 66, 40, percent(t.phases.done, counted), INK.amber, T.phases, T.of(t.phases.done, counted)) +
+    progressRing(78, 66, 40, share.closed.pct, INK.green, T.closed, share.closed.detail) +
+    progressRing(222, 66, 40, share.phases.pct, INK.amber, T.phases, share.phases.detail) +
     `<line x1="302" y1="24" x2="302" y2="154" class="k"/>` +
     statTile(330, 56, t.inProgress, T.statuses['in-progress'], INK.amber) +
     statTile(440, 56, t.notStarted, T.states.planned, '#8b949e') +
@@ -554,16 +573,18 @@ const entryOf = (id) => snapshot.board.entries.find((e) => e.id === id)
 function overview($, el, width, now) {
   const b = snapshot.board
   const t = b.totals
-  const all = t.open + t.closed
-  const counted = phaseTotal(t.phases) - (t.phases.dropped ?? 0)
+  const share = overviewShares(t)
   const barWidth = Math.max(10, Math.min(48, width - 30))
   const inProgress = b.inProgress.map(entryOf)
   const summary = hasSvg(el)
-    ? [el.Svg({ source: overviewCard(t), alt: `${T.closed} ${percent(t.closed, all)}%, ${T.phases} ${percent(t.phases.done, counted)}%, ${T.counts(t)}` })]
+    ? [el.Svg({
+        source: overviewCard(t),
+        alt: `${T.closed} ${shown(share.closed.pct)} (${share.closed.detail}), ${T.phases} ${shown(share.phases.pct)} (${share.phases.detail}), ${T.counts(t)}`,
+      })]
     : [
-        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.closed} ${percent(t.closed, all)}%`), dim(el, T.of(t.closed, all))] }),
+        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.closed} ${shown(share.closed.pct)}`), dim(el, share.closed.detail)] }),
         bar(el, { done: t.closed, active: t.inProgress, planned: t.notStarted, dropped: t.blocked }, barWidth),
-        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.phases} ${percent(t.phases.done, counted)}%`), dim(el, T.of(t.phases.done, counted))] }),
+        el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, `${T.phases} ${shown(share.phases.pct)}`), dim(el, share.phases.detail)] }),
         bar(el, t.phases, barWidth),
         dim(el, T.counts(t)),
       ]

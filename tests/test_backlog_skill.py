@@ -109,7 +109,8 @@ class TestGatesOnAProject(unittest.TestCase):
     def test_a_clean_project_passes_every_gate_from_a_subfolder(self) -> None:
         _write(self.project, "docs/implementations/BACKLOG-HISTORY.md", "# History\n- **BKLG-000** the first, closed\n")
         gates = (("check-doc-refs.mjs", ()), ("backlog-anchor.mjs", ("--all",)), ("architecture-shape.mjs", ()),
-                 ("backlog-coherence.mjs", ()), ("closed-defects.mjs", ()), ("related-docs.mjs", ()))
+                 ("backlog-coherence.mjs", ()), ("closed-defects.mjs", ()), ("phase-tables.mjs", ()),
+                 ("related-docs.mjs", ()))
         for script, args in gates:
             result = self._gate(script, *args)
             self.assertEqual(result.returncode, 0, f"{script}\n{result.stdout}{result.stderr}")

@@ -17,6 +17,12 @@ More than two named steps → one row per step:
   state cell opens with the mark. A plain name, or a state in words, makes the row invisible — the entry's bar stays
   empty however many steps are done. After editing a table, check it is read:
   `node <skill>/scripts/dashboard.mjs --json` lists the entry's `phases`.
+- **The `phase-tables` gate** (`node <skill>/scripts/phase-tables.mjs`) reads every open entry's card and own docs:
+  a numbered list of three or more top-level steps with no phase row it can read fails the gate for an entry in
+  progress, and is listed (not a failure) for one not started — the table is due when the work starts.
+- **A closed entry's phases still count** in the dashboard's share of phases done (from its history line or card and
+  the docs that line links, archived ones included); there its rows neither `✅` nor `⛔` count as dropped, since a
+  closed entry has no work left. Closing an entry never lowers the share.
 - Edited in the same change that moves a step — **and every other row whose open item that change closed**: work
   recorded only on the row it was done under leaves the rows that listed it open stale, and the entry looks
   unclosable. The cell stays a short current state (done / open, with evidence); the story goes in the commit.

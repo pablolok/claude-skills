@@ -50,8 +50,9 @@ function readCommits(root) {
 /** The board of the project as it is now. */
 function readBoard({ root, config, backlog, history }) {
   const backlogText = readText(root, backlog);
-  const docTexts = new Map(docsToRead(backlogText, config).map((rel) => [rel, readText(root, rel)]));
-  const board = buildBoard({ backlog: backlogText, history: readText(root, history), config, docTexts, commits: readCommits(root) });
+  const historyText = readText(root, history);
+  const docTexts = new Map(docsToRead(backlogText, config, historyText).map((rel) => [rel, readText(root, rel)]));
+  const board = buildBoard({ backlog: backlogText, history: historyText, config, docTexts, commits: readCommits(root) });
   return { project: { name: path.basename(root), backlog, history, docsDir: config.docsDir, citation: config.citation }, ...board };
 }
 

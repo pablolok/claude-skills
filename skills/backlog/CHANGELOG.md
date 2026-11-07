@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.0] - 2026-11-07
+- Dashboard: con 0 su 0 mostra «—» invece di 0%, le fasi delle voci chiuse restano contate (chiudere una voce non abbassa più la quota); nuovo controllo phase-tables per il lavoro in corso a più passi senza tabella delle fasi
+
+
 ## [1.10.2] - 2026-10-23
 - Chiusura: dopo git mv si cerca il vecchio percorso in tutti i documenti, archiviati compresi
 

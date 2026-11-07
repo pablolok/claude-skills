@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.11] - 2026-11-07
+- Act 1 elenca il controllo phase-tables della skill backlog
+
+
 ## [1.0.10] - 2026-10-24
 - Le decisioni dovute dalla persona: tabella indice, poi una alla volta spiegate in parole semplici, con la voce riletta e il numero rimisurato lo stesso giorno
 
