@@ -27,7 +27,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
 | `agents/savvy-medium.md` | Sonnet / medium, lean tools: standard feature work. |
 | `agents/savvy-light.md` | Sonnet / low, lean tools: mechanical edits, builds, tests. |
-| `agents/savvy-codex.md` | Sonnet / low relay for the Codex CLI: runs one task on an OpenAI model (`codex exec`, sandboxed), checks the diff and the tests, reports the Codex usage. |
+| `agents/savvy-codex-luna.md` … `savvy-codex-astra.md` | Sonnet / low relays for the Codex CLI, one per OpenAI intensity (Luna, Terra, Sol, Astra): each picks the newest model of its family from Codex's model list, runs one task with `codex exec` (sandboxed), checks the diff and the tests, reports the Codex usage. |
 | `LICENSE` | The upstream MIT licence. |
 
 `savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
@@ -48,7 +48,9 @@ its recommendation, and Heavy runs unless the user says Fable.
 
 ## Codex (OpenAI models)
 
-With the Codex CLI installed and signed in (`codex login status`), the orchestrator gains a Codex tier: `savvy-codex`
+With the Codex CLI installed and signed in (`codex login status`), the orchestrator gains four Codex tiers, one per
+intensity: Luna (Light-sized work), Terra (Medium), Sol (Careful or Heavy, and second opinions) and Astra (Fable-sized,
+only with the user's yes). A relay `savvy-codex-<intensity>`
 runs a task with `codex exec` (read-only for a second opinion, `codex exec review` for a diff, workspace-write for a
 task in a tree nobody else writes; never `danger-full-access`), resumes the same Codex session for follow-ups, checks
 the git diff and the tests itself, and reports the Codex usage (5-hour and weekly windows). Use it for a second opinion

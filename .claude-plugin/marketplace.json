@@ -109,8 +109,8 @@
     {
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
-      "description": "Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light, and savvy-codex for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.11.0",
+      "description": "Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
+      "version": "1.12.0",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -121,7 +121,7 @@
       "name": "savvy-progress",
       "source": "./published/workflow/savvy-progress",
       "description": "Progress bar above the prompt for /savvy-flow, plus an agents panel (/agents-info): running, finished and planned subagents with model, task progress, context, cost and time, the figures dressed for the holidays and seasons.",
-      "version": "1.7.4",
+      "version": "1.8.0",
       "category": "workflow",
       "strict": true
     },

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
-import { CLAY, INK, crabBody, pixels, stamp } from './sprite'
+import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, costumeIn, themeOf, themeOn } from './themes'
 import type { Dress, Theme } from './themes'
@@ -425,6 +425,11 @@ const TIER_COLOR: Record<string, string> = {
   careful: '#BA7517',
   medium: '#378ADD',
   light: '#1D9E75',
+  // The Codex relays, one per intensity: moon, earth, sun, star.
+  'codex-luna': '#8FA3BF',
+  'codex-terra': '#6E9B4A',
+  'codex-sol': '#E0A526',
+  'codex-astra': '#9B7BE0',
   other: '#888780',
 }
 
@@ -437,6 +442,18 @@ const TIER_MODEL: Record<string, string> = {
   careful: 'Opus · high',
   medium: 'Sonnet · medium',
   light: 'Sonnet · low',
+  'codex-luna': 'Codex · Luna',
+  'codex-terra': 'Codex · Terra',
+  'codex-sol': 'Codex · Sol',
+  'codex-astra': 'Codex · Astra',
+}
+
+// A Codex figure wears the costume of a Claude tier, on its own body, with its badge.
+const CODEX_WEARS: Record<string, string> = {
+  'codex-astra': 'fable',
+  'codex-sol': 'careful',
+  'codex-terra': 'medium',
+  'codex-luna': 'light',
 }
 
 // USD per million tokens: input, output, cache read, cache write (5-minute TTL).
@@ -489,6 +506,14 @@ const modelName = (id: string): string => {
   const [, family = '', major = '', minor] = m ?? []
   if (!family) return id.replace(/^claude-/, '').replace(/\[.*\]$/, '') || '—'
   return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? '.' + minor : ''}`
+}
+
+// What a run shows as its model: a Codex relay names its intensity, not the
+// Claude model relaying it (its cost and tokens stay the relay's own).
+const runModel = (a: AgentRun, withEffort = true): string => {
+  const tier = tierOf(a.type)
+  if (tier in CODEX_WEARS) return TIER_MODEL[tier] ?? tier
+  return withEffort && a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)
 }
 
 const norm = (s: string): string => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
@@ -614,10 +639,9 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
 }
 
 // A theme's CSS rides on the classic crab's.
-const crabCss = (): string => {
-  const dress = dressOf()
-  return dress ? CRAB_CSS + THEME_CSS + dress.css : CRAB_CSS
-}
+export const figureCss = (dress: Dress | null = dressOf() ?? null): string => (dress ? CRAB_CSS + THEME_CSS + dress.css : CRAB_CSS)
+
+const crabCss = (): string => figureCss()
 
 const costumeOf = (type: string): string => (type === 'Explore' ? 'explore' : tierOf(type))
 
@@ -626,19 +650,28 @@ const CRAB_SCALE = 1.1
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.
 // In a theme every figure moves: a running one at full pace, any other idles.
-const crab = (x: number, y: number, costume: string, dim = false, isWalking = false, scale = CRAB_SCALE): string => {
+// A Codex figure wears its tier's costume and moves as that tier does.
+const crab = (x: number, y: number, costume: string, dim = false, isWalking = false, scale = CRAB_SCALE, dress: Dress | null = dressOf() ?? null): string => {
   const { f, groups } = pixels()
-  const dress = dressOf()
-  const themed = dress && costumeIn(dress, costume)
-  const draw = themed ?? COSTUMES[costume] ?? ((g: Fill) => crabBody(g))
-  draw(f, colorOf(costume))
+  const wears = CODEX_WEARS[costume]
+  const figure = wears ?? costume
+  const themed = dress && costumeIn(dress, figure)
+  const draw = themed ?? COSTUMES[figure] ?? ((g: Fill) => crabBody(g))
+  if (wears) {
+    withBody(codexBody, () => draw(f, colorOf(costume)))
+    codexBadge(f, costume.replace(/^codex-/, ''), colorOf(costume))
+  } else draw(f, colorOf(costume))
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
   const body = `<g class="bd">${(groups.get('bd') ?? []).join('')}${props.map(group).join('')}</g>`
   const motion = isWalking ? ' run' : themed ? ' idle' : ''
-  const cls = themed && dress ? `${dress.prefix}-${costume}` : costume
+  const cls = themed && dress ? `${dress.prefix}-${figure}` : figure
   return `<g transform="translate(${x},${y}) scale(${scale})" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${cls}${motion}">${body}${group('la')}${group('lb')}</g></g>`
 }
+
+// One figure at the origin in a theme's dress (null: classic); its CSS is `figureCss`.
+export const figureSvg = (figure: string, dress: Dress | null, isWalking = false, scale = CRAB_SCALE): string =>
+  crab(0, 0, figure, false, isWalking, scale, dress)
 
 const statusMark = (x: number, y: number, status: string, color: string): string => {
   if (status === 'running') return `<circle class="live" cx="${x}" cy="${y}" r="3.5" fill="${color}"/>`
@@ -690,7 +723,7 @@ const agentSvg = (W: number, a: AgentRun, at: number): string => {
   const color = colorOf(tier)
   const ctx = ctxOf(a)
   const textW = W - 42 - 22
-  const meta = [a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)]
+  const meta = [runModel(a)]
   if (a.round > 1) meta.push(`${s.round} ${a.round}`)
   if (a.status === 'failed') meta.push(s.failed)
   const barW = textW
@@ -859,7 +892,7 @@ export const register: Register = (on, options) => {
               type: 'object',
               properties: {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
-                tier: { type: 'string', enum: ['fable', 'heavy', 'careful', 'medium', 'light'] },
+                tier: { type: 'string', enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(CODEX_WEARS)] },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
               },
               required: ['title', 'tier'],
@@ -1203,12 +1236,12 @@ export const register: Register = (on, options) => {
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
           {running.map(a => (
-            <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={66} />
+            <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${runModel(a, false)}, ${s.isRunning}`} width={W} height={66} />
           ))}
           {finished.length > 0 && toggleDone}
           {!p.isDoneCollapsed &&
             finished.map(a => (
-              <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={66} />
+              <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${runModel(a, false)}, ${s.isFinished}`} width={W} height={66} />
             ))}
           {planned.length > 0 && section('h-plan', `${s.planned} · ${planned.length}`)}
           {planned.map(pl => (
@@ -1226,7 +1259,7 @@ export const register: Register = (on, options) => {
       const color = colorOf(tier)
       const ctx = ctxOf(a)
       const progress = progressOf(a)
-      const model = a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)
+      const model = runModel(a)
       const steps = a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? ' ' + a.stepNote : ''} · ` : ''
       return (
         <Box key={a.id} flexDirection="column" marginBottom={1}>

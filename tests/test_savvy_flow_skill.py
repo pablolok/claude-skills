@@ -17,11 +17,12 @@ SKILL = "savvy-flow"
 SOURCE = REPO / "skills" / SKILL
 PUBLISHED = REPO / "published" / "workflow" / SKILL
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
-WORKERS = ("savvy-careful", "savvy-codex", "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
+CODEX_RELAYS = ("savvy-codex-astra", "savvy-codex-luna", "savvy-codex-sol", "savvy-codex-terra")
+WORKERS = ("savvy-careful", *CODEX_RELAYS, "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
 #: The tiers that run with a tool allowlist rather than every tool the parent has.
 LEAN_WORKERS = ("savvy-light", "savvy-medium")
 #: The relay that runs Codex: lean too, and it edits no project file itself.
-RELAY_WORKERS = ("savvy-codex",)
+RELAY_WORKERS = CODEX_RELAYS
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
@@ -89,13 +90,20 @@ class TestWorkers(unittest.TestCase):
             with self.subTest(worker=name):
                 self.assertNotIn("tools", frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")))
 
-    def test_the_codex_relay_runs_codex_and_edits_nothing_itself(self) -> None:
-        fields = frontmatter(_read(PUBLISHED / "agents" / "savvy-codex.md"))
+    def test_the_codex_relays_run_codex_and_edit_nothing_themselves(self) -> None:
+        for name in CODEX_RELAYS:
+            with self.subTest(relay=name):
+                self._check_relay(name)
+
+    def _check_relay(self, name: str) -> None:
+        fields = frontmatter(_read(PUBLISHED / "agents" / f"{name}.md"))
         tools = _flow_list(fields.get("tools", ""))
         self.assertEqual(fields.get("model"), "sonnet", "the relay is cheap: the work is Codex's")
         self.assertTrue({"Read", "Bash", "ToolSearch", "mcp__savvy-progress"} <= tools)
         self.assertFalse({"Edit", "Skill", "Agent"} & tools, "the relay never edits project files or spawns agents")
-        body = _flat(_read(PUBLISHED / "agents" / "savvy-codex.md"))
+        body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+        family = name.removeprefix("savvy-codex-")
+        self.assertIn(f"whose `slug` ends with `-{family}`", body, "the relay picks the newest model of its family")
         self.assertIn("`codex login status`", body)
         self.assertIn("Never `danger-full-access`", body)
         self.assertIn("`-s read-only`", body)
@@ -139,9 +147,9 @@ class TestModels(unittest.TestCase):
         self.assertGreater(self.text.index("## Themes"), self.text.index("## 6. Close"))
 
     def test_fable_runs_only_with_the_user_s_yes_and_a_reason(self) -> None:
-        self.assertIn("**`savvy-fable` runs only with the user's yes**, whatever model you are.", self.text)
+        self.assertIn("**`savvy-fable` and `savvy-codex-astra` run only with the user's yes**, whatever model you are.", self.text)
         self.assertIn("why Fable rather than Heavy", self.text)
-        self.assertIn("Heavy runs unless the user says Fable", self.text)
+        self.assertIn("Heavy (or Sol) runs unless the user says yes", self.text)
 
     def test_legwork_and_late_requests_get_a_tier(self) -> None:
         self.assertIn("**Legwork has a tier too**", self.text)
@@ -149,7 +157,7 @@ class TestModels(unittest.TestCase):
 
     def test_codex_is_optional_marked_in_the_plan_and_reviewed(self) -> None:
         self.assertIn("one shell call at the start, `codex login status`", self.text)
-        self.assertIn("A Codex task is marked as such in the plan you present before it is delegated.", self.text)
+        self.assertIn("A Codex task is marked as such in the plan you present before it is delegated, with its intensity.", self.text)
         self.assertIn("Its work gets the same adversarial review as any other tier.", self.text)
 
     def test_codex_gets_the_claude_skills_it_needs_by_path(self) -> None:

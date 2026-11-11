@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.0] - 2026-11-11
+- Codex figures — a cloud with a >_ face wears every theme's costume (Astra as Fable, Sol as Careful, Terra as Medium, Luna as Light) with its intensity's badge (moon, globe, sun, star) and colour; a Codex run shows Codex · <intensity> instead of its relay's model
+
+
 ## [1.7.4] - 2026-11-07
 - The bar says what the agents panel says — every agent the panel lists as running, a reviewer or verifier outside the plan too, is counted beside the accepted tasks (Review 1/1 · 1 running), and while one runs the bar stops at 99% instead of reading 100%; the progress tool's answer says the same
 

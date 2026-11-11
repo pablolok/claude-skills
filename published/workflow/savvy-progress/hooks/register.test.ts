@@ -3,8 +3,8 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
-import { costOf, fmtTokens, themeNamed, windowOf } from './register'
-import { pixels } from './sprite'
+import { costOf, figureSvg, fmtTokens, themeNamed, windowOf } from './register'
+import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
@@ -440,6 +440,108 @@ test('every theme dresses all seven figures, each its own, and gives every prop 
     }
   }
   expect(faults).toEqual([])
+})
+
+// The Codex figures, each with the Claude tier whose costume it wears.
+const CODEX: [string, string][] = [['codex-astra', 'fable'], ['codex-sol', 'careful'], ['codex-terra', 'medium'], ['codex-luna', 'light']]
+// The `>_` face: the chevron's first pixel and the underscore, wherever their group or color.
+const PROMPT = ['<rect x="11" y="12" width="1" height="1"', '<rect x="14" y="14" width="5" height="1"']
+
+test("every theme, and the classic set, draws all four Codex figures in their tier's costume, with the badge and the >_ face", () => {
+  const faults: string[] = []
+  for (const [theme, dress] of [['classic', null] as const, ...Object.entries(DRESSES)]) {
+    for (const [figure, wears] of CODEX) {
+      let drawn = ''
+      try {
+        drawn = figureSvg(figure, dress)
+      } catch (err) {
+        faults.push(`${theme} ${figure}: throws ${String(err)}`)
+        continue
+      }
+      const cls = dress ? `c-${dress.prefix}-${wears}` : `c-${wears}`
+      if (!drawn.includes(`class="${cls}`)) faults.push(`${theme} ${figure}: not dressed as ${wears}`)
+      if (!/<g class="badge"><rect/.test(drawn)) faults.push(`${theme} ${figure}: no badge`)
+      // The face stands where the crab's eyes do: a costume that hides them (asleep) hides it too.
+      const hasEyes = figureSvg(wears, dress).includes('<rect x="9" y="12" width="2" height="2"')
+      for (const px of PROMPT) if (drawn.includes(px) !== hasEyes) faults.push(`${theme} ${figure}: >_ face ${hasEyes ? 'missing' : 'shown with eyes hidden'}`)
+    }
+  }
+  expect(faults).toEqual([])
+})
+
+test('each Codex intensity has a badge of its own, in its own color', () => {
+  const badge = (figure: string): string => /<g class="badge">(.*?)<\/g>/.exec(figureSvg(figure, null))?.[1] ?? ''
+  const shapes = CODEX.map(([figure]) => badge(figure).replace(/fill="[^"]*"/g, ''))
+  expect(new Set(shapes).size).toBe(4)
+  expect(badge('codex-luna')).toContain('fill="#8FA3BF"')
+  expect(badge('codex-terra')).toContain('fill="#6E9B4A"')
+  expect(badge('codex-sol')).toContain('fill="#E0A526"')
+  expect(badge('codex-astra')).toContain('fill="#9B7BE0"')
+})
+
+test('a Codex figure leaves the crab as it was, even when its drawing throws', () => {
+  const crab = figureSvg('careful', DRESSES.winter)
+  figureSvg('codex-sol', DRESSES.winter)
+  expect(figureSvg('careful', DRESSES.winter)).toBe(crab)
+  expect(() =>
+    withBody(codexBody, () => {
+      throw new Error('torn costume')
+    }),
+  ).toThrow('torn costume')
+  const { f, groups } = pixels()
+  crabBody(f)
+  expect(groups.get('bd')?.[0]).toBe('<rect x="7" y="10" width="16" height="12" fill="#D97757"/>')
+  expect(figureSvg('careful', DRESSES.winter)).toBe(crab)
+})
+
+const CODEX_SEEN: [string, string, string][] = [
+  ['codex-astra', '#9B7BE0', 'Codex · Astra'],
+  ['codex-sol', '#E0A526', 'Codex · Sol'],
+  ['codex-terra', '#6E9B4A', 'Codex · Terra'],
+  ['codex-luna', '#8FA3BF', 'Codex · Luna'],
+]
+
+test("a Codex run shows its intensity, not the relay's model, plugin-prefixed or bare", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  const types = CODEX_SEEN.flatMap(([tier]) => [`savvy-flow:savvy-${tier}`, `savvy-${tier}`])
+  state.seed(AGENTS, types.map((type, i) => run(`w${i}`, { type, model: 'claude-sonnet-5-5', effort: 'low', costUsd: 0.42, status: 'done', endedAt: 5 })))
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const rows = (await ui.findAll({ type: 'Svg' })).slice(1).map(e => ({ svg: String(e.props.source), alt: String(e.props.alt) }))
+  await ui.unmount()
+  expect(rows.length).toBe(types.length)
+  const faults: string[] = []
+  for (const { svg, alt } of rows) {
+    const seen = CODEX_SEEN.find(([tier, color]) => svg.includes(`<tspan fill="${color}">${tier}</tspan>`))
+    if (!seen) faults.push(`no codex tier in ${alt}`)
+    else {
+      const [tier, , label] = seen
+      if (!svg.includes(label) || !alt.includes(label)) faults.push(`${tier}: no ${label}`)
+      if (/Sonnet/.test(svg) || /Sonnet/.test(alt)) faults.push(`${tier}: shows the relay's model`)
+      // The cost stays the relay's own.
+      if (!svg.includes('≈$0.42')) faults.push(`${tier}: lost the run's cost`)
+      if (!svg.includes('class="badge"')) faults.push(`${tier}: no badge`)
+    }
+  }
+  expect(faults).toEqual([])
+})
+
+test('a planned Codex task, named with or without savvy-, waits as its intensity', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await $.tool.call({ tool: 'mcp__savvy-progress__progress', title: 'Fix bug', total: 2, phase: 'delegate', tasks: [
+    { title: 'second opinion', tier: 'savvy-codex-terra' },
+    { title: 'quick fix', tier: 'codex-luna' },
+  ] })
+  expect(state.flow()?.tasks.map(t => t.tier)).toEqual(['codex-terra', 'codex-luna'])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [, terra, luna] = (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source))
+  await ui.unmount()
+  expect(terra).toContain('<tspan fill="#6E9B4A">codex-terra</tspan>')
+  expect(terra).toContain('Codex · Terra')
+  expect(terra).toContain('class="c-medium"')
+  expect(luna).toContain('Codex · Luna')
+  expect(luna).toContain('class="c-light"')
 })
 
 test('the classic theme keeps the crabs as they were', { options: { theme: 'classic' } }, async ($, on) => {

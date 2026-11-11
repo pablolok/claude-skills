@@ -1,6 +1,6 @@
 ---
 name: savvy-flow
-description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light, and savvy-codex for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
+description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
 disable-model-invocation: true
 argument-hint: <task description>
 ---
@@ -14,7 +14,7 @@ Task from the user: $ARGUMENTS
 ## 0. Preconditions
 
 - The flow is designed for a strong orchestrator model at high effort (Fable high is the reference setup). Whatever the session runs on is the user's deliberate choice: you orchestrate, you do not take the workers' tasks yourself.
-- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, `savvy-codex` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, and the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
 
 ## Models: every worker runs at its tier's model
@@ -28,9 +28,10 @@ Task from the user: $ARGUMENTS
   screenshots, rendered images), small touch-ups. They go to Careful (every tool, vision included) or Medium (files and shell) and return
   findings; you keep the verdict. Work asked for after the plan is done is planned and tiered the same way, never
   sent to a generic agent because it is "not part of the plan".
-- **`savvy-fable` runs only with the user's yes**, whatever model you are. When a task meets its criteria (section 3),
+- **`savvy-fable` and `savvy-codex-astra` run only with the user's yes**, whatever model you are. When a task meets its criteria (section 3),
   or a Heavy attempt failed on it, ask before delegating it: the task, why Fable rather than Heavy (what makes it hard,
-  what Heavy would risk), the cost of the choice, and your recommendation; Heavy is the alternative offered. The user's
+  what Heavy would risk), the cost of the choice, and your recommendation; Heavy is the alternative offered (Sol, for
+  Astra). The user's
   answer settles that task only; the rest of the plan goes on while it is pending. A design feature for Fable
   (section 2) is asked the same way.
 - A second opinion from your own model family adds cost more than insight: take it from the Codex tier when it is
@@ -122,7 +123,10 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Careful | `savvy-careful` | Opus / high | "Do it right": the approach is clear but execution is delicate. Multi-file refactors, fixes that must preserve invariants, logic with many edge cases, concurrency |
 | Medium | `savvy-medium` | Sonnet / medium, lean tools | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
 | Light | `savvy-light` | Sonnet / low, lean tools | Mechanical edits, renames, boilerplate, config, small isolated fixes, running builds/tests and reporting |
-| Codex | `savvy-codex` | An OpenAI model through the Codex CLI, relayed by a Sonnet / low wrapper | Only when Codex is signed in (section 0): a **second opinion** from another model family (a review of a risky diff, a second diagnosis of a hard bug), a self-contained task the user wants done on OpenAI models, or work moved off the Claude limits when the user asks |
+| Codex Luna | `savvy-codex-luna` | OpenAI's Luna family through the Codex CLI, effort low; a Sonnet relay | Only when Codex is signed in (section 0), as below: Light-sized work |
+| Codex Terra | `savvy-codex-terra` | Terra family, effort medium | Medium-sized work |
+| Codex Sol | `savvy-codex-sol` | Sol family, effort high | Careful- or Heavy-sized work; the default for a **second opinion** from another model family (a review of a risky diff, a second diagnosis of a hard bug) |
+| Codex Astra | `savvy-codex-astra` | Astra family, effort high | Fable-sized work, and only with the user's yes, asked as for Fable (section "Models") |
 
 Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
@@ -130,20 +134,24 @@ lean, it starts at a fraction of that, and the cheaper model halves what is left
 simulator, the web or a skill goes to Careful or above, or its brief states the rule it needs in a few lines.
 
 Heuristics:
-- Uncertain between two tiers → take the higher one. Exception: Fable is never picked alone (section "Models"): ask, and Heavy runs unless the user says Fable.
+- Uncertain between two tiers → take the higher one. Exception: Fable and Codex Astra are never picked alone (section "Models"): ask, and Heavy (or Sol) runs unless the user says yes.
 - Heavy vs Careful is about the kind of difficulty, not the amount: insight needed → Heavy; thoroughness needed → Careful. A task that needs both is two tasks: Heavy investigates and produces a precise brief, Careful implements it.
 - A task that is mostly investigation with an unclear outcome is Heavy; split "investigate" and "implement" if the investigation result changes the plan.
 - Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows: to `savvy-fable`, on the user's explicit request.
 
 ### The Codex tier
 
-Code and context go to a second vendor, OpenAI, under the user's own Codex sign-in.
-- A Codex task is marked as such in the plan you present before it is delegated.
-- The wrapper (`savvy-codex`) runs `codex exec` and returns what Codex did, checked:
+Code and context go to a second vendor, OpenAI, under the user's own Codex sign-in. Use it for a second opinion, for a
+self-contained task the user wants done on OpenAI models, or to move work off the Claude limits when the user asks.
+- **Pick the intensity like a Claude tier**, the cheapest that gets it right: Luna for mechanical work, Terra for
+  standard work, Sol for delicate or unfamiliar work and for second opinions, Astra only with the user's yes. The
+  relay picks the newest model of its family from Codex's own model list and sets the effort; a brief names a model
+  or an effort only when the user asked for one.
+- A Codex task is marked as such in the plan you present before it is delegated, with its intensity.
+- The relay (`savvy-codex-<intensity>`) runs `codex exec` and returns what Codex did, checked:
   - a second opinion runs read-only (`-s read-only`, or `codex exec review` on the diff);
   - an implementation runs in a tree no other worker is writing (alone, or in its own worktree), with Codex told not to commit;
   - a follow-up on the same topic resumes the Codex session (`codex exec resume <session id>`) instead of starting cold: keep its session id in the registry row.
-- The brief names no OpenAI model unless the user asked for one: Codex uses the user's configured default.
 - **Codex does not load Claude Code's skills or `CLAUDE.md`.** It reads `AGENTS.md` and the skills in the project's
   `.agents/skills` (and its own user folder) by itself; a skill from `.claude/skills`, a user folder or a plugin
   reaches it only when the brief names its `SKILL.md` by absolute path ("Before starting, read and follow …"), and so
@@ -282,7 +290,7 @@ applies winning:
 | `autumn` | autumn, September 1 – November 30 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
 | `winter` | winter, December 1 – the end of February | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
 
-- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; Codex has none, its tasks are led by its name. The mascots follow the
+- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra. The mascots follow the
   roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
   fast one.
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.

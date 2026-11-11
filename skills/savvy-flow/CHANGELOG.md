@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.12.0] - 2026-11-11
+- Four Codex tiers by OpenAI intensity — savvy-codex-luna / terra / sol / astra, each relay picks the newest model of its family from Codex's model list and sets the effort; Astra, like Fable, only with the user's yes; the intensities keep their sky emoji in every chat theme
+
+
 ## [1.11.0] - 2026-11-11
 - Workers run at their tier's model — only savvy types (never general-purpose or a fork, which inherit the orchestrator's model), legwork gets a tier, savvy-fable only with the user's yes and a reason; a Codex tier (savvy-codex) runs OpenAI models through a signed-in Codex CLI, sandboxed and checked, with the Claude skills a task needs named by path
 
