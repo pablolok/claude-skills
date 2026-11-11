@@ -1,5 +1,5 @@
 """Tests for the savvy-flow skill: published as a plugin whose root is the skill and whose `agents/` folder ships the
-five tiered workers, with the upstream licence and attribution travelling alongside."""
+tiered workers and the Codex relay, with the upstream licence and attribution travelling alongside."""
 
 from __future__ import annotations
 
@@ -17,9 +17,11 @@ SKILL = "savvy-flow"
 SOURCE = REPO / "skills" / SKILL
 PUBLISHED = REPO / "published" / "workflow" / SKILL
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
-WORKERS = ("savvy-careful", "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
+WORKERS = ("savvy-careful", "savvy-codex", "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
 #: The tiers that run with a tool allowlist rather than every tool the parent has.
 LEAN_WORKERS = ("savvy-light", "savvy-medium")
+#: The relay that runs Codex: lean too, and it edits no project file itself.
+RELAY_WORKERS = ("savvy-codex",)
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
@@ -52,9 +54,9 @@ class TestSavvyFlowSkill(PublishedSkillChecks, unittest.TestCase):
 
 
 class TestWorkers(unittest.TestCase):
-    """The five workers ship in the plugin's `agents/` folder, as the source has them."""
+    """The workers ship in the plugin's `agents/` folder, as the source has them."""
 
-    def test_the_five_workers_are_published_as_the_source(self) -> None:
+    def test_the_workers_are_published_as_the_source(self) -> None:
         expected = [f"{name}.md" for name in WORKERS]
         self.assertEqual(sorted(path.name for path in (SOURCE / "agents").glob("*.md")), expected)
         self.assertEqual(sorted(path.name for path in (PUBLISHED / "agents").glob("*.md")), expected, "publish the skill")
@@ -83,9 +85,21 @@ class TestWorkers(unittest.TestCase):
                 tools = _flow_list(frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")).get("tools", ""))
                 self.assertTrue({"Read", "Edit", "Write", "Bash", "ToolSearch", "mcp__savvy-progress"} <= tools)
                 self.assertFalse({"Skill", "Agent"} & tools, "a lean worker loads no skill and spawns no agent")
-        for name in set(WORKERS) - set(LEAN_WORKERS):
+        for name in set(WORKERS) - set(LEAN_WORKERS) - set(RELAY_WORKERS):
             with self.subTest(worker=name):
                 self.assertNotIn("tools", frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")))
+
+    def test_the_codex_relay_runs_codex_and_edits_nothing_itself(self) -> None:
+        fields = frontmatter(_read(PUBLISHED / "agents" / "savvy-codex.md"))
+        tools = _flow_list(fields.get("tools", ""))
+        self.assertEqual(fields.get("model"), "sonnet", "the relay is cheap: the work is Codex's")
+        self.assertTrue({"Read", "Bash", "ToolSearch", "mcp__savvy-progress"} <= tools)
+        self.assertFalse({"Edit", "Skill", "Agent"} & tools, "the relay never edits project files or spawns agents")
+        body = _flat(_read(PUBLISHED / "agents" / "savvy-codex.md"))
+        self.assertIn("`codex login status`", body)
+        self.assertIn("Never `danger-full-access`", body)
+        self.assertIn("`-s read-only`", body)
+        self.assertIn("`codex exec resume <session id> -o <last.md> - < <prompt> > <log> 2>&1`", body)
 
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default
@@ -107,6 +121,40 @@ class TestSkill(unittest.TestCase):
         text = _read(PUBLISHED / "SKILL.md")
         for name in WORKERS:
             self.assertIn(f"`{name}`", text)
+
+
+class TestModels(unittest.TestCase):
+    """Workers run at their tier's model: an agent with no model of its own inherits the session's, the orchestrator's."""
+
+    def setUp(self) -> None:
+        self.text = _flat(_read(PUBLISHED / "SKILL.md"))
+
+    def test_every_agent_call_runs_a_savvy_type_never_one_that_inherits(self) -> None:
+        self.assertIn("**Every Agent call you make runs a savvy worker type.**", self.text)
+        self.assertIn("Never `fork`; never `general-purpose`.", self.text)
+        self.assertIn("Use an Explore subagent only for wide searches, with `model` set to `haiku` or `sonnet`", self.text)
+
+    def test_the_model_rule_comes_before_the_flow_and_the_themes_after_it(self) -> None:
+        self.assertLess(self.text.index("## Models: every worker runs at its tier's model"), self.text.index("## 1. Understand"))
+        self.assertGreater(self.text.index("## Themes"), self.text.index("## 6. Close"))
+
+    def test_fable_runs_only_with_the_user_s_yes_and_a_reason(self) -> None:
+        self.assertIn("**`savvy-fable` runs only with the user's yes**, whatever model you are.", self.text)
+        self.assertIn("why Fable rather than Heavy", self.text)
+        self.assertIn("Heavy runs unless the user says Fable", self.text)
+
+    def test_legwork_and_late_requests_get_a_tier(self) -> None:
+        self.assertIn("**Legwork has a tier too**", self.text)
+        self.assertIn("never sent to a generic agent", self.text)
+
+    def test_codex_is_optional_marked_in_the_plan_and_reviewed(self) -> None:
+        self.assertIn("one shell call at the start, `codex login status`", self.text)
+        self.assertIn("A Codex task is marked as such in the plan you present before it is delegated.", self.text)
+        self.assertIn("Its work gets the same adversarial review as any other tier.", self.text)
+
+    def test_codex_gets_the_claude_skills_it_needs_by_path(self) -> None:
+        self.assertIn("**Codex does not load Claude Code's skills or `CLAUDE.md`.**", self.text)
+        self.assertIn("reaches it only when the brief names its `SKILL.md` by absolute path", self.text)
 
 
 class TestHostTools(unittest.TestCase):

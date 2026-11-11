@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.0] - 2026-11-11
+- Workers run at their tier's model — only savvy types (never general-purpose or a fork, which inherit the orchestrator's model), legwork gets a tier, savvy-fable only with the user's yes and a reason; a Codex tier (savvy-codex) runs OpenAI models through a signed-in Codex CLI, sandboxed and checked, with the Claude skills a task needs named by path
+
+
 ## [1.10.0] - 2026-11-02
 - Chat themes for the whole Italian calendar — a row with mascots, marks and closing line for every holiday, period and season the panel wears; /savvy-theme or the panel's picker switches chat from the next message; All Souls' Day stays sober
 

@@ -1,6 +1,6 @@
 ---
 name: savvy-flow
-description: Orchestrated delivery flow. The session model plans, owns design, delegates implementation to tiered worker subagents (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light) and adversarially reviews their output. Invoke with /savvy-flow <task>.
+description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / savvy-heavy / savvy-careful / savvy-medium / savvy-light, and savvy-codex for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
 disable-model-invocation: true
 argument-hint: <task description>
 ---
@@ -13,8 +13,28 @@ Task from the user: $ARGUMENTS
 
 ## 0. Preconditions
 
-- The flow is designed for a strong orchestrator model at high effort (Fable high is the reference setup). Do not try to detect or verify the session's model or effort — you cannot see the effort level. Whatever the session runs on is the user's deliberate choice; just orchestrate.
-- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- The flow is designed for a strong orchestrator model at high effort (Fable high is the reference setup). Whatever the session runs on is the user's deliberate choice: you orchestrate, you do not take the workers' tasks yourself.
+- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, `savvy-codex` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
+
+## Models: every worker runs at its tier's model
+
+- **Every Agent call you make runs a savvy worker type.** A tier's model and effort are pinned in its definition; a
+  `general-purpose` agent, a fork, or an agent type with no model of its own inherits **the session's** model, so on
+  a strong orchestrator it is a worker at the orchestrator's price. Never `fork`; never `general-purpose`.
+- A built-in type the flow needs (Explore for a wide search) gets an explicit `model` (`haiku` or `sonnet`) in the
+  Agent call.
+- **Legwork has a tier too**: audits, verification passes, evidence gathering, reading outputs closely (logs,
+  screenshots, rendered images), small touch-ups. They go to Careful (every tool, vision included) or Medium (files and shell) and return
+  findings; you keep the verdict. Work asked for after the plan is done is planned and tiered the same way, never
+  sent to a generic agent because it is "not part of the plan".
+- **`savvy-fable` runs only with the user's yes**, whatever model you are. When a task meets its criteria (section 3),
+  or a Heavy attempt failed on it, ask before delegating it: the task, why Fable rather than Heavy (what makes it hard,
+  what Heavy would risk), the cost of the choice, and your recommendation; Heavy is the alternative offered. The user's
+  answer settles that task only; the rest of the plan goes on while it is pending. A design feature for Fable
+  (section 2) is asked the same way.
+- A second opinion from your own model family adds cost more than insight: take it from the Codex tier when it is
+  available.
 
 ## Progress bar
 
@@ -29,69 +49,6 @@ When delegating, pass the task's `title` verbatim as the Agent tool's `descripti
 - send the plan to the bar **before** the first worker starts, and copy each `description` from it character for character, never a shorter or reworded name;
 - a task handed to a worker already running (SendMessage) carries the task's title as its `summary`;
 - a worker relaunched for the same task (a wrong base, a crash) keeps the same title; a task that changes is re-planned in the bar first, then delegated under its new title.
-
-## Themes
-
-The messages you write to the user in chat wear a theme, chosen once when the flow starts, the first answer that
-applies winning:
-
-1. **The user asks for one** (by name, or for none) → that one for the rest of the session, until they ask again.
-2. **The agents panel's `theme` option** (savvy-progress) → the same theme as the panel, so the two never disagree.
-   Read it with one shell call, `claude plugin configure savvy-progress@pablolok-skills --json`: its
-   `inputs.theme`. A theme's id pins that theme until it is set back to `auto`; `classic` means no theme in chat (the
-   panel's everyday costumes have no chat counterpart); `auto`, any other value, or no answer (the plugin missing, the
-   command failing) falls through to the calendar. The user sets the option in `/config`, with
-   `/savvy-theme <theme|auto>` or from the theme picker in the panel; a `/savvy-theme` run or the panel's note that
-   the theme changed, met during the flow, switches chat to that theme from your next message.
-3. **The calendar**, by the session's current date, in the panel's windows below: a holiday while one is on,
-   otherwise a period (the Christmas season, the sales, the school holidays, back to school), otherwise the season. A
-   holiday wins over the period it falls in, a period over its season. With the date unknown, no theme.
-
-| Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
-|-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
-| `new-year` | New Year's Day, January 1 | 🌠 | 📅 | 📝 | 🥣 | 🏊 | 🗓️ | 🍀 · 🔁 · 🔥 | `🍀 A clean start to the year.` |
-| `befana` | Epiphany, January 6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
-| `winter-sales` | the winter sales, January 7–20 | 🎈 | 🧥 | 🏷️ | 🛍️ | 🛒 | 🧣 | 💸 · 🔖 · 🔥 | `🛍️ Every bargain bagged.` |
-| `valentine` | Valentine's Day, February 14 | 💘 | 🍫 | 💌 | 🌹 | 🎈 | 💝 | 💕 · 💔 · 🔥 | `💝 Done with love.` |
-| `carnival` | Carnival, the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
-| `womens-day` | Women's Day, March 8 | 👑 | 🌿 | 🎀 | 🍰 | 💐 | 🌼 | 💛 · 🍂 · 🔥 | `🌼 Mimosa for everyone.` |
-| `fathers-day` | Father's Day, March 19 | 🏅 | 🪚 | 🔨 | 🧁 | 🧰 | 👔 | ✅ · 🔩 · 🔥 | `👔 Built to last.` |
-| `easter-holidays` | the Easter holidays, Holy Thursday – Easter Tuesday | 🕊️ | 🥾 | 🧳 | 🍰 | 🚲 | 🧺 | 🌿 · 🗺️ · 🔥 | `🧺 Back from the trip, all packed away.` |
-| `easter` | Easter Sunday and Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
-| `liberation` | Liberation Day, April 25 | 🇮🇹 | 🌹 | 🌿 | 💐 | 🏃 | 🕊️ | 🌹 · 🧭 · 🔥 | `🕊️ Free and done.` |
-| `labour-day` | Labour Day, May 1 | 🎸 | ⛏️ | 🧵 | 🥪 | 🏃 | 🛠️ | 🔧 · 🪛 · 🔥 | `🛠️ Hard work, well done.` |
-| `mothers-day` | Mother's Day, the second Sunday of May | 💖 | ☕ | 💌 | 🎂 | 🌷 | 💐 | 💗 · 🩹 · 🔥 | `💐 Made with care, for her.` |
-| `republic-day` | Republic Day, June 2 | ✈️ | 🎺 | 🪢 | 🍨 | 🥁 | 🇮🇹 | 🟩 · 🟥 · 🔥 | `🇮🇹 Done, the flag flying.` |
-| `summer-sales` | the summer sales, two weeks from the first Saturday of July | 🪭 | 🛍️ | 👡 | 🕶️ | 👒 | 🏷️ | 💰 · 🔖 · 🔥 | `🛍️ Sold out, all done.` |
-| `summer-holidays` | the summer holidays, July 1 – August 31 | 🎈 | ⛺ | 🧴 | 🍝 | 🛵 | 🏖️ | 🌴 · 🧭 · 🔥 | `🏖️ Done, off on holiday.` |
-| `ferragosto` | Ferragosto, August 15 | 🦩 | ⛱️ | 🍢 | 🥘 | 🏐 | 🎆 | 🍉 · 🌊 · 🔥 | `🎆 Done, see you at the fireworks.` |
-| `back-to-school` | back to school, September 1–14 | 🎓 | 🎒 | ✏️ | 🍎 | 🛩️ | 📚 | ✔️ · 📝 · 🔥 | `📚 Homework done.` |
-| `halloween` | Halloween, October 31 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
-| `all-saints` | All Saints' Day, November 1 | 😇 | 🕯️ | 🪟 | 🍪 | 🔔 | ✨ | 🌟 · 🙏 · 🔥 | `✨ All saints, all done.` |
-| `all-souls` | All Souls' Day, November 2 | 🏮 | 🌼 | 🕯️ | 💮 | 💧 | 🤍 | ✔️ · ↩️ · ⬆️ | `🤍 Done, quietly.` |
-| `black-friday` | Black Friday, the day after the fourth Thursday of November | 🪙 | 📦 | 💳 | 🛍️ | 🛒 | 🖤 | 💰 · 🧾 · 🔥 | `🖤 Every deal closed.` |
-| `immaculate` | the Immaculate Conception, December 8 | 🌟 | 🌲 | 🐑 | 🎀 | 💡 | ⭐ | ✨ · 🧶 · 🔥 | `⭐ The tree is up.` |
-| `christmas` | the Christmas season, December 8 – January 6, outside its own days | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
-| `christmas-eve` | Christmas Eve, December 24 | 💫 | 🐟 | 🎁 | 🥛 | 🛷 | 🌟 | 🔔 · 📜 · 🔥 | `🌟 Everything ready for tonight.` |
-| `christmas-day` | Christmas Day, December 25 | 🎺 | 🎁 | 🎀 | 🍲 | 🚗 | 🔔 | 🎉 · 🧦 · 🔥 | `🎁 Merry Christmas, all unwrapped.` |
-| `st-stephen` | St Stephen's Day, December 26 | 💤 | 🍗 | 🔢 | 🍞 | 👟 | 🛋️ | 😌 · 🍽️ · 🔥 | `🛋️ Done, back to the leftovers.` |
-| `new-years-eve` | New Year's Eve, December 31 | 🎆 | 🍖 | 🍾 | 🥂 | 🎇 | 🕛 | ✨ · ⏳ · 🔥 | `🥂 Counted down and done.` |
-| `spring` | spring, March 1 – May 31 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
-| `summer` | summer, June 1 – August 31 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
-| `autumn` | autumn, September 1 – November 30 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
-| `winter` | winter, December 1 – the end of February | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
-
-- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line. The mascots follow the
-  roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
-  fast one.
-- A review verdict carries its mark: accepted, returned (with its defects), escalated.
-- The progress bar's `title` starts with your mark, the same on every call (a new title starts a new flow).
-- The close report opens with your mark and ends with the theme's closing line, in the session's language.
-- `all-souls` is sober: a calm tone, no exclamation marks, and its marks only where these rules put them.
-
-It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
-put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs
-verbatim). With no theme, every message is plain.
 
 ## Host tools
 
@@ -113,7 +70,7 @@ flow, never in place of it:
 
 ## 1. Understand and plan (orchestrator only)
 
-1. Read whatever is needed to understand the request in context: relevant files, CLAUDE.md, recent git history. Use an Explore subagent (haiku/sonnet) only for wide searches.
+1. Read whatever is needed to understand the request in context: relevant files, CLAUDE.md, recent git history. Use an Explore subagent only for wide searches, with `model` set to `haiku` or `sonnet` in the call (left unset, it runs as you).
    - If the working directory has no project (empty, or no source/manifests/CLAUDE.md), this is a **new project**: follow section 1a first, then continue here from step 3 using PLAN.md as the task list.
 2. Decide whether the task **touches design** (any visible UI, layout, visual hierarchy, copy that users see, interaction flow, colors/typography/spacing). If yes → go to section 2 before any implementation.
 3. Break the work into **tasks** with:
@@ -160,11 +117,12 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 
 | Tier | Agent | Model / effort | Use for |
 |------|-------|----------------|---------|
-| Fable | `savvy-fable` | Fable / high | "Hardest problems": very complex logic (subtle algorithms, concurrency, many interacting states), hard bugs that resist ordinary debugging or survived a Heavy investigation; targeted design features, only when the user asks (section 2) |
+| Fable | `savvy-fable` | Fable / high | Only with the user's yes (section "Models"). "Hardest problems": very complex logic (subtle algorithms, concurrency, many interacting states), hard bugs that resist ordinary debugging or survived a Heavy investigation; targeted design features, only when the user asks (section 2) |
 | Heavy | `savvy-heavy` | Opus / xhigh | "Understand and find": unfamiliar or messy code, unclear root cause, non-obvious architecture, large contexts, anything where a wrong first approach is expensive |
 | Careful | `savvy-careful` | Opus / high | "Do it right": the approach is clear but execution is delicate. Multi-file refactors, fixes that must preserve invariants, logic with many edge cases, concurrency |
 | Medium | `savvy-medium` | Sonnet / medium, lean tools | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
 | Light | `savvy-light` | Sonnet / low, lean tools | Mechanical edits, renames, boilerplate, config, small isolated fixes, running builds/tests and reporting |
+| Codex | `savvy-codex` | An OpenAI model through the Codex CLI, relayed by a Sonnet / low wrapper | Only when Codex is signed in (section 0): a **second opinion** from another model family (a review of a risky diff, a second diagnosis of a hard bug), a self-contained task the user wants done on OpenAI models, or work moved off the Claude limits when the user asks |
 
 Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
@@ -172,10 +130,26 @@ lean, it starts at a fraction of that, and the cheaper model halves what is left
 simulator, the web or a skill goes to Careful or above, or its brief states the rule it needs in a few lines.
 
 Heuristics:
-- Uncertain between two tiers → take the higher one. Exception: Fable is a reserve tier; pick it only when the task clearly meets its criteria, otherwise Heavy.
+- Uncertain between two tiers → take the higher one. Exception: Fable is never picked alone (section "Models"): ask, and Heavy runs unless the user says Fable.
 - Heavy vs Careful is about the kind of difficulty, not the amount: insight needed → Heavy; thoroughness needed → Careful. A task that needs both is two tasks: Heavy investigates and produces a precise brief, Careful implements it.
 - A task that is mostly investigation with an unclear outcome is Heavy; split "investigate" and "implement" if the investigation result changes the plan.
 - Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows: to `savvy-fable`, on the user's explicit request.
+
+### The Codex tier
+
+Code and context go to a second vendor, OpenAI, under the user's own Codex sign-in.
+- A Codex task is marked as such in the plan you present before it is delegated.
+- The wrapper (`savvy-codex`) runs `codex exec` and returns what Codex did, checked:
+  - a second opinion runs read-only (`-s read-only`, or `codex exec review` on the diff);
+  - an implementation runs in a tree no other worker is writing (alone, or in its own worktree), with Codex told not to commit;
+  - a follow-up on the same topic resumes the Codex session (`codex exec resume <session id>`) instead of starting cold: keep its session id in the registry row.
+- The brief names no OpenAI model unless the user asked for one: Codex uses the user's configured default.
+- **Codex does not load Claude Code's skills or `CLAUDE.md`.** It reads `AGENTS.md` and the skills in the project's
+  `.agents/skills` (and its own user folder) by itself; a skill from `.claude/skills`, a user folder or a plugin
+  reaches it only when the brief names its `SKILL.md` by absolute path ("Before starting, read and follow …"), and so
+  does a `CLAUDE.md` the task depends on. Named that way, Codex follows it; left out, it is silently ignored.
+- Its report ends with the Codex plan usage when the logs show it (the 5-hour and weekly windows). Pass it on in your close report.
+- Its work gets the same adversarial review as any other tier.
 
 ## 4. Delegate
 
@@ -255,4 +229,67 @@ take what the workers' worktrees hold that is still needed, then remove every wo
 not left for the end: the user reads every leftover branch in their git client as work still open. Removing it also
 ends that worker — it can no longer be resumed — so give its topic's next task to a fresh worker from the start.
 
-Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration.
+Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration, and the Codex usage last reported when the Codex tier ran.
+
+## Themes
+
+The messages you write to the user in chat wear a theme, chosen once when the flow starts, the first answer that
+applies winning:
+
+1. **The user asks for one** (by name, or for none) → that one for the rest of the session, until they ask again.
+2. **The agents panel's `theme` option** (savvy-progress) → the same theme as the panel, so the two never disagree.
+   Read it with one shell call, `claude plugin configure savvy-progress@pablolok-skills --json`: its
+   `inputs.theme`. A theme's id pins that theme until it is set back to `auto`; `classic` means no theme in chat (the
+   panel's everyday costumes have no chat counterpart); `auto`, any other value, or no answer (the plugin missing, the
+   command failing) falls through to the calendar. The user sets the option in `/config`, with
+   `/savvy-theme <theme|auto>` or from the theme picker in the panel; a `/savvy-theme` run or the panel's note that
+   the theme changed, met during the flow, switches chat to that theme from your next message.
+3. **The calendar**, by the session's current date, in the panel's windows below: a holiday while one is on,
+   otherwise a period (the Christmas season, the sales, the school holidays, back to school), otherwise the season. A
+   holiday wins over the period it falls in, a period over its season. With the date unknown, no theme.
+
+| Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
+|-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
+| `new-year` | New Year's Day, January 1 | 🌠 | 📅 | 📝 | 🥣 | 🏊 | 🗓️ | 🍀 · 🔁 · 🔥 | `🍀 A clean start to the year.` |
+| `befana` | Epiphany, January 6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
+| `winter-sales` | the winter sales, January 7–20 | 🎈 | 🧥 | 🏷️ | 🛍️ | 🛒 | 🧣 | 💸 · 🔖 · 🔥 | `🛍️ Every bargain bagged.` |
+| `valentine` | Valentine's Day, February 14 | 💘 | 🍫 | 💌 | 🌹 | 🎈 | 💝 | 💕 · 💔 · 🔥 | `💝 Done with love.` |
+| `carnival` | Carnival, the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
+| `womens-day` | Women's Day, March 8 | 👑 | 🌿 | 🎀 | 🍰 | 💐 | 🌼 | 💛 · 🍂 · 🔥 | `🌼 Mimosa for everyone.` |
+| `fathers-day` | Father's Day, March 19 | 🏅 | 🪚 | 🔨 | 🧁 | 🧰 | 👔 | ✅ · 🔩 · 🔥 | `👔 Built to last.` |
+| `easter-holidays` | the Easter holidays, Holy Thursday – Easter Tuesday | 🕊️ | 🥾 | 🧳 | 🍰 | 🚲 | 🧺 | 🌿 · 🗺️ · 🔥 | `🧺 Back from the trip, all packed away.` |
+| `easter` | Easter Sunday and Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
+| `liberation` | Liberation Day, April 25 | 🇮🇹 | 🌹 | 🌿 | 💐 | 🏃 | 🕊️ | 🌹 · 🧭 · 🔥 | `🕊️ Free and done.` |
+| `labour-day` | Labour Day, May 1 | 🎸 | ⛏️ | 🧵 | 🥪 | 🏃 | 🛠️ | 🔧 · 🪛 · 🔥 | `🛠️ Hard work, well done.` |
+| `mothers-day` | Mother's Day, the second Sunday of May | 💖 | ☕ | 💌 | 🎂 | 🌷 | 💐 | 💗 · 🩹 · 🔥 | `💐 Made with care, for her.` |
+| `republic-day` | Republic Day, June 2 | ✈️ | 🎺 | 🪢 | 🍨 | 🥁 | 🇮🇹 | 🟩 · 🟥 · 🔥 | `🇮🇹 Done, the flag flying.` |
+| `summer-sales` | the summer sales, two weeks from the first Saturday of July | 🪭 | 🛍️ | 👡 | 🕶️ | 👒 | 🏷️ | 💰 · 🔖 · 🔥 | `🛍️ Sold out, all done.` |
+| `summer-holidays` | the summer holidays, July 1 – August 31 | 🎈 | ⛺ | 🧴 | 🍝 | 🛵 | 🏖️ | 🌴 · 🧭 · 🔥 | `🏖️ Done, off on holiday.` |
+| `ferragosto` | Ferragosto, August 15 | 🦩 | ⛱️ | 🍢 | 🥘 | 🏐 | 🎆 | 🍉 · 🌊 · 🔥 | `🎆 Done, see you at the fireworks.` |
+| `back-to-school` | back to school, September 1–14 | 🎓 | 🎒 | ✏️ | 🍎 | 🛩️ | 📚 | ✔️ · 📝 · 🔥 | `📚 Homework done.` |
+| `halloween` | Halloween, October 31 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
+| `all-saints` | All Saints' Day, November 1 | 😇 | 🕯️ | 🪟 | 🍪 | 🔔 | ✨ | 🌟 · 🙏 · 🔥 | `✨ All saints, all done.` |
+| `all-souls` | All Souls' Day, November 2 | 🏮 | 🌼 | 🕯️ | 💮 | 💧 | 🤍 | ✔️ · ↩️ · ⬆️ | `🤍 Done, quietly.` |
+| `black-friday` | Black Friday, the day after the fourth Thursday of November | 🪙 | 📦 | 💳 | 🛍️ | 🛒 | 🖤 | 💰 · 🧾 · 🔥 | `🖤 Every deal closed.` |
+| `immaculate` | the Immaculate Conception, December 8 | 🌟 | 🌲 | 🐑 | 🎀 | 💡 | ⭐ | ✨ · 🧶 · 🔥 | `⭐ The tree is up.` |
+| `christmas` | the Christmas season, December 8 – January 6, outside its own days | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
+| `christmas-eve` | Christmas Eve, December 24 | 💫 | 🐟 | 🎁 | 🥛 | 🛷 | 🌟 | 🔔 · 📜 · 🔥 | `🌟 Everything ready for tonight.` |
+| `christmas-day` | Christmas Day, December 25 | 🎺 | 🎁 | 🎀 | 🍲 | 🚗 | 🔔 | 🎉 · 🧦 · 🔥 | `🎁 Merry Christmas, all unwrapped.` |
+| `st-stephen` | St Stephen's Day, December 26 | 💤 | 🍗 | 🔢 | 🍞 | 👟 | 🛋️ | 😌 · 🍽️ · 🔥 | `🛋️ Done, back to the leftovers.` |
+| `new-years-eve` | New Year's Eve, December 31 | 🎆 | 🍖 | 🍾 | 🥂 | 🎇 | 🕛 | ✨ · ⏳ · 🔥 | `🥂 Counted down and done.` |
+| `spring` | spring, March 1 – May 31 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
+| `summer` | summer, June 1 – August 31 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
+| `autumn` | autumn, September 1 – November 30 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
+| `winter` | winter, December 1 – the end of February | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
+
+- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; Codex has none, its tasks are led by its name. The mascots follow the
+  roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
+  fast one.
+- A review verdict carries its mark: accepted, returned (with its defects), escalated.
+- The progress bar's `title` starts with your mark, the same on every call (a new title starts a new flow).
+- The close report opens with your mark and ends with the theme's closing line, in the session's language.
+- `all-souls` is sober: a calm tone, no exclamation marks, and its marks only where these rules put them.
+
+It is decoration only: the content, the rules of every section and the length of each message stay as they are. Never
+put it in files, code, commits, pull requests, worker briefs or task titles (the panel matches task titles to runs
+verbatim). With no theme, every message is plain.

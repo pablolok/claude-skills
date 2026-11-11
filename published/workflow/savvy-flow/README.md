@@ -1,7 +1,7 @@
 # Savvy Flow
 
 An orchestrated delivery flow. `/savvy-flow:savvy-flow <task>`: the session model plans, owns the design, delegates
-the implementation to tiered worker subagents and reviews what they return adversarially.
+every task to tiered worker subagents, each pinned to its own model, and reviews what they return adversarially.
 
 Originally by johnnyvizz (github.com/johnnyvizz/claude-kit), MIT; imported from main on 2026-10-11. The licence and
 its copyright notice are in `LICENSE` and stay with every copy of this folder.
@@ -21,12 +21,13 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 
 | File | Role |
 | :--- | :--- |
-| `SKILL.md` | The orchestrator's playbook: plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
+| `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
 | `agents/savvy-medium.md` | Sonnet / medium, lean tools: standard feature work. |
 | `agents/savvy-light.md` | Sonnet / low, lean tools: mechanical edits, builds, tests. |
+| `agents/savvy-codex.md` | Sonnet / low relay for the Codex CLI: runs one task on an OpenAI model (`codex exec`, sandboxed), checks the diff and the tests, reports the Codex usage. |
 | `LICENSE` | The upstream MIT licence. |
 
 `savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
@@ -34,6 +35,27 @@ session tools (`disallowedTools: [mcp__ccd_turn, mcp__ccd_session]`): it reports
 host has no such tools the deny does nothing. Light and Medium also carry a tool allowlist (`tools`: files, the shell,
 `ToolSearch` and the savvy-progress tools): without the listing of every tool and skill a fresh worker starts at a
 fraction of the context, so a task that needs a skill, a browser or the web goes to Careful or above.
+
+## A strong orchestrator, cheap workers
+
+The orchestrator (Fable is the reference) keeps the plan, the design and the review, and delegates every task. A
+worker's model is pinned in its agent file; an Agent call of a type with no model of its own (`general-purpose`, a
+fork) inherits the session's model and would run as the orchestrator, so the skill allows only the savvy types, and
+built-in ones (Explore) with an explicit `model`. Audits, verification passes and other legwork get a tier like any
+task. `savvy-fable` never starts on the orchestrator's choice alone, whether it runs on Fable or Opus: for a task
+that looks like Fable work (or one Heavy failed), the orchestrator asks the user first, with the reason, the cost and
+its recommendation, and Heavy runs unless the user says Fable.
+
+## Codex (OpenAI models)
+
+With the Codex CLI installed and signed in (`codex login status`), the orchestrator gains a Codex tier: `savvy-codex`
+runs a task with `codex exec` (read-only for a second opinion, `codex exec review` for a diff, workspace-write for a
+task in a tree nobody else writes; never `danger-full-access`), resumes the same Codex session for follow-ups, checks
+the git diff and the tests itself, and reports the Codex usage (5-hour and weekly windows). Use it for a second opinion
+from another model family, or to run work on OpenAI models. A Codex task is marked in the plan before it goes out: the
+code goes to a second vendor. Without the CLI the tier simply does not exist.
+Codex reads `AGENTS.md` and the project's `.agents/skills` on its own, but not Claude Code's skills or `CLAUDE.md`: the
+brief names each `SKILL.md` a task needs by absolute path, and Codex follows it.
 
 ## Themes
 
