@@ -65,8 +65,10 @@ const store = (on: On) => {
   }
 }
 
+const NO_AGENT_ID = 'Start, answering no agentId.'
+
 // The engine beneath the plugin: what its session.start and its hooks call on `$`.
-const engine = (on: On, listed: { infos: AgentInfo[] }, now = 10_000) => {
+const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000) => {
   const clock = mock.clock(on, { now })
   const state = store(on)
   mock.env(on, {})
@@ -79,7 +81,9 @@ const engine = (on: On, listed: { infos: AgentInfo[] }, now = 10_000) => {
     asks++
     return { value: listed.infos }
   })
-  on('agent.spawn', ($, e) => ({ model: 'claude-opus-5-5', agentId: e.description }))
+  // A spawn given NO_AGENT_ID's prompt answers no agentId: a simulation of what
+  // upstream issue #57 reports for named subagents (the host types say core sets it).
+  on('agent.spawn', ($, e) => (e.prompt === NO_AGENT_ID ? { model: 'claude-opus-5-5' } : { model: 'claude-opus-5-5', agentId: e.description }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.panes', () => ({ value: [] }))
   // What the plugin saved in `/config` and told the model, in order.
@@ -845,4 +849,156 @@ test("the bar's running count is every run the panel lists as running, the plan'
 
   expect(state.flow()?.running).toBe(1)
   expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 2 running, 0%')
+})
+
+test('on the desktop the bar sizes itself to the slot, so the count and the dismiss stay on screen', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  state.seed(FLOW, flowOf())
+
+  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: { bodyColumns: 100, hasSurvey: false } })
+  const [svg] = await ui.findAll({ type: 'Svg' })
+  const boxes = await ui.findAll({ type: 'Box' })
+  const count = await ui.findAll({ type: 'Button', text: '×' })
+  const dismiss = await ui.findAll({ type: 'Button', text: '✕' })
+  const tree = JSON.stringify(await ui.drawn())
+  await ui.unmount()
+
+  // No size of its own: the box takes the drawing's width up to the slot, and the viewBox scales it.
+  expect(svg?.props.width).toBeUndefined()
+  expect(svg?.props.height).toBeUndefined()
+  expect(String(svg?.props.source)).toContain('viewBox="0 0 ')
+  // Its box grows and shrinks, down to nothing, beside the count and the dismiss.
+  expect(boxes.some(b => b.props.flexGrow === 1 && b.props.flexShrink === 1 && b.props.minWidth === 0)).toBe(true)
+  expect(count).toHaveLength(1)
+  expect(dismiss).toHaveLength(1)
+  // The growing box holds the Svg, and the count and the dismiss come after it.
+  const [grow, drawing, crew, close] = ['"minWidth":0', '"Svg"', '×', '✕'].map(s => tree.indexOf(s))
+  expect([grow, drawing, crew, close].every(i => (i ?? -1) >= 0)).toBe(true)
+  expect(grow).toBeLessThan(drawing ?? -1)
+  expect(drawing).toBeLessThan(crew ?? -1)
+  expect(crew).toBeLessThan(close ?? -1)
+})
+
+// One model request of a worker's loop, answered beneath the plugin with `usage`.
+const USAGE = { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 50_000, cache_creation_input_tokens: 300, model: 'claude-opus-5-5' }
+const answering = (on: On) =>
+  on('turn.step', async function* ($, e) {
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: USAGE }
+  })
+const stepOf = async ($: Engine, agentId: string, index: number) => {
+  const stream = $.turn.step({ turnId: 't1', index, model: 'claude-opus-5-5', messageCount: 1, agentId })
+  for await (const chunk of stream) void chunk
+  return stream.result
+}
+
+test('a run counts its input, output and cache writes, not the same context re-read on every step', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  answering(on)
+  await start($)
+  await spawn($, 'w1')
+
+  await stepOf($, 'w1', 0)
+  await stepOf($, 'w1', 1)
+
+  const w1 = byId(state.agents(), 'w1')
+  expect(w1?.tokens).toBe(2 * (1000 + 200 + 300))
+  // The context still holds the cache read, and the cost still prices it.
+  expect(w1?.contextTokens).toBe(1000 + 200 + 50_000 + 300)
+  expect(w1?.costUsd).toBe(2 * costOf('claude-opus-5-5', USAGE))
+  expect(w1?.steps).toBe(2)
+})
+
+test("a run whose steps went unseen takes the turn's sum, cache reads left out", async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await spawn($, 'w1')
+
+  await $.turn.complete({ answer: 'done', durationMs: 1, isAborted: false, turnId: 't1', agentId: 'w1', reason: 'answer', usage: USAGE })
+
+  expect(byId(state.agents(), 'w1')).toMatchObject({ status: 'done', tokens: 1000 + 200 + 300, costUsd: costOf('claude-opus-5-5', USAGE) })
+})
+
+test('a subagent cannot report the flow: it changes nothing, nor wipes the finished runs', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await report($)
+  state.seed(AGENTS, [run('old', { status: 'done', endedAt: 5 })])
+
+  const hijack = await $.tool.call({ tool: 'mcp__savvy-progress__progress', agentId: 'w1', title: 'Hijacked', total: 9, done: 9, finished: true })
+
+  expect(hijack.result).toBe('ignored: only the main session reports the flow')
+  expect(state.flow()).toMatchObject({ title: 'Fix bug', total: 2, done: 0, isFinished: false })
+  expect(byId(state.agents(), 'old')).toMatchObject({ status: 'done' })
+  // The main session still can.
+  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 1 })).result).toBe('ok: Tasks 1/2')
+})
+
+test('a step with no panel row for its agent says so, instead of ok', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await spawn($, 'w1')
+
+  const known = await $.tool.call({ tool: 'mcp__savvy-progress__step', agentId: 'w1', done: 1, total: 3 })
+  const unknown = await $.tool.call({ tool: 'mcp__savvy-progress__step', agentId: 'stranger', done: 1, total: 3 })
+
+  expect(known.result).toBe('ok')
+  expect(unknown.result).toBe('ignored: no panel row for agent stranger')
+  expect(byId(state.agents(), 'w1')).toMatchObject({ stepDone: 1, stepTotal: 3 })
+})
+
+// A named spawn the engine beneath answers with no agentId (NO_AGENT_ID).
+const spawnNamed = ($: Engine, name: string, subagentType: string, background: boolean) =>
+  $.agent.spawn({
+    tool_use_id: `toolu_${name}`,
+    prompt: NO_AGENT_ID,
+    description: name,
+    name,
+    subagentType,
+    provider: { plugin: 'engine', tier: 'core' },
+    parentModel: 'claude-opus-5-5',
+    background,
+    fork: false,
+  })
+
+test('a run whose spawn answered no agentId takes it from its Agent call, so its steps and its end reach it', async ($, on) => {
+  const listed = { infos: [] as AgentInfo[] }
+  const { clock, state } = engine(on, listed, 0)
+  answering(on)
+  on('turn.complete', () => ({ text: '' }))
+  on('tool.call', { tool: 'Agent' }, () => ({
+    result: { status: 'teammate_spawned', agentId: 'a-77', agent_id: 'a-77', teammate_id: 'scout@team', name: 'scout', prompt: 'Do it.' },
+  }))
+  await start($)
+  await report($)
+  await spawnNamed($, 'scout', 'savvy-flow:savvy-careful', true)
+  expect(byId(state.agents(), 'toolu_scout')?.agentId).toBeUndefined()
+
+  await $.tool.call({ tool: 'Agent', tool_use_id: 'toolu_scout', description: 'scout', prompt: 'Do it.', subagent_type: 'savvy-flow:savvy-careful', name: 'scout' })
+  expect(byId(state.agents(), 'toolu_scout')).toMatchObject({ agentId: 'a-77', status: 'running' })
+
+  // The reconcile finds it by that id and leaves it running.
+  listed.infos = [info('a-77', 'running')]
+  await clock.advance(5000)
+  expect(byId(state.agents(), 'toolu_scout')?.status).toBe('running')
+
+  await stepOf($, 'a-77', 0)
+  expect(byId(state.agents(), 'toolu_scout')).toMatchObject({ steps: 1, tokens: 1500 })
+  await $.turn.complete({ answer: 'done', durationMs: 1, isAborted: false, turnId: 't1', agentId: 'a-77', reason: 'answer' })
+  expect(byId(state.agents(), 'toolu_scout')?.status).toBe('done')
+})
+
+test("an Agent call's record of a run already over settles the row it names", async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0)
+  on('tool.call', { tool: 'Agent' }, () => ({ result: { status: 'completed', agentId: 'a-9', prompt: 'Do it.', content: [] } }))
+  await start($)
+  await spawnNamed($, 'fg', 'Explore', false)
+  // A foreground run outlasts a reconcile, which fails a row with no agentId.
+  await clock.advance(5000)
+  expect(byId(state.agents(), 'toolu_fg')?.status).toBe('failed')
+
+  await $.tool.call({ tool: 'Agent', tool_use_id: 'toolu_fg', description: 'fg', prompt: 'Do it.', subagent_type: 'Explore', name: 'fg' })
+
+  expect(byId(state.agents(), 'toolu_fg')).toMatchObject({ agentId: 'a-9', status: 'done', endedAt: 5000 })
 })

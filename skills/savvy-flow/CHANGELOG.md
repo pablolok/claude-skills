@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.12.1] - 2026-11-12
+- Workers close their step count before the final report (idea from the upstream claude-kit PR #53), so a finished worker never reads as short of its steps
+
+
 ## [1.12.0] - 2026-11-11
 - Four Codex tiers by OpenAI intensity — savvy-codex-luna / terra / sol / astra, each relay picks the newest model of its family from Codex's model list and sets the effort; Astra, like Fable, only with the user's yes; the intensities keep their sky emoji in every chat theme
 

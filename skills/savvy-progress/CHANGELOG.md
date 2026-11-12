@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8.1] - 2026-11-12
+- Fixes, ideas from the upstream claude-kit (merged commits 7f311a3 and 37d524b, PRs #52 and #40, issue #57) — the desktop band sizes itself to the slot so the count and the dismiss stay visible; the Tokens total leaves cache reads out; only the main session reports the flow; a step with no panel row says so; a run whose spawn gave no agentId takes it from its Agent call
+
+
 ## [1.8.0] - 2026-11-11
 - Codex figures — a cloud with a >_ face wears every theme's costume (Astra as Fable, Sol as Careful, Terra as Medium, Luna as Light) with its intensity's badge (moon, globe, sun, star) and colour; a Codex run shows Codex · <intensity> instead of its relay's model
 

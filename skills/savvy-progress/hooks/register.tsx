@@ -853,6 +853,28 @@ async function syncRunning($: EngineInterface): Promise<void> {
   if (f && f.running !== running) await update($, flow, prev => (prev ? { ...prev, running } : prev))
 }
 
+// A run whose spawn answered no agentId is keyed on its Agent call's tool_use_id,
+// and its loop's events, matched by agentId, would never reach it. The Agent
+// call's own record names the agent (`agentId`, or `agent_id` in its older
+// spelling): the row takes it, and a record of a run already over settles it.
+async function adoptAgentId($: EngineInterface, toolUseId: string | undefined, result: unknown): Promise<void> {
+  if (!toolUseId || typeof result !== 'object' || result === null) return
+  const record = result as { agentId?: unknown; agent_id?: unknown; status?: unknown }
+  const agentId = typeof record.agentId === 'string' && record.agentId ? record.agentId : typeof record.agent_id === 'string' ? record.agent_id : ''
+  if (!agentId) return
+  const list = await read($, agents)
+  if (!list.some(a => a.id === toolUseId && !a.agentId) || list.some(a => a.agentId === agentId)) return
+  const at = await $.clock.now()
+  await update($, agents, rows =>
+    rows.map(a =>
+      a.id !== toolUseId || a.agentId
+        ? a
+        : { ...a, agentId, ...(record.status === 'completed' ? { status: 'done' as const, endedAt: at } : {}) },
+    ),
+  )
+  await syncRunning($)
+}
+
 // Module scope is fine: a reload only makes the next tick reconcile at once.
 let lastListAt = 0
 
@@ -875,7 +897,8 @@ export const register: Register = (on, options) => {
       description:
         'Report /savvy-flow progress to the progress bar above the prompt and the agents panel. ' +
         'Call it after presenting the plan (title, total, tasks, phase "delegate"), each time a task is accepted (done), ' +
-        'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value.',
+        'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
+        'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
         type: 'object',
         properties: {
@@ -979,6 +1002,9 @@ export const register: Register = (on, options) => {
   })
 
   on('tool.call', { tool: TOOL }, async ($, e) => {
+    // The flow is the main session's: a call from a worker's loop carries its
+    // agentId and changes nothing, or a worker could rename, finish or reset it.
+    if (e.agentId) return { result: 'ignored: only the main session reports the flow' }
     const input = e as unknown as ProgressInput
     const prev = await read($, flow)
     if (isNewFlow(prev, input) && input.title !== undefined) {
@@ -997,29 +1023,33 @@ export const register: Register = (on, options) => {
     const input = e as unknown as { done?: number; total?: number; note?: string }
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
-    await update($, agents, list =>
-      list.map(a => {
+    // Set on every run of the updater, which may run again on a conflict.
+    let isMatched = false
+    await update($, agents, list => {
+      isMatched = list.some(a => a.agentId === agentId)
+      return list.map(a => {
         if (a.agentId !== agentId) return a
         const total = Math.max(0, Math.round(input.total ?? a.stepTotal ?? 0))
         const done = Math.max(0, Math.round(input.done ?? a.stepDone ?? 0))
         return { ...a, stepTotal: total, stepDone: total ? Math.min(total, done) : done, stepNote: input.note?.trim() || undefined }
-      }),
-    )
-    return { result: 'ok' }
+      })
+    })
+    return { result: isMatched ? 'ok' : `ignored: no panel row for agent ${agentId}` }
   })
 
   // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
-    const type = String(e.subagent_type ?? '')
-    if (!isSavvy(type)) return next(e)
-
-    // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
-    await update($, flow, prev => {
-      const base = prev && !prev.isFinished ? { ...blank(), ...prev } : blank()
-      return { ...base, phase: base.phase === 'plan' ? 'delegate' : base.phase }
-    })
-    await syncRunning($)
-    return next(e)
+    if (isSavvy(String(e.subagent_type ?? ''))) {
+      // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
+      await update($, flow, prev => {
+        const base = prev && !prev.isFinished ? { ...blank(), ...prev } : blank()
+        return { ...base, phase: base.phase === 'plan' ? 'delegate' : base.phase }
+      })
+      await syncRunning($)
+    }
+    const answered = await next(e)
+    await adoptAgentId($, e.tool_use_id, answered.result)
+    return answered
   })
 
   on('agent.spawn', async ($, e, next) => {
@@ -1082,11 +1112,12 @@ export const register: Register = (on, options) => {
                 (usage.cache_creation_input_tokens || 0) +
                 (usage.output_tokens || 0),
               contextMax: windowOf(model),
+              // Cache reads are the same context read again on every step: summed,
+              // they would count it once per step. They stay in the context and the cost.
               tokens:
                 a.tokens +
                 (usage.input_tokens || 0) +
                 (usage.output_tokens || 0) +
-                (usage.cache_read_input_tokens || 0) +
                 (usage.cache_creation_input_tokens || 0),
               costUsd: a.costUsd + costOf(model, usage),
               steps: a.steps + 1,
@@ -1113,11 +1144,7 @@ export const register: Register = (on, options) => {
             ...(fallback && e.usage
               ? {
                   model: e.usage.model || a.model,
-                  tokens:
-                    e.usage.input_tokens +
-                    e.usage.output_tokens +
-                    e.usage.cache_read_input_tokens +
-                    e.usage.cache_creation_input_tokens,
+                  tokens: e.usage.input_tokens + e.usage.output_tokens + e.usage.cache_creation_input_tokens,
                   costUsd: costOf(e.usage.model || a.model, e.usage),
                 }
               : {}),
@@ -1368,12 +1395,16 @@ export const register: Register = (on, options) => {
 
     if ('Svg' in ui) {
       const { Svg } = ui
-      // About 8 CSS px per reported column; the rest is the count, the dismiss
-      // and their gaps. No floor above the slot: a row wider than it would wrap.
+      // About 8 CSS px per reported column: the width the row is drawn at. The
+      // guess can run wider than the slot, so the Svg takes no size of its own:
+      // its box shrinks to what the count and the dismiss leave, and the drawing
+      // scales down to it by its viewBox.
       const width = Math.max(180, Math.min(1600, (e.props.bodyColumns || 100) * 8 - 96))
       return (
         <Box flexDirection="row" alignItems="center" gap={1}>
-          <Svg source={rowSvg(f, width, active)} alt={`${f.title}: ${label(f, active)}, ${percent}`} width={width} height={H} />
+          <Box flexGrow={1} flexShrink={1} minWidth={0}>
+            <Svg source={rowSvg(f, width, active)} alt={`${f.title}: ${label(f, active)}, ${percent}`} />
+          </Box>
           {crewButton}
           {dismiss}
         </Box>

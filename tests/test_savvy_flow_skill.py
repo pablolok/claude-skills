@@ -109,6 +109,13 @@ class TestWorkers(unittest.TestCase):
         self.assertIn("`-s read-only`", body)
         self.assertIn("`codex exec resume <session id> -o <last.md> - < <prompt> > <log> 2>&1`", body)
 
+    def test_every_worker_closes_its_step_count_before_reporting(self) -> None:
+        # The report itself is rarely reported as a step: without a closing call a finished worker stays at 5/7.
+        for name in WORKERS:
+            with self.subTest(worker=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn("Before your final report, make one last call with `done` equal to `total`", body)
+
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default
         # entry; declaring them too would register each worker twice, and an own manifest would conflict with it.
