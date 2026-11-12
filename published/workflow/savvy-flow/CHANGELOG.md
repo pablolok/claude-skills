@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.14.0] - 2026-11-12
+- Routing by capability: references/routing.md rates each family on the capabilities a task depends on (reasoning, repository work, interface design, writing, vision, constraint retention, agentic execution, cost), with dated sources, eleven routing rules and an Observed-in-use log the close of a flow adds to
+
+
 ## [1.13.1] - 2026-11-12
 - All four Codex relays report the model slug and effort resolved in step 4 to the agents panel before running Codex (needs savvy-progress 1.11.0)
 

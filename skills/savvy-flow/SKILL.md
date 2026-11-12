@@ -147,6 +147,10 @@ Heuristics:
 - Heavy vs Careful is about the kind of difficulty, not the amount: insight needed → Heavy; thoroughness needed → Careful. A task that needs both is two tasks: Heavy investigates and produces a precise brief, Careful implements it.
 - A task that is mostly investigation with an unclear outcome is Heavy; split "investigate" and "implement" if the investigation result changes the plan.
 - Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows: to `savvy-fable`, on the user's explicit request.
+- The tier sets the difficulty; **the capability the task depends on picks the family** when two could take it
+  (narrative text, visible polish, terminal-heavy work, accumulating constraints, a second opinion's direction):
+  `references/routing.md`, read when planning. At the close of a flow, add what this flow showed about a family to
+  its "Observed in use".
 
 ### The Codex tier
 
