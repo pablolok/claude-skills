@@ -40,6 +40,12 @@ reuse audit, fail-fast inputs, no warning suppression); the items below make it 
 7. **XML documentation** (`///`) on public members.
 8. **Domain modeling in C#.** Prefer enums / strongly-typed named abstractions over raw numeric or
    string codes for finite states, categories, statuses, modes, results.
+9. **Composite format braces.** `FormattableString.Invariant($"...")` and `string.Format` parse their composite
+   format at run time. There, `}}` straight after a format specifier is read as part of that specifier:
+   `{x:F1}}}` formats `x` with `"F1}"` and prints `F1}`, not the number followed by `}`. Close the brace outside
+   the item (for example a separate `"}"` or a `$"{x:F1}" + "}"`), or use a plain interpolated string, which the
+   compiler parses itself. When code writes JSON or another brace-delimited format, check its output by parsing it
+   back.
 
 ## Quality gates (C#)
 
