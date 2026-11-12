@@ -1,6 +1,6 @@
 // Backlog dashboard — the page. Reads /api/board, /api/tree and /api/file; draws the views from them; holds no data of
 // its own beyond what it last fetched. The register's words are shown as written; only the page's own labels are
-// translated (by the browser's language).
+// translated: English unless the reader picked Italian with the header's language button (kept in this browser).
 "use strict";
 
 // ─── words ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -22,6 +22,7 @@ const WORDS = {
     showAll: (n) => `Show all ${n}`, nothingPending: "Nothing waiting.", nothing: "Nothing here.",
     offline: "The dashboard server is not answering.", ofTotal: (a, b) => `${a} of ${b}`,
     noEntries: "no entries yet", noPhases: "no phases declared",
+    otherLanguage: "Italiano", switchLanguage: "Show the dashboard in Italian",
   },
   it: {
     overview: "Panoramica", entries: "Voci", docs: "Documenti", activity: "Attività",
@@ -40,10 +41,31 @@ const WORDS = {
     showAll: (n) => `Mostra tutte (${n})`, nothingPending: "Niente in attesa.", nothing: "Niente qui.",
     offline: "Il server della dashboard non risponde.", ofTotal: (a, b) => `${a} su ${b}`,
     noEntries: "nessuna voce ancora", noPhases: "nessuna fase dichiarata",
+    otherLanguage: "English", switchLanguage: "Mostra la dashboard in inglese",
   },
 };
-const LANG = (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
+/** Where this browser keeps the reader's language pick. */
+const LANG_KEY = "backlog-dashboard.lang";
+/** The page's language: English unless the reader picked Italian. Never guessed from the browser's language. */
+function pickedLanguage() {
+  try {
+    return localStorage.getItem(LANG_KEY) === "it" ? "it" : "en";
+  } catch {
+    return "en";
+  }
+}
+const LANG = pickedLanguage();
 const T = WORDS[LANG];
+
+/** Switch to the other language: keep the pick, then reload, so every label and date is drawn in it from the start. */
+function switchLanguage() {
+  try {
+    localStorage.setItem(LANG_KEY, LANG === "it" ? "en" : "it");
+  } catch {
+    return; // nowhere to keep it: the page stays as it is rather than flip back on the next load
+  }
+  location.reload();
+}
 
 /** How often the page asks whether the register changed. */
 const POLL_MS = 5000;
@@ -488,6 +510,11 @@ document.addEventListener("click", (ev) => {
 });
 (async () => {
   document.documentElement.lang = LANG;
+  const language = $("#language");
+  language.textContent = T.otherLanguage;
+  language.title = T.switchLanguage;
+  language.lang = LANG === "it" ? "en" : "it";
+  language.addEventListener("click", switchLanguage);
   await Store.refresh();
   header();
   await render();

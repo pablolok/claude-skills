@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.12.0] - 2026-11-12
+- Dashboard language: English by default, never guessed from the locale; Italian on request — the pane's l key (kept in the new language plugin option), the page's header button (kept by the browser). A pane the plugin reloaded under reads the register again
+
+
 ## [1.11.0] - 2026-11-07
 - Dashboard: con 0 su 0 mostra «—» invece di 0%, le fasi delle voci chiuse restano contate (chiudere una voce non abbassa più la quota); nuovo controllo phase-tables per il lavoro in corso a più passi senza tabella delle fasi
 

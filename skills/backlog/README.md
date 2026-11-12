@@ -177,6 +177,10 @@ tab). Type `/backlog-dashboard`: a pane opens beside the transcript (a wide full
 | `1`–`6` | Overview · In progress · Next · To verify · Documents · Activity |
 | Tab / ↑ ↓, Enter | move between rows, open the focused one (an entry, a document, a link) |
 | `b`, `r`, Esc | back, refresh (it also refreshes itself every minute while open), close |
+| `l` | switch between English and Italian; the pick is kept in the plugin's `language` option |
+
+The pane speaks English unless the plugin's `language` option (`en` or `it`, in `/config`) says Italian; it never
+guesses from the system locale.
 
 The hooks module has no Node APIs: it runs `scripts/dashboard.mjs --json --root <session folder>` and draws the
 snapshot, and reads documents with `$.fs.read`. Links inside a document are pressable where the terminal reports
@@ -198,7 +202,8 @@ node <skill>/scripts/dashboard.mjs [--port N] [--no-open]
 
 A page on `http://127.0.0.1:4317/` (a free port if that one is taken; loopback only). It needs only Node; the page
 loads `marked`, `DOMPurify` and `mermaid` from jsDelivr to render markdown and its fenced `mermaid` diagrams (offline,
-documents show as plain text and a diagram as its source). Its views:
+documents show as plain text and a diagram as its source). It speaks English; the header's language button switches it
+to Italian and back, and this browser keeps the pick. Its views:
 
 - **Overview** — entries closed over all, phases done over all phases (dropped ones left out), in progress, not
   started, blocked, pending checks; the entries in progress (their Status note, phase bar, current phase, last

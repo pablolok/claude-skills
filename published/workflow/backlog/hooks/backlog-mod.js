@@ -4,12 +4,17 @@
 // `scripts/dashboard.mjs --json` (the same board the web page draws) and draws the snapshot it prints. Documents are
 // read with `$.fs.read`. Nothing is stored: every open and every refresh asks the register and git again.
 //
-// Keys while the pane has focus: 1-6 switch view, r refreshes, b goes back, Tab/arrows move between rows, Enter
-// opens the focused row, Esc closes. A phase (in the working-on-now card and on an entry's page) opens its detail in
+// The pane speaks English unless the plugin's `language` option says Italian; it never guesses from the locale. `l`
+// switches between the two and keeps the pick in the option.
+//
+// Keys while the pane has focus: 1-6 switch view, r refreshes, l switches language, b goes back, Tab/arrows move
+// between rows, Enter opens the focused row, Esc closes. A phase (in the working-on-now card and on an entry's page) opens its detail in
 // place: what it is, its state and the whole note of its state cell.
 
 const PANE = 'backlog-dashboard'
 const COMMAND = 'backlog-dashboard'
+/** The plugin option that keeps the pane's language. */
+const LANGUAGE_OPTION = 'backlog.language'
 /** How long the snapshot script may take: git log and every open entry's docs on a large register. */
 const LOAD_TIMEOUT_MS = 60000
 /** How long the diagrams of one document may take: a real browser draws each one the first time. */
@@ -41,7 +46,7 @@ const STATUS_COLOR = { 'in-progress': 'warning', blocked: 'error', open: 'subtle
 const WORDS = {
   en: {
     tabs: ['Overview', 'In progress', 'Next', 'To verify', 'Documents', 'Activity'],
-    refresh: 'Refresh', back: 'Back', loading: 'Reading the register…', updated: 'updated',
+    refresh: 'Refresh', back: 'Back', loading: 'Reading the register…', updated: 'updated', otherLanguage: 'Italiano',
     closed: 'Entries closed', phases: 'Phases done', of: (a, b) => `${a} of ${b}`,
     noEntries: 'no entries yet', noPhases: 'no phases declared',
     counts: (t) => `${t.inProgress} in progress · ${t.notStarted} not started · ${t.blocked} blocked · ${t.pending} to verify`,
@@ -69,7 +74,7 @@ const WORDS = {
   },
   it: {
     tabs: ['Panoramica', 'In corso', 'Prossimi', 'Da verificare', 'Documenti', 'Attività'],
-    refresh: 'Aggiorna', back: 'Indietro', loading: 'Leggo il registro…', updated: 'aggiornato',
+    refresh: 'Aggiorna', back: 'Indietro', loading: 'Leggo il registro…', updated: 'aggiornato', otherLanguage: 'English',
     closed: 'Voci chiuse', phases: 'Fasi completate', of: (a, b) => `${a} su ${b}`,
     noEntries: 'nessuna voce ancora', noPhases: 'nessuna fase dichiarata',
     counts: (t) => `${t.inProgress} in corso · ${t.notStarted} da iniziare · ${t.blocked} bloccate · ${t.pending} da verificare`,
@@ -97,17 +102,21 @@ const WORDS = {
   },
 }
 
-/** The language of the machine's locale, among those the mod has words for. */
-function language() {
-  try {
-    const locale = Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase()
-    return locale.startsWith('it') ? 'it' : 'en'
-  } catch {
-    return 'en'
-  }
+// The pane's language: English unless the option (or a pick in the pane) says Italian. Never read from the locale.
+let LANG = 'en'
+let T = WORDS.en
+function setLanguage(value) {
+  LANG = value === 'it' ? 'it' : 'en'
+  T = WORDS[LANG]
 }
-const LANG = language()
-const T = WORDS[LANG]
+
+/** Switch the pane to the other language at once, and keep the pick in the option for the next sessions. */
+async function switchLanguage($) {
+  setLanguage(LANG === 'it' ? 'en' : 'it')
+  $.ui.invalidate('ui.render')
+  // Not kept (a refused write) still leaves the pane in the picked language until the next load.
+  await $.config.set({ key: LANGUAGE_OPTION, value: LANG }).catch(() => undefined)
+}
 
 // ─── what the pane shows ─────────────────────────────────────────────────────────────────────────────────────────
 let snapshot = null // { root, board, tree } from dashboard.mjs --json
@@ -821,7 +830,10 @@ function header($, el, width, now) {
         $.ui.invalidate('ui.render')
       },
     }))
-  const actions = [el.Button({ key: 'refresh', label: T.refresh, hotkey: 'r', plain: true, onPress: () => load($) })]
+  const actions = [
+    el.Button({ key: 'refresh', label: T.refresh, hotkey: 'r', plain: true, onPress: () => load($) }),
+    el.Button({ key: 'language', label: T.otherLanguage, hotkey: 'l', plain: true, onPress: () => switchLanguage($) }),
+  ]
   if (!active) actions.unshift(el.Button({ key: 'back', label: T.back, hotkey: 'b', plain: true, onPress: () => goBack($) }))
   const project = snapshot ? `${snapshot.board.project.name} · ${snapshot.board.project.backlog}` : ''
   const when = loading ? T.loading : loadedAt ? `${T.updated} ${ago(new Date(loadedAt).toISOString(), now)}` : ''
@@ -850,7 +862,8 @@ function viewBody($, el, width, now) {
 }
 
 // ─── hooks ───────────────────────────────────────────────────────────────────────────────────────────────────────
-export function register(on) {
+export function register(on, options) {
+  setLanguage(options?.language)
   on('session.start', async ($, e, next) => {
     $.clock.every(REFRESH_MS, () => {
       if (isOpen) load($)
@@ -881,6 +894,12 @@ export function register(on) {
 
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANE) return next(e)
+    // A pane drawn with nothing read and nothing reading (the plugin reloaded under it, as a saved option reloads it)
+    // reads the register again rather than wait on a load nobody started.
+    if (!snapshot && !missing && !failure && !loading) {
+      isOpen = true
+      load($)
+    }
     const el = $.ui.resolve(e)
     const width = Math.max(30, e.props.bodyColumns ?? 80)
     const now = await $.clock.now()

@@ -77,6 +77,11 @@ h1, h2, h3 { margin: 0; line-height: 1.25; }
 .tabs a:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
 .tabs a.on { background: var(--accent-soft); color: var(--accent); }
 .refresh { margin: 0 0 0 auto; }
+.lang {
+  padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--muted); font-family: inherit; cursor: pointer;
+}
+.lang:hover { background: var(--surface-2); color: var(--text); }
 
 .view { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
 

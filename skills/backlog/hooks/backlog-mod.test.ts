@@ -1,6 +1,6 @@
 // Tests of the backlog mod: the command opens the pane and reads the register through the skill's own script; the
-// pane's rows open an entry, its document, and filter the documents. Labels depend on the locale, so the checks
-// address elements by their keys.
+// pane's rows open an entry, its document, and filter the documents. Labels follow the `language` option (English
+// unless it says Italian), so most checks address elements by their keys.
 import { expect, mock, test } from 'claude-code/testing'
 
 const SNAPSHOT = {
@@ -322,4 +322,54 @@ test('a project with no register shows where one would start, not an error', asy
   const colors = (await ui.findAll({ type: 'Text' })).map((t) => t.props.color)
   expect(colors.length).toBeGreaterThan(0)
   expect(colors).not.toContain('error')
+})
+
+/** `stubs`, plus the option writes the pane makes, in order. */
+function languageStubs(on) {
+  const saved: { key: string; value: unknown }[] = []
+  stubs(on, [])
+  on('config.set', ($, e) => {
+    saved.push({ key: e.key, value: e.value })
+    return { value: e.value }
+  })
+  return saved
+}
+
+test('with the language option on it, the pane speaks Italian and offers English', { options: { language: 'it' } }, async ($, on) => {
+  languageStubs(on)
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  expect((await ui.find({ key: 'tab-overview' })).props.label).toBe('Panoramica')
+  expect((await ui.find({ key: 'language' })).props.label).toBe('English')
+})
+
+test('the language key switches the pane at once and keeps the pick in the option', async ($, on) => {
+  const saved = languageStubs(on)
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  await ui.press({ key: 'language' })
+  expect((await ui.find({ key: 'tab-overview' })).props.label).toBe('Panoramica')
+  expect(await ui.find({ key: 'entry-BKLG-002' })).toBeDefined()
+  await ui.press({ key: 'language' })
+  expect((await ui.find({ key: 'tab-overview' })).props.label).toBe('Overview')
+  expect(saved).toEqual([{ key: 'backlog.language', value: 'it' }, { key: 'backlog.language', value: 'en' }])
+})
+
+test('with no option the pane speaks English, whatever the locale, and offers Italian', async ($, on) => {
+  languageStubs(on)
+  await $.command.run({ command: 'backlog-dashboard', args: '' })
+  const ui = await $.ui.mount(PANE)
+  expect((await ui.find({ key: 'tab-overview' })).props.label).toBe('Overview')
+  expect((await ui.find({ key: 'language' })).props.label).toBe('Italiano')
+})
+
+test('a pane drawn before anything was read (the plugin reloaded under it) reads the register by itself', async ($, on) => {
+  const runs: string[][] = []
+  stubs(on, runs)
+  const ui = await $.ui.mount(PANE)
+  await ui.find({ key: 'tab-overview' })
+  await ui.unmount()
+  const again = await $.ui.mount(PANE)
+  expect(await again.find({ key: 'entry-BKLG-002' })).toBeDefined()
+  expect(runs.length).toBe(1)
 })
