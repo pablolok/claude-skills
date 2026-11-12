@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.2] - 2026-11-12
+- A planned Claude alias takes the newest version seen in the session, since an alias resolves to its family's newest, so a run pinned to an older model never relabels it
+
+
 ## [1.11.1] - 2026-11-12
 - A planned Codex row names the predicted model but no effort, since the user's effort for Codex is in the brief the bar never sees; a cache re-read that finds the same models no longer redraws the idle panel every minute; the cache path tests pass on every platform
 

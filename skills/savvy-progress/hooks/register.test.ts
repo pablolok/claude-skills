@@ -1241,8 +1241,10 @@ test('a Claude planned task keeps its bare alias until a resolved run teaches it
   expect(plannedModel(taskOf('heavy'), { codex: {}, claude: learnClaudeModels({}, ['opus']) })).toBe('Opus · xhigh')
 })
 
-test('the first resolved Claude model fixes its family\'s planned version', () => {
-  expect(learnClaudeModels({ opus: 'Opus 5.5' }, ['claude-opus-6-0'])).toEqual({ opus: 'Opus 5.5' })
+test('the newest resolved Claude model names its family\'s planned version, whatever order the runs came in', () => {
+  expect(learnClaudeModels({ opus: 'Opus 5.5' }, ['claude-opus-6-0'])).toEqual({ opus: 'Opus 6.0' })
+  expect(learnClaudeModels({}, ['claude-opus-4-7', 'claude-opus-5-5', 'claude-opus-4-1-20250805'])).toEqual({ opus: 'Opus 5.5' })
+  expect(learnClaudeModels({}, ['claude-sonnet-4-5-20250929', 'claude-sonnet-5'])).toEqual({ sonnet: 'Sonnet 5' })
 })
 
 test('a planned explicit Claude alias uses its learned version', () => {

@@ -29,7 +29,8 @@ the mod needs.
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
   them.
   Claude runs name the resolved model the engine reports (for example `Opus 5.5 · xhigh`); a planned alias learns
-  its version from the first resolved run of that family in the session and keeps the bare alias until then. The
+  its version from the newest resolved run of that family in the session (an alias resolves to the newest, so a run
+  pinned to an older model never relabels it) and keeps the bare alias until then. The
   engine exposes no API to resolve an arbitrary alias. Codex relays declare their exact model slug and reasoning
   effort through `step` (for example `Codex · Sol 6.1 · high`). Planned Codex tasks and runs awaiting that declaration
   predict the relay's choice from `~/.codex/models_cache.json` under the user's home: the visible (`list`) model

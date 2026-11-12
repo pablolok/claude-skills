@@ -653,14 +653,26 @@ const modelName = (id: string): string => {
   return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? '.' + minor : ''}`
 }
 
+// A learned label's version as numbers (`Opus 5.5` → [5, 5]), to tell the newer of two apart.
+const versionOf = (label: string): [number, number] => {
+  const m = /(\d+)(?:\.(\d+))?$/.exec(label)
+  return [Number(m?.[1] ?? 0), Number(m?.[2] ?? 0)]
+}
+const isNewer = (a: string, b: string): boolean => {
+  const [x, y] = [versionOf(a), versionOf(b)]
+  return x[0] !== y[0] ? x[0] > y[0] : x[1] > y[1]
+}
+
 // The engine exposes resolved run ids, but no API to resolve an arbitrary alias.
-// The first concrete id for a family fixes its planned label for this session.
+// An alias resolves to its family's newest model, so the newest id seen for a family
+// names its planned label: a run pinned to an older one never relabels the alias.
 export const learnClaudeModels = (known: Record<string, string>, ids: string[]): Record<string, string> => {
   const learned = { ...known }
   for (const id of ids) {
     const family = /(?:^|\b)(fable|mythos|opus|sonnet|haiku)-\d+/i.exec(id)?.[1].toLowerCase()
     const alias = family === 'mythos' ? 'fable' : family
-    if (alias && !learned[alias]) learned[alias] = modelName(id).replace(/^Mythos /, 'Fable ')
+    const label = alias ? modelName(id).replace(/^Mythos /, 'Fable ') : ''
+    if (alias && (!learned[alias] || isNewer(label, learned[alias]))) learned[alias] = label
   }
   return learned
 }

@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import json
 import pathlib
+import shutil
 import struct
+import subprocess
 import sys
 import unittest
 
@@ -136,6 +138,30 @@ class TestLicence(unittest.TestCase):
                 self.assertIn(COPYRIGHT, licence)
                 self.assertIn(PERMISSION, licence)
                 self.assertIn(ATTRIBUTION, " ".join(_read(folder / "README.md").split()))
+
+
+
+@unittest.skipUnless(shutil.which("claude"), "the Claude Code CLI runs a mod's checks and tests")
+class TestModRuns(unittest.TestCase):
+    """The published mod validates and its own tests pass: the checks above read its text, these run it."""
+
+    def _claude(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(["claude", "plugin", *args], cwd=PUBLISHED, capture_output=True, text=True,
+                              encoding="utf-8", check=False)
+
+    def test_the_mod_validates(self) -> None:
+        result = self._claude("validate", ".")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_the_mod_tests_pass(self) -> None:
+        result = self._claude("test")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertRegex(result.stdout + result.stderr, r"\b[1-9]\d* pass")
+        self.assertNotRegex(result.stdout + result.stderr, r"\b[1-9]\d* fail")
+
+    def test_nothing_claude_code_generates_is_published(self) -> None:
+        self.assertFalse((PUBLISHED / ".claude-plugin" / "types").exists(), "automate_publish skips the generated types")
+        self.assertFalse((PUBLISHED / "tsconfig.json").exists(), "automate_publish skips the generated tsconfig")
 
 
 if __name__ == "__main__":
