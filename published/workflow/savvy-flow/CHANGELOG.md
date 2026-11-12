@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.15.0] - 2026-11-12
+- Codex relays pipe codex exec --json through scripts/codex-status.mjs, a small status file per run (session, model, current action, tokens, plan usage) the agents panel reads; every worker's step note names its actual action
+
+
 ## [1.14.0] - 2026-11-12
 - Routing by capability: references/routing.md rates each family on the capabilities a task depends on (reasoning, repository work, interface design, writing, vision, constraint retention, agentic execution, cost), with dated sources, eleven routing rules and an Observed-in-use log the close of a flow adds to
 

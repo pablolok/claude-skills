@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { AgentInfo, EngineInterface, Register } from 'claude-code'
+import type { AgentInfo, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { AgentRun, Flow, ModelHints, Panel, Phase, PlannedTask } from '../types'
+import type { AgentRun, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanUsage, UsageReadings } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -20,6 +20,8 @@ const shown = atom({ plugin: 'savvy-progress', key: 'shown' } as const, null)
 const picking = atom({ plugin: 'savvy-progress', key: 'picking' } as const, 0)
 const EMPTY_MODELS: ModelHints = { codex: {}, claude: {} }
 const models = atom({ plugin: 'savvy-progress', key: 'models' } as const, EMPTY_MODELS)
+const EMPTY_USAGE: UsageReadings = { statuses: {} }
+const usageReadings = atom({ plugin: 'savvy-progress', key: 'usage' } as const, EMPTY_USAGE)
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
@@ -313,7 +315,8 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: shownModels(await read($, models)) }
+  const { cacheReadAt: _, statusMtimes: __, ...usage } = await read($, usageReadings)
+  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
 }
@@ -557,7 +560,7 @@ const CODEX_EFFORT: Record<string, string> = { luna: 'low', terra: 'medium', sol
 
 export const codexModelName = (slug: string): string => {
   const m = /^gpt-(\d+(?:\.\d+)*?)-(luna|terra|sol|astra)$/.exec(slug)
-  return m ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
+  return m?.[2] ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
 }
 
 // Same rule as the relays: the lowest priority among visible models of the family.
@@ -611,6 +614,157 @@ const PRICES: [RegExp, [number, number, number, number]][] = [
   [/haiku-5-5/, [0.1, 0.5, 0.01, 0.125]],
   [/haiku/, [1, 5, 0.1, 1.25]],
 ]
+
+// USD per million: input, output, cached input. Standard short-context estimates,
+// verified 2026-11-12 against https://developers.openai.com/api/docs/models and
+// https://developers.openai.com/api/docs/pricing (current family versions).
+// Older/future versions use their family's current rates; unknown families have no price.
+const GPT_PRICES: Record<string, [number, number, number]> = {
+  luna: [0.1, 0.5, 0.01],
+  terra: [1, 5, 0.05],
+  sol: [2, 10, 0.1],
+  astra: [10, 50, 1],
+}
+
+export const codexCostOf = (model: string, u: CodexTokens): number | undefined => {
+  const price = GPT_PRICES[model.toLowerCase().split('-').pop() ?? '']
+  if (!price) return undefined
+  const [i, o, r] = price
+  // Cached input is part of input; reasoning is already part of output.
+  return ((u.input_tokens - u.cached_input_tokens) * i + u.cached_input_tokens * r + u.output_tokens * o) / 1e6
+}
+
+const nonnegative = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0
+
+export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefined => {
+  const window = (kind: string) => {
+    const value = limits.find(l => l.kind === kind && nonnegative(l.percentUsed))
+    return value ? { percentUsed: value.percentUsed, ...(value.resetsAt ? { resetsAt: value.resetsAt } : {}) } : undefined
+  }
+  const fiveHour = window('five_hour'), week = window('seven_day')
+  return fiveHour || week ? { fiveHour, week } : undefined
+}
+
+const STATUS_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/
+const STATUS_MAX_BYTES = 16 * 1024
+const STATUS_POLL_MS = 3000
+const STATUS_STALE_MS = 15_000
+
+// The writer publishes only bounded fields. The panel never opens a Codex rollout.
+export const codexStatusFrom = (text: string): CodexStatus | undefined => {
+  try {
+    if (text.length > STATUS_MAX_BYTES) return undefined
+    const value = JSON.parse(text)
+    const u = value?.totalTokenUsage
+    if (value?.version !== 1 || !['running', 'done', 'failed'].includes(value.state) ||
+        !(value.sessionId === null || typeof value.sessionId === 'string' && value.sessionId.length <= 120) ||
+        !(value.model === null || typeof value.model === 'string' && value.model.length <= 120) ||
+        typeof value.action !== 'string' || [...value.action].length > 60 || !nonnegative(value.updatedAt) ||
+        !u || ![u.input_tokens, u.cached_input_tokens, u.output_tokens].every(nonnegative) ||
+        !(u.reasoning_output_tokens === null || nonnegative(u.reasoning_output_tokens)) ||
+        u.cached_input_tokens > u.input_tokens) return undefined
+    const window = (w: { used_percent?: unknown; window_minutes?: unknown; resets_at?: unknown } | undefined, minutes: number) =>
+      w?.window_minutes === minutes && nonnegative(w.used_percent) && nonnegative(w.resets_at) && Number.isFinite(new Date(w.resets_at * 1000).getTime())
+        ? { percentUsed: w.used_percent, resetsAt: new Date(w.resets_at * 1000).toISOString() } : undefined
+    const fiveHour = window(value.rateLimits?.primary, 300), week = window(value.rateLimits?.secondary, 10080)
+    return { version: 1, sessionId: value.sessionId, model: value.model, state: value.state, action: value.action,
+      totalTokenUsage: { input_tokens: u.input_tokens, cached_input_tokens: u.cached_input_tokens,
+        output_tokens: u.output_tokens, reasoning_output_tokens: u.reasoning_output_tokens },
+      rateLimits: fiveHour || week ? { fiveHour, week } : undefined, updatedAt: value.updatedAt }
+  } catch { return undefined }
+}
+
+export const codexRun = (a: AgentRun, usage: UsageReadings, at: number): AgentRun => {
+  if (!a.codexStatus) return a
+  const status = usage.statuses[a.codexStatus]
+  const relayStatus = a.relayStatus ?? a.status
+  const relayEndedAt = a.relayEndedAt ?? a.endedAt
+  const codexState = status?.state === 'running' && at - status.updatedAt > STATUS_STALE_MS ? undefined : status?.state
+  const state = codexState === 'running' ? 'running' : relayStatus === 'running' ? 'running'
+    : codexState === 'failed' ? 'failed' : relayStatus
+  return { ...a, relayStatus, relayEndedAt, status: state, codexState,
+    endedAt: state === 'running' ? undefined : relayEndedAt ?? at,
+    ...(status?.action ? { stepNote: status.action } : {}) }
+}
+
+async function syncCodexRuns($: EngineInterface): Promise<void> {
+  const usage = await read($, usageReadings)
+  const at = await $.clock.now()
+  await update($, agents, list => list.map(a => codexRun(a, usage, at)))
+  await syncRunning($)
+}
+
+async function refreshCodexUsage($: EngineInterface): Promise<void> {
+  const at = await $.clock.now()
+  const previous = await read($, usageReadings)
+  if (previous.cacheReadAt !== undefined && at - previous.cacheReadAt < STATUS_POLL_MS) return
+  await update($, usageReadings, prev => ({ ...prev, cacheReadAt: at }))
+  const statuses: UsageReadings['statuses'] = {}, statusMtimes: Record<string, number> = {}
+  let codex: PlanUsage | undefined
+  try {
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
+    if (home) {
+      const directory = `${home.replace(/[\\/]+$/, '')}/.codex/savvy-status`
+      const files = (await $.fs.list(directory)).filter(f => f.kind === 'file' && !f.isLink &&
+        f.name.endsWith('.json') && STATUS_NAME.test(f.name.slice(0, -5)) && f.size <= STATUS_MAX_BYTES)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name))
+      const wanted = new Set((await read($, agents)).map(a => a.codexStatus).filter(Boolean))
+      if (files[0]) wanted.add(files[0].name.slice(0, -5))
+      for (const file of files) {
+        const name = file.name.slice(0, -5)
+        if (!wanted.has(name)) continue
+        const cached = previous.statuses[name]
+        let status = cached
+        // Running files refresh every three seconds; finished files only on a changed mtime.
+        if (!cached || cached.state === 'running' || previous.statusMtimes?.[name] !== file.mtimeMs) {
+          try { status = codexStatusFrom(await $.fs.read(`${directory}/${file.name}`)) } catch { status = undefined }
+        }
+        if (status) { statuses[name] = status; statusMtimes[name] = file.mtimeMs }
+      }
+      const newest = files[0] && statuses[files[0].name.slice(0, -5)]
+      codex = newest ? newest.rateLimits : undefined
+    }
+  } catch { /* An absent status directory supplies no Codex line. */ }
+  await update($, usageReadings, prev => ({ ...prev, codex, statuses, statusMtimes }))
+  await syncCodexRuns($)
+}
+
+export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex'>, columns = Infinity): string => {
+  const family = (name: string, plan: PlanUsage | undefined, style: number) => {
+    if (!plan) return ''
+    const resetTime = (value?: PlanUsage['fiveHour']) => {
+      const reset = value?.resetsAt && new Date(value.resetsAt)
+      return reset && Number.isFinite(reset.getTime())
+        ? reset.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }) : ''
+    }
+    const window = (label: string, value?: PlanUsage['fiveHour']) => {
+      if (!value) return ''
+      const time = style === 0 && resetTime(value)
+      return `${label}${style >= 2 ? '' : ' '}${value.percentUsed}%${time ? ` ↻${time}` : ''}`
+    }
+    const time = style === 1 || style === 2 ? resetTime(plan.week ?? plan.fiveHour) : ''
+    return `${name} ${[window('5h', plan.fiveHour), window('7d', plan.week)].filter(Boolean).join(style >= 2 ? '·' : ' · ')}${time ? `${style === 1 ? ' ' : ''}↻${time}` : ''}`
+  }
+  const text = (style: number) => [family('Claude', usage.claude, style), family('Codex', usage.codex, style)].filter(Boolean).join(style >= 2 ? ' ' : '   ')
+  for (const style of [0, 1, 2]) if ([...text(style)].length <= columns) return text(style)
+  // At very narrow widths keep both percentages before reset times; the UI
+  // truncates the final fallback on one line instead of wrapping over the tiles.
+  return text(3)
+}
+
+const codexAccount = (a: AgentRun, usage: UsageReadings) => {
+  const status = a.codexStatus && usage.statuses[a.codexStatus]
+  return status ? { tokens: status.totalTokenUsage.input_tokens + status.totalTokenUsage.output_tokens,
+    cost: codexCostOf(status.model || a.codexModel || tierOf(a.type), status.totalTokenUsage) } : { tokens: undefined, cost: undefined }
+}
+
+const rowAccount = (a: AgentRun, usage: UsageReadings) => tierOf(a.type) in CODEX_WEARS
+  ? codexAccount(a, usage) : { tokens: a.contextTokens, cost: a.costUsd }
+
+const accountText = (a: AgentRun, usage: UsageReadings): string => {
+  const value = rowAccount(a, usage)
+  return `${value.tokens === undefined ? '—' : fmtTokens(value.tokens)} ≈${value.cost === undefined ? '—' : fmtCost(value.cost)}`
+}
 
 type Usage = {
   input_tokens: number
@@ -669,7 +823,7 @@ const isNewer = (a: string, b: string): boolean => {
 export const learnClaudeModels = (known: Record<string, string>, ids: string[]): Record<string, string> => {
   const learned = { ...known }
   for (const id of ids) {
-    const family = /(?:^|\b)(fable|mythos|opus|sonnet|haiku)-\d+/i.exec(id)?.[1].toLowerCase()
+    const family = /(?:^|\b)(fable|mythos|opus|sonnet|haiku)-\d+/i.exec(id)?.[1]?.toLowerCase()
     const alias = family === 'mythos' ? 'fable' : family
     const label = alias ? modelName(id).replace(/^Mythos /, 'Fable ') : ''
     if (alias && (!learned[alias] || isNewer(label, learned[alias]))) learned[alias] = label
@@ -742,13 +896,26 @@ const plannedOf = (f: Flow | null, list: AgentRun[]): Planned[] => {
   return (f.tasks ?? []).map((t, i) => ({ ...t, n: i + 1 })).filter(t => !started.has(norm(t.title)))
 }
 
-const totals = (list: AgentRun[], at: number) => {
-  const cost = list.reduce((s, a) => s + a.costUsd, 0)
-  const tokens = list.reduce((s, a) => s + a.tokens, 0)
+export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPTY_USAGE) => {
+  // Every engine request is Claude's, including the relay around Codex.
+  const claude = { cost: list.reduce((s, a) => s + a.costUsd, 0), tokens: list.reduce((s, a) => s + a.tokens, 0) }
+  const codex = { cost: 0, tokens: 0 }
+  const sessions = new Map<string, { tokens: number; cost?: number }>()
+  for (const a of list) {
+    const status = a.codexStatus && usage.statuses[a.codexStatus]
+    if (!(tierOf(a.type) in CODEX_WEARS) || !status || !status.sessionId) continue
+    const own = codexAccount(a, usage)
+    const previous = sessions.get(status.sessionId)
+    if (own.tokens !== undefined && (!previous || own.tokens >= previous.tokens)) sessions.set(status.sessionId, { tokens: own.tokens, cost: own.cost })
+  }
+  for (const own of sessions.values()) { codex.tokens += own.tokens; codex.cost += own.cost ?? 0 }
   const start = Math.min(...list.map(a => a.startedAt))
   const end = Math.max(...list.map(a => a.endedAt ?? Math.max(at, a.startedAt)))
-  return { cost, tokens, time: list.length ? end - start : 0 }
+  return { claude, codex, time: list.length ? end - start : 0 }
 }
+
+const familyCosts = (t: ReturnType<typeof totals>) => `Claude ${fmtCost(t.claude.cost)} · Codex ${fmtCost(t.codex.cost)}`
+const familyTokens = (t: ReturnType<typeof totals>) => `Claude ${fmtTokens(t.claude.tokens)} · Codex ${fmtTokens(t.codex.tokens)}`
 
 // --- desktop drawings: each row is one SVG, as the band above the prompt is.
 
@@ -891,20 +1058,21 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
   const gap = 6
   const tw = (W - gap * 2) / 3
   const top = title ? 28 : 0
-  const tile = (i: number, k: string, v: string) =>
-    `<rect class="tile" x="${i * (tw + gap)}" y="${top}" width="${tw}" height="40" rx="8"/>
+  const tile = (i: number, k: string, v: string, second = '') =>
+    `<rect class="tile" x="${i * (tw + gap)}" y="${top}" width="${tw}" height="56" rx="8"/>
 <text class="s" x="${i * (tw + gap) + 9}" y="${top + 16}" font-family="${FONT}" font-size="11">${k}</text>
-<text class="t" x="${i * (tw + gap) + 9}" y="${top + 33}" font-family="${FONT}" font-size="15" font-weight="600" font-variant-numeric="tabular-nums">${v}</text>`
+<text class="t" x="${i * (tw + gap) + 9}" y="${top + 33}" font-family="${FONT}" font-size="11" font-weight="600" font-variant-numeric="tabular-nums">${xml(fitText(v, 11, tw - 18))}</text>
+${second ? `<text class="t" x="${i * (tw + gap) + 9}" y="${top + 48}" font-family="${FONT}" font-size="11">${xml(fitText(second, 11, tw - 18))}</text>` : ''}`
   return svg(
     W,
     headerHeight(title),
     `${weather}${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitted)}</text>` : ''}
 ${title ? (dress?.ornament(W) ?? '') : ''}
-${tile(0, s.cost, '≈' + fmtCost(t.cost))}${tile(1, s.tokens, fmtTokens(t.tokens))}${tile(2, s.time, fmtTime(t.time))}`,
+${tile(0, s.cost + ' ≈', `Claude ${fmtCost(t.claude.cost)}`, `Codex ${fmtCost(t.codex.cost)}`)}${tile(1, s.tokens, `Claude ${fmtTokens(t.claude.tokens)}`, `Codex ${fmtTokens(t.codex.tokens)}`)}${tile(2, s.time, fmtTime(t.time))}`,
   )
 }
 
-const headerHeight = (title: string): number => (title ? 72 : 44)
+const headerHeight = (title: string): number => (title ? 88 : 60)
 
 // The task's own progress when the worker reports steps; a finished run is full.
 // A worker's own count as its row reads it: the steps it left undone stand beside
@@ -912,15 +1080,15 @@ const headerHeight = (title: string): number => (title ? 72 : 44)
 const stepCount = (a: AgentRun): string =>
   a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${a.stepSkipped === 1 ? tr().skippedOne : tr().skipped}` : ''}` : ''
 
-const progressOf = (a: AgentRun): number | null => {
-  if (a.status === 'done') return 1
-  if (a.stepTotal) return Math.min(1, (a.stepDone ?? 0) / a.stepTotal)
-  return null
+export const progressOf = (a: AgentRun): number | null => {
+  if (a.stepTotal) return Math.min(a.codexState === 'running' ? 0.99 : 1, (a.stepDone ?? 0) / a.stepTotal)
+  if (a.codexState === 'running') return 0
+  return a.status === 'done' ? 1 : null
 }
 
 const ctxOf = (a: AgentRun): number => (a.contextMax ? Math.min(100, Math.round((a.contextTokens / a.contextMax) * 100)) : 0)
 
-const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints): string => {
+const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints, usage: UsageReadings): string => {
   const s = tr()
   const tier = tierOf(a.type)
   const color = colorOf(tier)
@@ -931,8 +1099,8 @@ const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints): string
   if (a.status === 'failed') meta.push(s.failed)
   const barW = textW
   const progress = progressOf(a)
-  const stats = `ctx ${ctx}% · ${fmtTokens(a.contextTokens)}  ≈${fmtCost(a.costUsd)}  ${fmtTime(elapsed(a, at))}`
-  const steps = a.stepTotal ? `${stepCount(a)}${a.stepNote ? ' · ' + a.stepNote : ''}` : ''
+  const stats = `ctx ${ctx}% · ${accountText(a, usage)}  ${fmtTime(elapsed(a, at))}`
+  const steps = [a.stepTotal ? stepCount(a) : '', a.stepNote].filter(Boolean).join(' · ')
   const stepsW = Math.max(0, barW - textWidth(stats, 11) - 12)
   // Without reported steps the bar falls back to the context, drawn grey.
   const fillW = Math.round(barW * (progress ?? ctx / 100))
@@ -982,9 +1150,10 @@ const compactSvg = (W: number, list: AgentRun[], planned: Planned[], t: ReturnTy
   const x = shown.length * 36 + (more ? 4 : 0)
   return svg(
     W,
-    32,
+    68,
     `${body}${more ? `<text class="s" x="${x}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : ''}
-<text class="s" x="${W}" y="21" text-anchor="end" font-family="${FONT}" font-size="12" font-variant-numeric="tabular-nums">≈${fmtCost(t.cost)} · ${fmtTokens(t.tokens)} · ${fmtTime(t.time)}</text>`,
+<text class="s" x="0" y="48" font-family="${FONT}" font-size="11">≈ ${xml(familyCosts(t))}</text>
+<text class="s" x="0" y="64" font-family="${FONT}" font-size="11">${xml(familyTokens(t))} · ${fmtTime(t.time)}</text>`,
   )
 }
 
@@ -1036,16 +1205,16 @@ const ENDED: Partial<Record<AgentInfo['status'], AgentRun['status']>> = {
 }
 
 // `listedAt` is when the list was asked for: a run started since may not be in it yet.
-const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number): AgentRun[] => {
+const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usage: UsageReadings): AgentRun[] => {
   const statusOf = new Map(infos.map((i): [string, AgentInfo['status']] => [i.id, i.status]))
   return list.map((a): AgentRun => {
-    if (a.status !== 'running') return a
-    if (!a.agentId) return { ...a, status: 'failed', endedAt: listedAt }
-    const listed = statusOf.get(a.agentId)
-    // A workflow's agents are never listed: only their turn.complete ends them.
-    if (listed === undefined) return a.isWorkflow || a.startedAt >= listedAt ? a : { ...a, status: 'failed', endedAt: listedAt }
-    const ended = ENDED[listed]
-    return ended ? { ...a, status: ended, endedAt: listedAt } : a
+    let relay = a.codexStatus ? { ...a, status: a.relayStatus ?? a.status, endedAt: a.relayEndedAt ?? a.endedAt } : a
+    if (relay.status === 'running') {
+      const listed = relay.agentId && statusOf.get(relay.agentId)
+      if (!relay.agentId || (listed === undefined && !relay.isWorkflow && relay.startedAt < listedAt)) relay = { ...relay, status: 'failed', endedAt: listedAt }
+      else if (listed && ENDED[listed]) relay = { ...relay, status: ENDED[listed]!, endedAt: listedAt }
+    }
+    return a.codexStatus ? codexRun({ ...relay, relayStatus: relay.status, relayEndedAt: relay.endedAt }, usage, listedAt) : relay
   })
 }
 
@@ -1093,7 +1262,8 @@ async function reconcile($: EngineInterface): Promise<void> {
   const listedAt = await $.clock.now()
   lastListAt = listedAt
   const infos = await $.agent.list()
-  await update($, agents, list => reconciled(list, infos, listedAt))
+  const usage = await read($, usageReadings)
+  await update($, agents, list => reconciled(list, infos, listedAt, usage))
   await syncRunning($)
 }
 
@@ -1156,24 +1326,25 @@ export const register: Register = (on, options) => {
       description:
         'For savvy-flow workers: report progress on your own task to the agents panel. ' +
         'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
-        'call it again as each step finishes, and close with `done` equal to `total` and `skipped` for the steps left undone. ' +
-        'Codex relays also declare the exact `model` slug and `effort` they pass to Codex. ' +
+        'call it again as each step finishes with a note naming the actual action (reading CreatureProbe.cs, running EditMode tests), never working; close with `done` equal to `total` and `skipped` for the steps left undone. ' +
+        'Codex relays also declare their exact `model` slug, `effort`, and a unique `codexStatus` filename stem before piping Codex JSON through the status writer (declarations need no done). ' +
         'Cheap and silent: it only draws a bar.',
       inputSchema: {
         type: 'object',
         properties: {
           done: { type: 'integer', minimum: 0, description: 'Steps finished so far.' },
           total: { type: 'integer', minimum: 1, description: 'Steps planned; may change if the plan changes.' },
-          note: { type: 'string', description: 'The step in progress, a few words.' },
+          note: { type: 'string', description: 'The concrete action: reading CreatureProbe.cs or running EditMode tests; never working.' },
           model: { type: 'string', description: 'Codex relays: the exact model slug passed to codex exec (for example gpt-6.1-sol).' },
           effort: { type: 'string', description: 'Codex relays: the reasoning effort passed to codex exec.' },
+          codexStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Codex relays: the unique name of this invocation in ~/.codex/savvy-status/<name>.json.' },
           skipped: {
             type: 'integer',
             minimum: 0,
             description: 'Planned steps left undone (a step merged into another is done), shown beside the count. Leave it out when there are none.',
           },
         },
-        required: ['done'],
+        required: [],
       },
     })
     await $.command.register({
@@ -1189,6 +1360,14 @@ export const register: Register = (on, options) => {
 
     // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
     await refreshCodexModels($)
+    try {
+      const claude = claudePlanUsage((await $.session.usage()).rateLimits)
+      await update($, usageReadings, prev => ({ ...prev, claude }))
+    } catch {
+      // A host without usage readings supplies no Claude line, including after a reload.
+      await update($, usageReadings, prev => ({ ...prev, claude: undefined }))
+    }
+    await refreshCodexUsage($)
     await rememberClaudeModels($, (await read($, agents)).map(a => a.model))
     await update($, flow, f => (f?.isFinished ? null : f))
     try {
@@ -1202,6 +1381,7 @@ export const register: Register = (on, options) => {
     $.clock.every(1000, () => {
       void (async () => {
         await refreshCodexModels($)
+        await refreshCodexUsage($)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
           const at = await $.clock.now()
@@ -1259,10 +1439,11 @@ export const register: Register = (on, options) => {
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
-    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string }
+    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string; codexStatus?: string }
     if ((input.model !== undefined && typeof input.model !== 'string') || (input.effort !== undefined && typeof input.effort !== 'string')) {
       return { deny: 'model and effort must be strings' }
     }
+    if (input.codexStatus !== undefined && (typeof input.codexStatus !== 'string' || !STATUS_NAME.test(input.codexStatus))) return { deny: 'codexStatus must be a safe filename stem' }
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     // Set on every run of the updater, which may run again on a conflict.
@@ -1279,10 +1460,11 @@ export const register: Register = (on, options) => {
           ...row,
           stepTotal: total,
           stepDone: total ? Math.min(total, done) : done,
-          stepNote: input.note?.trim() || undefined,
+          stepNote: input.note === undefined ? a.stepNote : input.note.trim() || undefined,
           ...(tierOf(a.type) in CODEX_WEARS ? {
             ...(input.model?.trim() ? { codexModel: input.model.trim() } : {}),
             ...(input.effort?.trim() ? { codexEffort: input.effort.trim() } : {}),
+            ...(input.codexStatus?.trim() ? { codexStatus: input.codexStatus.trim() } : {}),
           } : {}),
           // A worker that skipped nothing keeps the row it always had.
           ...(skipped ? { stepSkipped: skipped } : {}),
@@ -1290,6 +1472,38 @@ export const register: Register = (on, options) => {
       })
     })
     return { result: isMatched ? 'ok' : `ignored: no panel row for agent ${agentId}` }
+  })
+
+  on('session.measure', async ($, e, next) => {
+    const result = await next(e)
+    await update($, usageReadings, prev => ({ ...prev, claude: claudePlanUsage(e.rateLimits) }))
+    return result
+  })
+
+  // summary is local to SendMessage's tool.call: session.send does not carry it.
+  // Hold it until agent.spawn.resume identifies the actual resumed loop.
+  on('tool.call', { tool: 'SendMessage' }, async ($, e, next) => {
+    const summary = typeof e.summary === 'string' ? e.summary.trim() : ''
+    const to = typeof e.to === 'string' ? e.to : ''
+    const rows = await read($, agents)
+    let target = rows.find(a => a.agentId === to || a.name === to)
+    if (summary && !target && to) {
+      try {
+        const id = (await $.agent.list()).find(a => a.name === to || a.id === to || a.teammateId === to)?.id
+        target = rows.find(a => a.agentId === id)
+      } catch { /* A host without a roster can still address a stored id/name. */ }
+    }
+    const id = target?.id
+    if (summary && id) await update($, agents, list => list.map(a => a.id === id ? { ...a, nextTitle: summary } : a))
+    try {
+      const result = await next(e)
+      if (!result.deny) return result
+      if (id) await update($, agents, list => list.map(a => a.id === id && a.nextTitle === summary ? { ...a, nextTitle: undefined } : a))
+      return result
+    } catch (error) {
+      if (id) await update($, agents, list => list.map(a => a.id === id && a.nextTitle === summary ? { ...a, nextTitle: undefined } : a))
+      throw error
+    }
   })
 
   // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
@@ -1322,12 +1536,16 @@ export const register: Register = (on, options) => {
     // Until the first model request names the run's own, the effort its Agent call asked for.
     const effort = askedEffort.get(e.tool_use_id)
     await update($, agents, list => {
-      const round = 1 + list.filter(a => norm(a.description) === norm(e.description) && e.description).length
+      const previous = e.resume && list.find(a => a.agentId === e.resume?.agentId)
+      const description = previous?.nextTitle || e.description
+      const round = previous ? norm(description) === norm(previous.description) ? previous.round + 1 : 1
+        : 1 + list.filter(a => norm(a.description) === norm(description) && description).length
       const run: AgentRun = {
         id: started.agentId ?? e.tool_use_id,
         agentId: started.agentId,
         type: e.subagentType,
-        description: e.description,
+        description,
+        ...(e.name ? { name: e.name } : previous?.name ? { name: previous.name } : {}),
         model: started.model,
         ...(effort ? { effort } : {}),
         status: 'running',
@@ -1371,6 +1589,7 @@ export const register: Register = (on, options) => {
               model,
               effort: typeof e.effort === 'string' ? e.effort : a.effort,
               status: 'running',
+              ...(a.codexStatus ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
               endedAt: undefined,
               contextTokens:
                 (usage.input_tokens || 0) +
@@ -1408,6 +1627,7 @@ export const register: Register = (on, options) => {
             ...a,
             status: e.reason === 'answer' ? 'done' : 'failed',
             endedAt: at,
+            ...(a.codexStatus ? { relayStatus: e.reason === 'answer' ? 'done' as const : 'failed' as const, relayEndedAt: at } : {}),
             ...(fallback && e.usage
               ? {
                   model: e.usage.model || a.model,
@@ -1419,7 +1639,7 @@ export const register: Register = (on, options) => {
         }),
       )
       await update($, now, () => at)
-      await syncRunning($)
+      await syncCodexRuns($)
     }
     return next(e)
   })
@@ -1488,8 +1708,11 @@ export const register: Register = (on, options) => {
       />
     )
     // The copy once there is one, so the live values' changes do not redraw it.
-    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models) }
+    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models), usage: await read($, usageReadings) }
     const hints = view.models ?? EMPTY_MODELS
+    const usage = view.usage ?? EMPTY_USAGE
+    const planText = planUsageText(usage, Math.max(24, e.props.bodyColumns || 40))
+    const planHeader = planText ? <Text wrap="truncate-end">{planText}</Text> : null
     const list = view.agents
     const f = view.flow
     const p: Panel = await read($, panel)
@@ -1498,7 +1721,7 @@ export const register: Register = (on, options) => {
     const running = list.filter(a => a.status === 'running').reverse()
     const finished = list.filter(a => a.status !== 'running').reverse()
     const planned = plannedOf(f, list)
-    const t = totals(list, at)
+    const t = totals(list, at, usage)
     // The pane's title says "Agents"; inside, only the flow's own name.
     const title = f && !f.isFinished ? f.title : ''
 
@@ -1526,7 +1749,7 @@ export const register: Register = (on, options) => {
         {languagePicker}
       </Box>
     )
-    const summary = `≈${fmtCost(t.cost)}, ${fmtTokens(t.tokens)} ${s.tokensWord}, ${fmtTime(t.time)}`
+    const summary = `≈ ${familyCosts(t)}, ${familyTokens(t)} ${s.tokensWord}, ${fmtTime(t.time)}`
 
     if (e.surface === 'desktop' && 'Svg' in ui) {
       const { Svg } = ui
@@ -1540,24 +1763,26 @@ export const register: Register = (on, options) => {
       if (p.isCompact) {
         return (
           <Box flexDirection="column" gap={1}>
-            <Svg source={compactSvg(W, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={32} />
+            {planHeader}
+            <Svg source={compactSvg(W, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={68} />
             {controls}
           </Box>
         )
       }
       return (
         <Box flexDirection="column">
+          {planHeader}
           <Svg source={headerSvg(W, title, t, at)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title)} />
           {controls}
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
           {running.map(a => (
-            <Svg key={a.id} source={agentSvg(W, a, at, hints)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isRunning}`} width={W} height={66} />
+            <Svg key={a.id} source={agentSvg(W, a, at, hints, usage)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isRunning}`} width={W} height={66} />
           ))}
           {finished.length > 0 && toggleDone}
           {!p.isDoneCollapsed &&
             finished.map(a => (
-              <Svg key={a.id} source={agentSvg(W, a, at, hints)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isFinished}`} width={W} height={66} />
+              <Svg key={a.id} source={agentSvg(W, a, at, hints, usage)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isFinished}`} width={W} height={66} />
             ))}
           {planned.length > 0 && section('h-plan', `${s.planned} · ${planned.length}`)}
           {planned.map(pl => (
@@ -1576,7 +1801,8 @@ export const register: Register = (on, options) => {
       const ctx = ctxOf(a)
       const progress = progressOf(a)
       const model = runModel(a, true, hints)
-      const steps = a.stepTotal ? `${stepCount(a)}${a.stepNote ? ' ' + a.stepNote : ''} · ` : ''
+      const note = [a.stepTotal ? stepCount(a) : '', a.stepNote].filter(Boolean).join(' · ')
+      const steps = note ? `${note} · ` : ''
       return (
         <Box key={a.id} flexDirection="column" marginBottom={1}>
           <Box flexDirection="row" gap={1}>
@@ -1596,7 +1822,7 @@ export const register: Register = (on, options) => {
             {progress === null ? <Text dimColor>{ctxBar(ctx, barW)}</Text> : <Text color={color}>{ctxBar(progress * 100, barW)}</Text>}
             <Text dimColor>
               {' '}
-              {steps}ctx {ctx}% · {fmtTokens(a.contextTokens)} ≈{fmtCost(a.costUsd)} {fmtTime(elapsed(a, at))}
+              {steps}ctx {ctx}% · {accountText(a, usage)} {fmtTime(elapsed(a, at))}
             </Text>
           </Text>
         </Box>
@@ -1605,6 +1831,7 @@ export const register: Register = (on, options) => {
 
     return (
       <Box flexDirection="column">
+        {planHeader}
         <Box flexDirection="row" justifyContent="space-between">
           <Text bold wrap="truncate-end">
             {title}
@@ -1612,7 +1839,7 @@ export const register: Register = (on, options) => {
           {toggleCompact}
         </Box>
         <Text dimColor>
-          ≈{fmtCost(t.cost)} · {fmtTokens(t.tokens)} {s.tokensWord} · {fmtTime(t.time)}
+          {summary}
         </Text>
         {themePicker}
         {languagePicker}

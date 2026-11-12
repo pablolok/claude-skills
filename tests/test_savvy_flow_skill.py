@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 import typing
 import unittest
@@ -89,6 +91,17 @@ class TestSavvyFlowSkill(PublishedSkillChecks, unittest.TestCase):
     SKILL = SKILL
 
 
+@unittest.skipUnless(shutil.which("node"), "node is not installed")
+class TestCodexStatusScript(unittest.TestCase):
+    def test_node_suite_passes(self) -> None:
+        script = SOURCE / "scripts" / "codex-status.test.mjs"
+        result = subprocess.run(
+            ["node", "--test", "--test-isolation=none", str(script)], cwd=REPO,
+            capture_output=True, text=True, encoding="utf-8", check=False, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
 class TestWorkers(unittest.TestCase):
     """The workers ship in the plugin's `agents/` folder, as the source has them."""
 
@@ -142,7 +155,8 @@ class TestWorkers(unittest.TestCase):
         self.assertIn("`codex login status`", body)
         self.assertIn("Never `danger-full-access`", body)
         self.assertIn("`-s read-only`", body)
-        self.assertIn("`codex exec resume <session id> -o <last.md> - < <prompt> > <log> 2>&1`", body)
+        self.assertIn("`codex exec --json resume <session id> -o <last.md> - < <prompt> 2> <stderr> | node <root>/scripts/codex-status.mjs <new name> <resolved slug> > <log>`", body)
+        self.assertIn("`codexStatus: <name>`", body, "the relay declares its status file to the agents panel")
 
     def test_every_worker_closes_its_step_count_before_reporting(self) -> None:
         # The report itself is rarely reported as a step: without a closing call a finished worker stays at 5/7.

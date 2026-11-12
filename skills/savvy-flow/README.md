@@ -22,6 +22,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | File | Role |
 | :--- | :--- |
 | `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
+| `scripts/codex-status.mjs` | Bounded atomic status snapshots from JSON stdout and positioned rollout tails; no dependencies. |
 | `references/themes.md` | The chat themes, one section per month: each theme's window, its mascot per tier, the orchestrator's mark, the review marks and the closing line. The orchestrator reads the current month's section, or one theme's row. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
@@ -58,11 +59,36 @@ intensity: Luna (Light-sized work), Terra (Medium), Sol (Careful or Heavy, and s
 only with the user's yes). A relay `savvy-codex-<intensity>`
 runs a task with `codex exec` (read-only for a second opinion, `codex exec review` for a diff, workspace-write for a
 task in a tree nobody else writes; never `danger-full-access`), resumes the same Codex session for follow-ups, checks
-the git diff and the tests itself, and reports the Codex usage (5-hour and weekly windows). Use it for a second opinion
+the git diff and the tests itself, and reports Codex usage from its small status snapshot. Use it for a second opinion
 from another model family, or to run work on OpenAI models. A Codex task is marked in the plan before it goes out: the
 code goes to a second vendor. Without the CLI the tier simply does not exist.
 Codex reads `AGENTS.md` and the project's `.agents/skills` on its own, but not Claude Code's skills or `CLAUDE.md`: the
 brief names each `SKILL.md` a task needs by absolute path, and Codex follows it.
+
+The relay sends `codex exec --json` stdout through the plugin's zero-dependency Node script
+`scripts/codex-status.mjs <unique-name> [resolved-model]`, keeping `-o <last.md>` for the final answer and stderr
+separate. It finds the savvy-flow root through `CLAUDE_PLUGIN_ROOT` when available, or the parent of its active
+`agents/` directory in the plugin cache (`skills/savvy-flow` in a source checkout). Each invocation, including a
+resume, declares a new safe `codexStatus` name through `step` without `done`. JSON events pass through to the relay's
+log, while an atomic snapshot of at most 16 KiB in `~/.codex/savvy-status/<name>.json` updates about once a second.
+It reports session id, model, running/done/failed, an actual action of at most 60 characters, cumulative usage,
+optional plan windows and update time. EOF before completion records failure. A repeated name is rejected.
+
+`turn.completed.usage` is added to the session's prior instrumented snapshots, so resumes keep a cumulative total
+and savvy-progress counts that session once. Usage before instrumentation cannot be recovered. Cached input is
+part of input; reasoning is part of output (and stays null when the stream omits its count). Once the session id is
+known, the Node writer finds that session's rollout under `~/.codex/sessions/YYYY/MM/DD/`
+by the id in its filename. It reads only the last 512 KiB with a positioned read at discovery, at most every 30 seconds
+while running, and once more at completion. The last complete `turn_context` model and `token_count.rate_limits`
+fill the snapshot even when JSON stdout omits them. `CODEX_HOME`, when set, replaces `~/.codex` for both writer
+status files and rollout discovery. Missing metadata stays absent; no plan usage is inferred. The panel never reads
+rollouts. The panel polls running snapshots at most once every three seconds, shows their current action, and keeps the row running while fresh Codex heartbeats arrive, even if the Claude relay has stopped. A running
+snapshot older than 15 seconds stops overriding the relay's state. Command actions remove pwsh/powershell, cmd and
+bash wrappers before their 60-character limit; startup error/warning items do not become actions before a turn starts.
+All workers report concrete step notes ("reading CreatureProbe.cs", "running EditMode tests"), never "working".
+
+The recorded local CLI probe and the separate documentation sample used by the tests are described in
+[`scripts/fixtures/README.md`](scripts/fixtures/README.md).
 
 ## Themes
 
@@ -95,4 +121,5 @@ own steps to the agents panel. Without it those calls are skipped.
 
 ```bash
 python -m unittest tests.test_savvy_flow_skill
+node --test --test-isolation=none skills/savvy-flow/scripts/codex-status.test.mjs
 ```

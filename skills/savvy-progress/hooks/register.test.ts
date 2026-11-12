@@ -1,14 +1,15 @@
-import type { AgentInfo, CommandRunInput, ConfigSetInput, On, ToolRegisterInput, UiFocusInput } from 'claude-code'
+import type { AgentInfo, CommandRunInput, ConfigSetInput, EngineInterface, On, UiFocusInput } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import type { AgentRun, Flow } from '../types'
-import { codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, runModel, themeNamed, windowOf } from './register'
+import type { AgentRun, Flow, UsageReadings } from '../types'
+import { claudePlanUsage, codexCostOf, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
 const FLOW = 'flow'
+type ToolRegisterInput = Parameters<EngineInterface['tool']['register']>[0]
 
 const run = (id: string, over: Partial<AgentRun> = {}): AgentRun => ({
   id,
@@ -87,7 +88,7 @@ const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record
   })
   // A spawn given NO_AGENT_ID's prompt answers no agentId: a simulation of what
   // upstream issue #57 reports for named subagents (the host types say core sets it).
-  on('agent.spawn', ($, e) => (e.prompt === NO_AGENT_ID ? { model: 'claude-opus-5-5' } : { model: 'claude-opus-5-5', agentId: e.description }))
+  on('agent.spawn', ($, e) => (e.prompt === NO_AGENT_ID ? { model: 'claude-opus-5-5' } : { model: 'claude-opus-5-5', agentId: e.resume?.agentId ?? e.description }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.panes', () => ({ value: [] }))
   // What the plugin saved in `/config` and told the model, in order.
@@ -526,8 +527,7 @@ test("a Codex run shows its intensity, not the relay's model, plugin-prefixed or
       const [tier, , label] = seen
       if (!svg.includes(label) || !alt.includes(label)) faults.push(`${tier}: no ${label}`)
       if (/Sonnet/.test(svg) || /Sonnet/.test(alt)) faults.push(`${tier}: shows the relay's model`)
-      // The cost stays the relay's own.
-      if (!svg.includes('≈$0.42')) faults.push(`${tier}: lost the run's cost`)
+      if (!svg.includes('≈—')) faults.push(`${tier}: missing session should leave cost unknown`)
       if (!svg.includes('class="badge"')) faults.push(`${tier}: no badge`)
     }
   }
@@ -1208,7 +1208,7 @@ test('a planned Codex task names no effort: the user\'s is in its brief, the pla
 })
 
 test('a Codex run awaiting declaration predicts each intensity\'s own effort', () => {
-  for (const [family, effort] of [['luna', 'low'], ['terra', 'medium'], ['sol', 'high'], ['astra', 'high']]) {
+  for (const [family, effort] of [['luna', 'low'], ['terra', 'medium'], ['sol', 'high'], ['astra', 'high']] as const) {
     expect(runModel(run('w1', { type: `savvy-codex-${family}` }), true, { codex: { [family]: `gpt-6.1-${family}` }, claude: {} }))
       .toBe(`Codex · ${codexModelName(`gpt-6.1-${family}`)} · ${effort}`)
   }
@@ -1255,7 +1255,7 @@ test('a planned explicit Claude alias uses its learned version', () => {
 test('the step schema declares optional model and effort strings', async ($, on) => {
   const { registered } = engine(on, { infos: [] })
   await start($)
-  expect(registered.find(t => t.name === 'step')?.inputSchema).toMatchObject({ properties: { model: { type: 'string' }, effort: { type: 'string' } }, required: ['done'] })
+  expect(registered.find(t => t.name === 'step')?.inputSchema).toMatchObject({ properties: { model: { type: 'string' }, effort: { type: 'string' } }, required: [] })
 })
 
 test('the step tool accepts a Codex model and effort and preserves them through later relay usage', async ($, on) => {
@@ -1383,7 +1383,7 @@ test('a worker that closes its count with steps skipped shows how many, beside t
   expect(rows.find(r => r.includes('>w1<'))).toContain('>6/6 · 1 skipped · report<')
   expect(rows.find(r => r.includes('>w2<'))).toContain('>6/6<')
   expect(rows.find(r => r.includes('>w2<'))).not.toContain('skipped')
-  expect(terminal).toContain('6/6 · 1 skipped report · ')
+  expect(terminal).toContain('6/6 · 1 skipped · report · ')
 })
 
 test('the skipped count holds until the worker says otherwise, and never exceeds its steps', async ($, on) => {
@@ -1513,4 +1513,350 @@ test('the language picker taking the focus holds the panel still, as the theme p
   await $.ui.focus(clicked('compact'))
   expect(await panelNow($)).toContain('90k')
   await ui.unmount()
+})
+
+
+const CODEX_USAGE = { input_tokens: 1_000_000, cached_input_tokens: 800_000, output_tokens: 100_000, reasoning_output_tokens: 20_000 }
+const CODEX_LIMITS = {
+  primary: { used_percent: 2, window_minutes: 300, resets_at: 1_794_536_454 },
+  secondary: { used_percent: 9, window_minutes: 10080, resets_at: 1_795_033_876 },
+}
+const STATUS_ONE = { version: 1, sessionId: 'session-one', model: 'gpt-6.1-sol', state: 'done',
+  action: 'running EditMode tests', totalTokenUsage: CODEX_USAGE, rateLimits: CODEX_LIMITS, updatedAt: 100 }
+const CLAUDE_LIMITS = [
+  { kind: 'five_hour', percentUsed: 41, resetsAt: '2026-11-13T01:00:00Z' },
+  { kind: 'seven_day', percentUsed: 94, resetsAt: '2026-11-18T01:00:00Z' },
+]
+const READINGS: UsageReadings = { claude: claudePlanUsage(CLAUDE_LIMITS), codex: codexStatusFrom(JSON.stringify(STATUS_ONE))!.rateLimits,
+  statuses: { 'run-one': codexStatusFrom(JSON.stringify(STATUS_ONE))! } }
+
+// A flat directory of bounded snapshots; asking for a rollout is a test failure.
+const statusFiles = (on: On, initial = STATUS_ONE) => {
+  const files: Record<string, { text: string; mtimeMs: number; size?: number }> = {
+    'run-one': { text: JSON.stringify(initial), mtimeMs: 200 },
+    older: { text: JSON.stringify({ ...STATUS_ONE, rateLimits: null, updatedAt: 50 }), mtimeMs: 100 },
+  }
+  const reads: string[] = [], faults = { missing: false, unreadable: false }
+  on('fs.list', ($, e) => {
+    expect(e.path?.replace(/\\/g, '/')).toMatch(/\/\.codex\/savvy-status$/)
+    if (faults.missing) throw new Error('ENOENT')
+    return { value: Object.entries(files).map(([name, f]) => ({ name: name + '.json', kind: 'file', size: f.size ?? f.text.length, mtimeMs: f.mtimeMs, isLink: false })) }
+  })
+  on('fs.read', ($, e) => {
+    if (e.path.endsWith('models_cache.json')) return { value: '{}' }
+    expect(e.path.replace(/\\/g, '/')).toMatch(/\/\.codex\/savvy-status\/[\w-]+\.json$/)
+    const name = e.path.replace(/\\/g, '/').split('/').pop()!.slice(0, -5)
+    reads.push(name)
+    if (faults.unreadable || !files[name]) throw new Error('unreadable')
+    return { value: files[name].text }
+  })
+  return { files, reads, faults }
+}
+
+const relay = (over: Partial<AgentRun> = {}) => run('relay', { type: 'savvy-codex-sol', codexStatus: 'run-one', status: 'done', endedAt: 0, ...over })
+
+test('a bounded status snapshot parses both rate-limit windows', () => {
+  expect(codexStatusFrom(JSON.stringify(STATUS_ONE))?.rateLimits).toEqual({
+    fiveHour: { percentUsed: 2, resetsAt: new Date(CODEX_LIMITS.primary.resets_at * 1000).toISOString() },
+    week: { percentUsed: 9, resetsAt: new Date(CODEX_LIMITS.secondary.resets_at * 1000).toISOString() },
+  })
+})
+test('invalid status JSON supplies no reading', () => {
+  expect(codexStatusFrom('broken')).toBeUndefined()
+})
+test('an invalid status token count supplies no reading', () => {
+  expect(codexStatusFrom(JSON.stringify({ ...STATUS_ONE, totalTokenUsage: { ...CODEX_USAGE, input_tokens: '100' } }))).toBeUndefined()
+})
+test('an absent status directory leaves no Codex usage header', async ($, on) => {
+  engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on); files.faults.missing = true
+  await start($)
+  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+})
+test('an unreadable status file leaves no Codex usage header', async ($, on) => {
+  engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on); files.faults.unreadable = true
+  await start($)
+  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+})
+test('a status without rate limits produces no plan usage', () => {
+  expect(codexStatusFrom(JSON.stringify({ ...STATUS_ONE, rateLimits: null }))?.rateLimits).toBeUndefined()
+})
+test('a missing reasoning count remains unknown in the status snapshot', () => {
+  expect(codexStatusFrom(JSON.stringify({ ...STATUS_ONE, totalTokenUsage: { ...CODEX_USAGE, reasoning_output_tokens: null } }))?.totalTokenUsage.reasoning_output_tokens).toBeNull()
+})
+test('the Codex row reads only its declared status file', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  state.seed(AGENTS, [relay()])
+  await start($)
+  expect(files.reads).toEqual(['run-one'])
+  expect((await panelOf($)).terminal).toContain('1.1M ≈$1.48')
+})
+test('oversized status files are skipped before fs.read', async ($, on) => {
+  engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  files.files['run-one']!.size = 17_000_000
+  await start($)
+  expect(files.reads).not.toContain('run-one')
+})
+test('running status files refresh at most once every three seconds', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  await start($)
+  await clock.advance(2000)
+  expect(files.reads).toEqual(['run-one'])
+  await clock.advance(1000)
+  expect(files.reads).toEqual(['run-one', 'run-one'])
+})
+test('unchanged finished status files are not reread', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  await start($)
+  await clock.advance(6000)
+  expect(files.reads).toEqual(['run-one'])
+})
+test('the header takes rate limits from the newest status file', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  await start($)
+  expect((await panelOf($)).terminal).toContain('Codex 5h')
+  files.files.newest = { text: JSON.stringify({ ...STATUS_ONE, rateLimits: null, updatedAt: 300 }), mtimeMs: 300 }
+  await clock.advance(3000)
+  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+})
+test('a live Codex action becomes its row step note without declared steps', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  statusFiles(on, { ...STATUS_ONE, state: 'running', action: 'dotnet test CreatureProbe.csproj' })
+  state.seed(AGENTS, [relay()])
+  await start($)
+  expect(byId(state.agents(), 'relay')?.stepNote).toBe('dotnet test CreatureProbe.csproj')
+  expect((await panelOf($)).terminal).toContain('dotnet test CreatureProbe.csproj')
+})
+test('a running Codex status keeps a stopped relay row running', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  state.seed(AGENTS, [relay({ status: 'running', stepDone: 4, stepTotal: 4 })])
+  await start($)
+  expect(byId(state.agents(), 'relay')).toMatchObject({ status: 'running', codexState: 'running', relayStatus: 'failed' })
+})
+test('a relay turn.complete cannot finish a running Codex row', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  on('turn.complete', () => ({ text: '' }))
+  statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  state.seed(AGENTS, [relay({ status: 'running', endedAt: undefined })])
+  await start($)
+  await $.turn.complete({ answer: 'waiting', durationMs: 1, isAborted: false, turnId: 't1', agentId: 'relay', reason: 'answer' })
+  expect(byId(state.agents(), 'relay')).toMatchObject({ status: 'running', relayStatus: 'done', codexState: 'running' })
+})
+test('a live Codex keeps an accepted flow below one hundred percent', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  state.seed(AGENTS, [relay()])
+  state.seed(FLOW, flowOf({ total: 1, done: 1 }))
+  await start($)
+  expect(await bar($)).toContain('99%')
+  expect(state.flow()?.running).toBe(1)
+})
+test('a completed Codex releases a row whose relay has completed', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  state.seed(AGENTS, [relay()])
+  await start($)
+  files.files['run-one'] = { text: JSON.stringify(STATUS_ONE), mtimeMs: 300 }
+  await clock.advance(3000)
+  expect(byId(state.agents(), 'relay')?.status).toBe('done')
+})
+test('a failed Codex status fails a completed relay row', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'failed' as const } } }
+  expect(codexRun(relay(), usage, 0).status).toBe('failed')
+})
+test('an unfinished declared step count stays partial after a worker completes', () => {
+  expect(progressOf(run('worker', { status: 'done', stepDone: 1, stepTotal: 4 }))).toBe(0.25)
+})
+test('a completed worker without declared steps still has a full bar', () => {
+  expect(progressOf(run('worker', { status: 'done' }))).toBe(1)
+})
+test('a running Codex bar stays below full even when all steps were reported', () => {
+  expect(progressOf(relay({ codexState: 'running', status: 'running', stepDone: 4, stepTotal: 4 }))).toBe(0.99)
+})
+test('Codex pricing discounts cached input and counts reasoning once', () => {
+  expect(codexCostOf('gpt-6.1-sol', CODEX_USAGE)).toBe(1.48)
+})
+test('the verified GPT price table covers all four families', () => {
+  expect(['luna', 'terra', 'sol', 'astra'].map(f => codexCostOf('gpt-6-' + f, CODEX_USAGE))).toEqual([0.078, 0.74, 1.48, 7.8])
+})
+test('a session resumed twice contributes only its largest cumulative snapshot', () => {
+  const usage: UsageReadings = { statuses: Object.fromEntries([1, 2, 3].map(n => ['run-' + n, { ...READINGS.statuses['run-one']!, totalTokenUsage: { ...CODEX_USAGE, input_tokens: n * 1_000_000 } }])) }
+  const rows = [1, 2, 3].map(n => relay({ id: String(n), codexStatus: 'run-' + n }))
+  expect(totals(rows, 0, usage).codex).toEqual({ tokens: 3_100_000, cost: 5.48 })
+})
+test('family totals retain Claude relay usage in the Claude total', () => {
+  expect(totals([run('worker', { tokens: 200, costUsd: 0.2 }), relay({ tokens: 300, costUsd: 0.3 })], 0, READINGS))
+    .toMatchObject({ claude: { tokens: 500, cost: 0.5 }, codex: { tokens: 1_100_000, cost: 1.48 } })
+})
+test('the step tool accepts a Codex status declaration without done', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await spawn($, 'relay', 'savvy-codex-sol')
+  await stepped($, 'relay', { total: 4, done: 0, note: 'checking Codex login' })
+  expect(await stepped($, 'relay', { codexStatus: 'run-one', model: 'gpt-6.1-sol' })).toMatchObject({ result: 'ok' })
+  expect(byId(state.agents(), 'relay')).toMatchObject({ codexStatus: 'run-one', stepDone: 0, stepNote: 'checking Codex login' })
+})
+test('the step schema permits declarations without a progress count', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  expect(registered.find(t => t.name === 'step')?.inputSchema).toMatchObject({ properties: { codexStatus: { type: 'string' } }, required: [] })
+})
+test('the step tool rejects a status name that escapes its directory', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  expect(await stepped($, 'relay', { codexStatus: '../outside' })).toMatchObject({ deny: 'codexStatus must be a safe filename stem' })
+})
+test('the step description asks for a concrete action note', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  expect(registered.find(t => t.name === 'step')?.description).toContain('reading CreatureProbe.cs')
+  expect(registered.find(t => t.name === 'step')?.description).toContain('never working')
+})
+test('a wide plan header shows both families and each window reset', () => {
+  const text = planUsageText(READINGS)
+  expect(text).toContain('Claude 5h 41% ↻')
+  expect(text).toContain('7d 94% ↻')
+  expect(text).toContain('Codex 5h 2% ↻')
+  expect(text.split('↻').length).toBe(5)
+})
+test('a narrow plan header fits both families on sixty columns', () => {
+  const text = planUsageText(READINGS, 60)
+  expect([...text].length).toBeLessThanOrEqual(60)
+  expect(text).toContain('Claude')
+  expect(text).toContain('Codex')
+  expect(text).toContain('↻')
+})
+test('a forty-column plan header preserves both families percentages', () => {
+  const text = planUsageText(READINGS, 40)
+  expect([...text].length).toBeLessThanOrEqual(40)
+  expect(text).toContain('Claude 5h41%·7d94%')
+  expect(text).toContain('Codex 5h2%·7d9%')
+})
+test('a rendered narrow usage line requests truncation instead of wrapping', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: 40 }, surface: 'desktop' })
+  const header = (await ui.findAll({ type: 'Text' })).find(e => JSON.stringify(e).includes('Claude 5h'))
+  expect(header?.props.wrap).toBe('truncate-end')
+  await ui.unmount()
+})
+test('the plan header omits Claude when the engine has no plan reading', () => {
+  expect(planUsageText({ codex: READINGS.codex })).not.toContain('Claude')
+})
+test('Claude plan usage comes from the engine session usage API', async ($, on) => {
+  engine(on, { infos: [] })
+  on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: CLAUDE_LIMITS } }))
+  await start($)
+  expect((await panelOf($)).terminal).toContain('Claude 5h 41%')
+})
+test('Claude session.measure refreshes the plan windows', async ($, on) => {
+  engine(on, { infos: [] })
+  on('session.measure', ($, e) => ({ changed: e.changed }))
+  await start($)
+  await $.session.measure({ context: { window: 1_000_000 }, rateLimits: CLAUDE_LIMITS, changed: ['rateLimits'] })
+  expect((await panelOf($)).terminal).toContain('Claude 5h 41%')
+})
+test('the rendered totals show each familys own cost', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [relay({ tokens: 500, costUsd: 0.42 })])
+  state.seed('usage', READINGS)
+  expect((await panelOf($)).terminal).toContain('Claude $0.42 · Codex $1.48')
+})
+
+const resume = ($: Engine, title = 'old title', name?: string) => $.agent.spawn({ tool_use_id: 'resume-tool',
+  prompt: 'Do the next task.', description: title, subagentType: 'savvy-flow:savvy-careful',
+  provider: { plugin: 'engine', tier: 'core' }, parentModel: 'claude-opus-5-5', background: true, fork: false,
+  resume: { agentId: 'worker' }, ...(name ? { name } : {}) })
+
+test('a resumed worker takes the new SendMessage summary as its task title', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  on('tool.call', { tool: 'SendMessage' }, async () => {
+    await resume($)
+    return { result: 'sent' }
+  })
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done', round: 2 })])
+  await start($)
+  await $.tool.call({ tool: 'SendMessage', to: 'worker', summary: 'Fix collision lookup', message: 'Implement the next task.' })
+  expect(byId(state.agents(), 'worker')?.description).toBe('Fix collision lookup')
+})
+test('a different resumed task starts at round one', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  on('tool.call', { tool: 'SendMessage' }, async () => { await resume($); return { result: 'sent' } })
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done', round: 3, stepDone: 4, stepTotal: 4 })])
+  await start($)
+  await $.tool.call({ tool: 'SendMessage', to: 'worker', summary: 'Run EditMode tests', message: 'Run the tests.' })
+  expect(byId(state.agents(), 'worker')).toMatchObject({ description: 'Run EditMode tests', round: 1 })
+  expect(byId(state.agents(), 'worker')?.stepTotal).toBeUndefined()
+})
+test('resuming the same task increments its round', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done', round: 2 })])
+  await start($)
+  await resume($)
+  expect(byId(state.agents(), 'worker')?.round).toBe(3)
+})
+test('a queued SendMessage summary survives until the later resume', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: 'queued' }))
+  state.seed(AGENTS, [run('worker', { name: 'scout', description: 'old title', status: 'done' })])
+  await start($)
+  await $.tool.call({ tool: 'SendMessage', to: 'scout', summary: 'Inspect CreatureProbe.cs', message: 'Inspect the next task.' })
+  expect(byId(state.agents(), 'worker')?.description).toBe('old title')
+  await resume($)
+  expect(byId(state.agents(), 'worker')?.description).toBe('Inspect CreatureProbe.cs')
+})
+test('a denied SendMessage does not relabel a future resume', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  on('tool.call', { tool: 'SendMessage' }, () => ({ deny: 'not delivered' }))
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done' })])
+  await start($)
+  await $.tool.call({ tool: 'SendMessage', to: 'worker', summary: 'Undelivered task', message: 'Next task.' })
+  await resume($)
+  expect(byId(state.agents(), 'worker')?.description).toBe('old title')
+})
+
+test('a running snapshot older than fifteen seconds releases a completed relay', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'running' as const, updatedAt: 1000 } } }
+  const row = codexRun(relay({ status: 'running', relayStatus: 'done', relayEndedAt: 1000 }), usage, 16_001)
+  expect(row.status).toBe('done')
+  expect(row.codexState).toBeUndefined()
+})
+test('a stale running snapshot falls back to the relay failure state', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'running' as const, updatedAt: 1000 } } }
+  expect(codexRun(relay({ status: 'running', relayStatus: 'failed' }), usage, 16_001).status).toBe('failed')
+})
+test('a stale Codex snapshot leaves an active relay running on its own', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'running' as const, updatedAt: 1000 } } }
+  const row = codexRun(relay({ status: 'running', relayStatus: 'running' }), usage, 16_001)
+  expect(row.status).toBe('running')
+  expect(row.codexState).toBeUndefined()
+})
+test('a snapshot exactly fifteen seconds old is still fresh', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'running' as const, updatedAt: 1000 } } }
+  expect(codexRun(relay(), usage, 16_000).codexState).toBe('running')
+})
+test('a renewed heartbeat revives a Codex row after the prior snapshot went stale', () => {
+  const usage = { ...READINGS, statuses: { 'run-one': { ...READINGS.statuses['run-one']!, state: 'running' as const, updatedAt: 1000 } } }
+  const stale = codexRun(relay({ relayStatus: 'done' }), usage, 16_001)
+  usage.statuses['run-one']!.updatedAt = 20_000
+  expect(codexRun(stale, usage, 21_000).status).toBe('running')
+})
+test('stale heartbeats stop holding an accepted flow below one hundred percent', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  state.seed(AGENTS, [relay()])
+  state.seed(FLOW, flowOf({ total: 1, done: 1 }))
+  await start($)
+  await clock.advance(18_000)
+  expect(byId(state.agents(), 'relay')?.status).toBe('done')
+  expect(await bar($)).toContain('100%')
 })

@@ -38,7 +38,41 @@ the mod needs.
   unreadable cache leaves the bare intensity (`Codex · Sol`); a re-read that finds the same models redraws nothing.
   A run awaiting its declaration predicts the effort too: Luna low, Terra medium, Sol high and Astra high. A planned
   Codex task names no effort (`Codex · Sol 6.1`): the user's effort for Codex is in its brief, which the bar never
-  sees. Codex cost and token counts remain the Claude relay's own.
+  sees. Codex rows show their own session's cumulative tokens and estimated cost once the relay declares its
+  `codexStatus` filename stem; an unavailable snapshot or price reads as `—`. The row uses the snapshot's concrete
+  action as its step note. A fresh snapshot saying `running` keeps the row running after its Claude relay stops;
+  once its heartbeat is older than 15 seconds, the next poll uses the relay's own state instead.
+  A finished worker with declared but unfinished steps keeps its steps' ratio; it does not jump to a full bar.
+  A resumed worker takes a new task title from SendMessage's `summary` and starts at round 1 for that title.
+- **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
+  engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`) and follows `session.measure`. Codex comes only
+  from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
+  is omitted. A wide line shows each 5-hour/7-day percentage and its reset's local time (`↻02:00`). A narrow line
+  uses `Claude 5h 41% · 7d 94% ↻02:00` (the reset at the end is the weekly one, or 5-hour if there is no weekly
+  reading), then removes spaces to fit both families; at 40 columns it keeps both families' percentages and omits
+  reset times. The line uses truncation rather than wrapping at still smaller widths.
+- **Status snapshots**: savvy-flow ships the zero-dependency Node writer `scripts/codex-status.mjs`. Each relay picks
+  a unique status name, declares it through `step` without changing its step count, and pipes `codex exec --json`
+  through the writer. The writer atomically replaces a snapshot of at most 16 KiB about once a second, including a
+  heartbeat during quiet commands, and flushes the terminal state on EOF. It keeps session id, resolved model,
+  running/done/failed state, the last command/file/tool/reasoning action (at most 60 characters), cumulative token
+  usage, optional rate limits and updated time. The Node writer finds the session's rollout by id and reads only its
+  last 512 KiB with a positioned read at discovery, every 30 seconds while running, and at completion, to fill the model
+  and rate limits. The engine never reads that rollout. Shell command actions show the inner command rather than
+  pwsh/powershell, cmd or bash wrappers; pre-turn errors and warnings are ignored as actions. The panel lists only the flat `savvy-status` directory, polls running
+  snapshots at most once every three seconds and rereads finished snapshots only when their modification time
+  changes. It never reads Codex rollouts: the engine's `$.fs.read` rejects files larger than 4 MiB.
+- **Family totals**: cost reads `Claude $x · Codex $y`, and tokens split the same way. Claude totals include all
+  engine-reported subagent requests, including Codex's Claude relays. Claude cache reads contribute to cost and
+  context but not to the token total. A writer adds each completed turn's `usage` to prior instrumented snapshots of
+  the same session, including resumes under a new status name. The panel counts the largest cumulative snapshot
+  once per session id. Work done before any status writer ran is unavailable. Codex tokens are `input_tokens +
+  output_tokens`; cached input and reasoning are subsets, so neither is added again. A missing reasoning count is
+  `null`, not guessed. Input, cached input and output are priced separately. Context fill remains the Claude relay's
+  context. Missing status files contribute no Codex total until they can be read.
+  Some CLI JSON streams omit `rate_limits`; the Node writer also reads them from the rollout tail. If neither source
+  supplies them, `rateLimits` stays null and no Codex plan line appears. No usage or reset is inferred from tokens.
+  Counts become available when the CLI emits turn usage.
 - **Themes**: the figures dress up for the calendar, and every one of them moves, running or not (a running one at
   full pace, the others idling slowly); the bar takes the theme's colors and the panel's header an ornament of its
   own. The crab stays the crab, and each tier keeps its role in every theme: Fable is the rare one that floats or
@@ -91,11 +125,19 @@ the mod needs.
   shows the effort its Agent call asked for, then the one the engine reports for each request.
 - `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`), and `skipped` for the planned
   steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
-  fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug) and
-  `effort` (the reasoning effort it passes to Codex); these stay on that run until declared again.
+  fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug),
+  `effort` (the reasoning effort it passes to Codex), and `codexStatus` (the unique filename stem for this Codex
+  invocation, also unique on a resume). Declarations need no `done` and preserve the prior count and note. A note
+  names the actual action, such as "reading CreatureProbe.cs" or "running EditMode tests", never "working".
 
-The cost is a rough estimate from token counts and a built-in per-model price table (`PRICES` in
-`hooks/register.tsx`), not a bill.
+Both costs are estimates from token counts and built-in tables (`PRICES` for Claude, `GPT_PRICES` for Codex in
+`hooks/register.tsx`). GPT family rates use current Standard short-context API prices, verified on 2026-11-12 in
+[OpenAI's model catalog](https://developers.openai.com/api/docs/models) and
+[pricing page](https://developers.openai.com/api/docs/pricing): input/output/cached input per million tokens are
+Luna $0.10/$0.50/$0.01, Terra $1/$5/$0.05, Sol $2/$10/$0.10, Astra $10/$50/$1. Older or future model versions use
+these current family rates; unknown families have no price. Processing modes, long-context rates, mixed-model
+sessions (priced with their last model) and other billing differences can change the actual amount. A Codex plan's
+work is covered by its subscription; the displayed API-equivalent estimate is not an extra charge or a bill.
 
 ## Settings
 

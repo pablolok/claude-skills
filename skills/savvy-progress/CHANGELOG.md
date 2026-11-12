@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.12.0] - 2026-11-12
+- The header shows each subscription's 5-hour and weekly usage (Claude from the engine's rate limits, Codex from the runs' status files) and the totals split by family (Claude, Codex); a Codex row counts and prices Codex's own tokens, shows its current action, and stays running while Codex works; a finished run with unfinished steps shows their ratio; a worker resumed for a new task takes the new title
+
+
 ## [1.11.2] - 2026-11-12
 - A planned Claude alias takes the newest version seen in the session, since an alias resolves to its family's newest, so a run pinned to an older model never relabels it
 

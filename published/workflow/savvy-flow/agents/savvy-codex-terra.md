@@ -25,30 +25,22 @@ Steps:
    `-terra` and whose `visibility` is `list`, take the one with the lowest `priority` (the newest) and pass `-m <slug>`;
    reasoning effort `-c model_reasoning_effort="medium"` unless the brief names another. No cache or no such model: run
    without `-m` and say so in the report. A brief that names a model wins over the family.
-   Once resolved, call `mcp__savvy-progress__step` if available with `done: 1`, `model: <resolved slug>` (omit if no `-m`) and `effort: <chosen effort>`.
-5. **Run Codex**, the prompt on stdin, its final message to a file, everything else to a log:
-   - task: `codex exec --skip-git-repo-check -C <dir> -s workspace-write -o <last.md> - < <prompt> > <log> 2>&1`;
-   - second opinion: the same with `-s read-only`, or `codex exec review --uncommitted` (or `--base <branch>`,
-     `--commit <sha>`) with the review instructions on stdin;
-   - follow-up on a session the brief names, run from the same working directory (it keeps the session's sandbox and
-     directory): `codex exec resume <session id> -o <last.md> - < <prompt> > <log> 2>&1`.
-   Never `danger-full-access`, never a flag that bypasses approvals or the sandbox. Pass the model and effort of step 4. Codex can take minutes: give the shell call the longest timeout the host allows; if it is cut off,
-   resume the session with "continue" rather than starting again.
-6. **After.** Read `<last.md>`, and from the log only its first ~20 lines (the header prints `session id:`, the model
-   and the sandbox) and any error. Do not read the whole log into your context; repeated config warnings in it are
-   noise. In a git repository: `git status --short` and `git diff --stat`
-   against step 2; any commit or file outside the task is a defect to report.
+   Once resolved, call `mcp__savvy-progress__step` if available with `model: <resolved slug>` (omit if no `-m`) and `effort: <chosen effort>`.
+   Generate a unique safe status name with Node's `crypto.randomUUID()` for every invocation, including resumes; declare `codexStatus: <name>` with `mcp__savvy-progress__step`, WITHOUT `done` (model/effort declarations also omit `done`).
+5. **Run Codex.** Find this savvy-flow plugin's root: use `CLAUDE_PLUGIN_ROOT` if set and it contains `scripts/codex-status.mjs`; otherwise locate this active agent definition under `~/.claude/plugins/cache/.../savvy-flow/<version>/agents/` and take the parent of `agents/`. In a source checkout it is `skills/savvy-flow`. Verify that `<root>/scripts/codex-status.mjs` exists and Node is installed; otherwise report blocked.
+   Pipe JSON stdout through the status writer; keep stderr separate and keep `-o` for the final message. Pass the model and effort of step 4 to Codex, and the resolved slug as the writer's optional second argument (omit it if unresolved):
+   - task: `codex exec --json --skip-git-repo-check -C <dir> -s workspace-write -o <last.md> - < <prompt> 2> <stderr> | node <root>/scripts/codex-status.mjs <name> <resolved slug> > <log>`;
+   - second opinion: the same with `-s read-only`; for a diff, `codex exec --json -o <last.md> review --uncommitted` (or `--base <branch>`, `--commit <sha>`) with review instructions, piped through the same writer;
+   - follow-up: `codex exec --json resume <session id> -o <last.md> - < <prompt> 2> <stderr> | node <root>/scripts/codex-status.mjs <new name> <resolved slug> > <log>`, from the same working directory. Declare the new name first.
+   Never `danger-full-access` or flags bypassing approvals or the sandbox. Preserve both pipeline exit statuses (`set -o pipefail` on Bash); the writer also fails if the stream ends without completion. Codex can take minutes: use the longest shell timeout available and keep the pipeline alive while it runs; a timeout does not mean Codex finished. If interrupted, resume with "continue" and a new status name.
+6. **After.** Read `<last.md>` and the small `~/.codex/savvy-status/<name>.json` for session id, model, state, current action and cumulative usage; inspect stderr for errors. Never read the whole JSON event log into context. In a git repository, compare `git status --short` and `git diff --stat` with step 2; a commit or file outside the task is a defect to report.
 7. **Verify** with the command the brief names (build, tests) when it is cheap, and report its outcome. Codex's own
    claims are not verification.
-8. **Usage**, best effort: the session's own log under `~/.codex/sessions/` (searched recursively; its file name ends
-   with the session id) holds `rate_limits` at the end of very long lines, so extract only the last match
-   (`grep -o '"rate_limits".*' <file> | tail -1`): `primary` is the 5-hour window, `secondary` the weekly one, each
-   with `used_percent` and `resets_at` (Unix seconds, give it as a local time). Skip it if not found.
+8. **Usage**, best effort: use only `rateLimits` in the small status file: `primary` is 5-hour, `secondary` weekly, with `used_percent` and Unix-seconds `resets_at` (report local times). The Node writer fills model and rate limits from a positioned 512 KiB tail of the matching rollout at completion and about every 30 seconds while running. If metadata is still absent, say "not found"; never infer it or open rollouts through the engine. Total token usage covers the instrumented session's turns, including earlier instrumented resumes.
 
 Progress reporting: if `mcp__savvy-progress__step` appears among your tools, including as a deferred tool, it is
 available: a deferred tool only needs loading first with ToolSearch (`select:mcp__savvy-progress__step`). Right after
-reading the brief, call it with `total: 4` (preflight, run, check, report) and `done: 0`; call it again with `done` (and
-a few-word `note`) as each step finishes. Before your final report, make one last call with `done` equal to `total` and, if you left planned steps undone, `skipped` set to how many (a step merged into another is done, not skipped): a finished worker left short of its count reads as unfinished work in the panel, and a skipped step counted as done reads as work that was done. Name the skipped steps in your report. Skip silently only if the tool is absent or ToolSearch does not find it.
+reading the brief, call it with `total: 4` (preflight, run, check, report) and `done: 0`; call it again with `done` and a `note` naming the actual action ("reading CreatureProbe.cs", "running EditMode tests"), never "working", as each step finishes. Before your final report, make one last call with `done` equal to `total` and, if you left planned steps undone, `skipped` set to how many (a step merged into another is done, not skipped): a finished worker left short of its count reads as unfinished work in the panel, and a skipped step counted as done reads as work that was done. Name the skipped steps in your report. Skip silently only if the tool is absent or ToolSearch does not find it.
 
 Final report format (keep it under ~300 words):
 1. Result: done / partially done / blocked, the Codex session id, and the model and effort it ran (Terra family).
