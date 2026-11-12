@@ -770,9 +770,10 @@ const planAt = (plan: PlanUsage | undefined, at: number): PlanUsage | undefined 
 
 export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex'>, at = 0): string => {
   if (!hasPlans(usage)) return ''
+  // A family with no reading is left out, as its plan tile is.
   const family = (name: string, plan?: PlanUsage) => hasPlan(plan)
-    ? `${name} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : `${name} —`
-  return [family('Claude', usage.claude), family('Codex', planAt(usage.codex, at))].join('  ')
+    ? `${name} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : ''
+  return [family('Claude', usage.claude), family('Codex', planAt(usage.codex, at))].filter(Boolean).join('  ')
 }
 
 const codexAccount = (a: AgentRun, usage: UsageReadings) => {
@@ -946,13 +947,17 @@ export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPT
   }
   const start = Math.min(...list.map(a => a.startedAt))
   const end = Math.max(...list.map(a => a.endedAt ?? Math.max(at, a.startedAt)))
-  return { claude, codex, time: list.length ? end - start : 0 }
+  // Codex shows only where it is used: a Codex worker in the list or a Codex plan reading.
+  const showsCodex = list.some(a => tierOf(a.type) in CODEX_WEARS) || hasPlan(usage.codex)
+  return { claude, codex, showsCodex, time: list.length ? end - start : 0 }
 }
 
 const knownCost = (cost?: number): string => cost === undefined ? '—' : fmtCost(cost)
 const knownTokens = (tokens?: number): string => tokens === undefined ? '—' : fmtTokens(tokens)
-const familyCosts = (t: ReturnType<typeof totals>) => `Claude ${knownCost(t.claude.cost)} · Codex ${knownCost(t.codex.cost)}`
-const familyTokens = (t: ReturnType<typeof totals>) => `Claude ${knownTokens(t.claude.tokens)} · Codex ${knownTokens(t.codex.tokens)}`
+const codexCost = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Codex ${knownCost(t.codex.cost)}` : ''
+const codexTokens = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Codex ${knownTokens(t.codex.tokens)}` : ''
+const familyCosts = (t: ReturnType<typeof totals>) => [`Claude ${knownCost(t.claude.cost)}`, codexCost(t)].filter(Boolean).join(' · ')
+const familyTokens = (t: ReturnType<typeof totals>) => [`Claude ${knownTokens(t.claude.tokens)}`, codexTokens(t)].filter(Boolean).join(' · ')
 
 // --- desktop drawings: each row is one SVG, as the band above the prompt is.
 
@@ -1142,7 +1147,7 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
     headerHeight(title, W, usage),
     `${weather}${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitted)}</text>` : ''}
 ${title ? (dress?.ornament(W) ?? '') : ''}
-${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, `Codex ${knownCost(t.codex.cost)}`)}${metricTile(1, s.tokens, `Claude ${knownTokens(t.claude.tokens)}`, `Codex ${knownTokens(t.codex.tokens)}`)}${metricTile(2, s.time, fmtTime(t.time))}${plans}`,
+${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, codexCost(t))}${metricTile(1, s.tokens, `Claude ${knownTokens(t.claude.tokens)}`, codexTokens(t))}${metricTile(2, s.time, fmtTime(t.time))}${plans}`,
   )
 }
 

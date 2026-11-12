@@ -1755,11 +1755,11 @@ test('an expired Codex window shows zero with a reset label and empty meter', as
 
 test('resetting one Codex window preserves the other window', () => {
   expect(planUsageText({ codex: { fiveHour: { percentUsed: 65, resetsAt: new Date(1000).toISOString() },
-    week: { percentUsed: 18, resetsAt: new Date(3000).toISOString() } } }, 2000)).toBe('Claude —  Codex 0/18%')
+    week: { percentUsed: 18, resetsAt: new Date(3000).toISOString() } } }, 2000)).toBe('Codex 0/18%')
 })
 
 test('a Codex window is not reset until strictly after its reset time', () => {
-  expect(planUsageText({ codex: { fiveHour: { percentUsed: 65, resetsAt: new Date(1000).toISOString() } } }, 1000)).toBe('Claude —  Codex 65/—%')
+  expect(planUsageText({ codex: { fiveHour: { percentUsed: 65, resetsAt: new Date(1000).toISOString() } } }, 1000)).toBe('Codex 65/—%')
 })
 
 test('rendering an expired reading preserves the original stored observation', async ($, on) => {
@@ -1994,8 +1994,9 @@ test('compact plan usage is grey text inside its SVG', async ($, on) => {
   expect(header.texts).not.toContain('41%')
 })
 
-test('compact usage leaves an unread family unknown', () => {
-  expect(planUsageText({ codex: READINGS.codex })).toBe('Claude —  Codex 2/9%')
+test('compact usage leaves out an unread family', () => {
+  expect(planUsageText({ codex: READINGS.codex })).toBe('Codex 2/9%')
+  expect(planUsageText({ claude: READINGS.claude })).not.toContain('Codex')
 })
 
 test('the narrowest panel preserves plan percentages on single text lines', async ($, on) => {
@@ -2010,7 +2011,7 @@ test('the narrowest panel preserves plan percentages on single text lines', asyn
 test('cost tiles leave both families unknown before any usage arrives', async ($, on) => {
   const { state } = engine(on, { infos: [] })
   await start($)
-  state.seed(AGENTS, [run('fresh')])
+  state.seed(AGENTS, [run('fresh', { type: 'savvy-flow:savvy-codex-sol' })])
   const { source } = await headerOf($)
   const cost = source.slice(source.indexOf('Cost ≈'), source.indexOf('Tokens</text>'))
   expect(cost).toContain('>Claude —</text>')
@@ -2020,11 +2021,35 @@ test('cost tiles leave both families unknown before any usage arrives', async ($
 test('token tiles leave an unread Codex family unknown', async ($, on) => {
   const { state } = engine(on, { infos: [] })
   await start($)
-  state.seed(AGENTS, [run('worker', { tokens: 200 })])
+  state.seed(AGENTS, [run('worker', { tokens: 200 }), run('relay', { type: 'savvy-flow:savvy-codex-sol' })])
   const { source } = await headerOf($)
   const tokens = source.slice(source.indexOf('Tokens</text>'), source.indexOf('Time</text>'))
   expect(tokens).toContain('>Claude 200</text>')
   expect(tokens).toContain('>Codex —</text>')
+})
+
+test('without Codex the cost and token tiles carry only Claude', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [run('worker', { tokens: 200 })])
+  const { source } = await headerOf($)
+  const tiles = source.slice(source.indexOf('Cost ≈'), source.indexOf('Time</text>'))
+  expect(tiles).toContain('>Claude 200</text>')
+  expect(tiles).not.toContain('Codex')
+})
+
+test('a Codex plan reading alone keeps the Codex lines', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { statuses: {}, codex: READINGS.codex })
+  state.seed(AGENTS, [run('worker', { tokens: 200 })])
+  const { source } = await headerOf($)
+  expect(source.slice(source.indexOf('Cost ≈'), source.indexOf('Time</text>'))).toContain('>Codex —</text>')
+})
+
+test('without Codex the family totals name only Claude', () => {
+  const t = totals([run('worker', { tokens: 200 })], 0)
+  expect(t.showsCodex).toBe(false)
 })
 
 test('an observed zero usage stays a known zero in totals', () => {

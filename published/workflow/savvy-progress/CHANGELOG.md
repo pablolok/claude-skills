@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.2] - 2026-11-13
+- Without Codex in use (no Codex worker, no Codex plan reading) the Cost and Tokens tiles, the compact totals and the compact plan line name Claude alone instead of carrying a Codex dash
+
+
 ## [1.13.1] - 2026-11-13
 - A family with no plan reading gets no tile: without Codex the Claude plan tile and its meters span the whole row instead of sitting beside an empty Codex tile
 

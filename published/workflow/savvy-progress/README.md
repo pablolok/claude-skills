@@ -68,7 +68,9 @@ the mod needs.
   pwsh/powershell, cmd or bash wrappers; pre-turn errors and warnings are ignored as actions. The panel lists only the flat `savvy-status` directory, polls running
   snapshots at most once every three seconds and rereads finished snapshots only when their modification time
   changes. It never reads Codex rollouts: the engine's `$.fs.read` rejects files larger than 4 MiB.
-- **Family totals**: cost reads `Claude $x · Codex $y`, and tokens split the same way. Claude totals include all
+- **Family totals**: cost reads `Claude $x · Codex $y`, and tokens split the same way; the Codex part appears only
+  when Codex is in use (a Codex worker in the list or a Codex plan reading), so a session without Codex shows Claude
+  alone. Claude totals include all
   engine-reported subagent requests, including Codex's Claude relays. Claude cache reads contribute to cost and
   context but not to the token total. A writer adds each completed turn's `usage` to prior instrumented snapshots of
   the same session, including resumes under a new status name. The panel counts the largest cumulative snapshot
