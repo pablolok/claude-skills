@@ -1002,3 +1002,206 @@ test("an Agent call's record of a run already over settles the row it names", as
 
   expect(byId(state.agents(), 'toolu_fg')).toMatchObject({ agentId: 'a-9', status: 'done', endedAt: 5000 })
 })
+
+// The plan as the orchestrator reports it, each task with whatever it declares.
+const plan = ($: Engine, tasks: Record<string, unknown>[]) =>
+  $.tool.call({ tool: 'mcp__savvy-progress__progress', title: 'Fix bug', total: tasks.length, phase: 'delegate', tasks })
+
+// The panel's rows beneath its header on the desktop, and the whole panel as the terminal draws it.
+const panelOf = async ($: Engine): Promise<{ rows: string[]; terminal: string }> => {
+  const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const rows = (await desktop.findAll({ type: 'Svg' })).slice(1).map(e => String(e.props.source))
+  await desktop.unmount()
+  const text = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const terminal = JSON.stringify(await text.drawn())
+  await text.unmount()
+  return { rows, terminal }
+}
+
+test("a planned task waits at the effort and the model the plan declares, at its tier's otherwise", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+
+  await plan($, [
+    { title: 'review', tier: 'fable', effort: 'xhigh' },
+    { title: 'audit', tier: 'careful', model: 'fable', effort: 'max', after: [1] },
+    { title: 'plain', tier: 'fable' },
+  ])
+
+  expect(state.flow()?.tasks).toEqual([
+    { title: 'review', tier: 'fable', after: [], effort: 'xhigh' },
+    { title: 'audit', tier: 'careful', after: [1], model: 'fable', effort: 'max' },
+    { title: 'plain', tier: 'fable', after: [] },
+  ])
+  // A task that declares nothing is stored as it always was.
+  expect(Object.keys(state.flow()?.tasks[2] ?? {}).sort()).toEqual(['after', 'tier', 'title'])
+  const { rows, terminal } = await panelOf($)
+  const [review = '', audit = '', plain = ''] = rows
+  expect(review).toContain('Fable · xhigh')
+  expect(review).not.toContain('Fable · high')
+  expect(audit).toContain('<tspan fill="#BA7517">careful</tspan>')
+  expect(audit).toContain('Fable · max  ·  after 1')
+  expect(audit).not.toContain('Opus')
+  expect(plain).toContain('Fable · high')
+  expect(terminal).toContain('Fable · xhigh')
+  expect(terminal).toContain('Fable · max')
+  expect(terminal).toContain('Fable · high')
+  expect(terminal).not.toContain('Opus')
+})
+
+test("an effort or a model the Agent tool does not take is dropped, and the task waits at its tier's", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+
+  await plan($, [{ title: 'refactor', tier: 'careful', effort: 'extreme', model: 'gpt', agent: '  ' }, { title: 'rename', tier: 'light', effort: ' XHigh ', model: 'Opus' }])
+
+  expect(Object.keys(state.flow()?.tasks[0] ?? {}).sort()).toEqual(['after', 'tier', 'title'])
+  expect(state.flow()?.tasks[1]).toEqual({ title: 'rename', tier: 'light', after: [], effort: 'xhigh', model: 'opus' })
+  const { rows, terminal } = await panelOf($)
+  expect(rows[0]).toContain('Opus · high')
+  expect(rows[1]).toContain('Opus · xhigh')
+  expect(terminal).toContain('Opus · high')
+})
+
+test('a Codex task waits as its intensity, whatever effort the plan declares', { options: { theme: 'classic' } }, async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+
+  await plan($, [{ title: 'second opinion', tier: 'codex-sol', effort: 'max', model: 'fable' }])
+
+  const { rows } = await panelOf($)
+  expect(rows[0]).toContain('Codex · Sol')
+  expect(rows[0]).not.toContain('max')
+  expect(rows[0]).not.toContain('Fable')
+})
+
+test("an agent of the project that is no savvy worker waits under its own type, at what the plan declares, until it runs", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+
+  await plan($, [
+    { title: 'Review of the diff', tier: 'other', agent: 'code-reviewer', model: 'fable', effort: 'xhigh' },
+    { title: 'Audit of the diff', tier: 'other', agent: 'security-auditor', after: [1] },
+  ])
+
+  expect(state.flow()?.tasks[0]).toEqual({ title: 'Review of the diff', tier: 'other', after: [], agent: 'code-reviewer', model: 'fable', effort: 'xhigh' })
+  const waiting = await panelOf($)
+  expect(waiting.rows).toHaveLength(2)
+  expect(waiting.rows[0]).toContain('<tspan fill="#888780">code-reviewer</tspan>')
+  expect(waiting.rows[0]).toContain('Fable · xhigh')
+  // With nothing declared the row names the agent and what it waits for, no model of a tier.
+  expect(waiting.rows[1]).toContain('<tspan fill="#888780">security-auditor</tspan><tspan class="m">  after 1</tspan>')
+  expect(waiting.terminal).toContain('code-reviewer · Fable · xhigh')
+  expect(waiting.terminal).toContain('security-auditor · after 1')
+
+  await spawn($, 'Review of the diff', 'code-reviewer')
+
+  const running = await panelOf($)
+  // The run took its task's place: one row for it, one still planned.
+  expect(running.rows).toHaveLength(2)
+  expect(running.rows.filter(r => r.includes('Review of the diff'))).toHaveLength(1)
+  expect(running.rows.find(r => r.includes('Review of the diff'))).toContain('ctx 0%')
+  // A task of the plan, so the faint layer counts it as it counts a savvy worker.
+  expect(state.flow()?.running).toBe(1)
+  expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 1 running, 0%')
+})
+
+// An Agent call as the engine answers it: the spawn happens inside the call.
+const launching = ($: Engine, on: On) =>
+  on('tool.call', { tool: 'Agent' }, async (_, e) => {
+    const call = e as unknown as { tool_use_id: string; description: string; subagent_type: string }
+    await $.agent.spawn({
+      tool_use_id: call.tool_use_id,
+      prompt: 'Do the task.',
+      description: call.description,
+      subagentType: call.subagent_type,
+      provider: { plugin: 'engine', tier: 'core' },
+      parentModel: 'claude-opus-5-5',
+      background: true,
+      fork: false,
+    })
+    return { result: { status: 'async_launched', agentId: call.description, prompt: 'Do the task.' } }
+  })
+
+const launch = ($: Engine, description: string, over: Record<string, unknown> = {}) =>
+  $.tool.call({ tool: 'Agent', tool_use_id: `toolu_${description}`, description, prompt: 'Do the task.', subagent_type: 'savvy-flow:savvy-fable', ...over })
+
+test("a run started at another effort than its tier's leaves Planned and shows the effort it runs at", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  launching($, on)
+  on('turn.step', async function* ($, e) {
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: { ...USAGE, model: 'claude-fable-5-2' } }
+  })
+  await start($)
+  await plan($, [{ title: 'review', tier: 'fable', effort: 'xhigh' }, { title: 'plain', tier: 'fable' }])
+
+  await launch($, 'review', { effort: 'xhigh' })
+  await launch($, 'plain')
+
+  // From its first frame, before any model request: what its Agent call asked for.
+  expect(byId(state.agents(), 'review')?.effort).toBe('xhigh')
+  expect(byId(state.agents(), 'plain')?.effort).toBeUndefined()
+  const started = await panelOf($)
+  expect(started.rows).toHaveLength(2)
+  expect(started.terminal).not.toContain('◷')
+  expect(started.rows.find(r => r.includes('>review<'))).toContain('· xhigh')
+  expect(started.rows.join('')).not.toContain('· high')
+
+  // Then what the engine says each request ran at.
+  const step = $.turn.step({ turnId: 't1', index: 0, model: 'claude-fable-5-2', effort: 'xhigh', messageCount: 1, agentId: 'review' })
+  for await (const chunk of step) void chunk
+  const other = $.turn.step({ turnId: 't2', index: 0, model: 'claude-fable-5-2', effort: 'high', messageCount: 1, agentId: 'plain' })
+  for await (const chunk of other) void chunk
+
+  const stepped = await panelOf($)
+  expect(stepped.rows.find(r => r.includes('>review<'))).toContain('Fable 5.2 · xhigh')
+  expect(stepped.rows.find(r => r.includes('>plain<'))).toContain('Fable 5.2 · high')
+  expect(stepped.terminal).toContain('Fable 5.2 · xhigh')
+})
+
+test("the engine's word on a run's effort replaces what its Agent call asked for", async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  launching($, on)
+  answering(on)
+  await start($)
+
+  await launch($, 'review', { effort: 'xhigh' })
+  const step = $.turn.step({ turnId: 't1', index: 0, model: 'claude-opus-5-5', effort: 'high', messageCount: 1, agentId: 'review' })
+  for await (const chunk of step) void chunk
+
+  expect(byId(state.agents(), 'review')?.effort).toBe('high')
+})
+
+const stepped = ($: Engine, agentId: string, input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__step', agentId, ...input })
+
+test('a worker that closes its count with steps skipped shows how many, beside the count', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await spawn($, 'w1')
+  await spawn($, 'w2')
+
+  await stepped($, 'w1', { done: 6, total: 6, skipped: 1, note: 'report' })
+  await stepped($, 'w2', { done: 6, total: 6 })
+
+  expect(byId(state.agents(), 'w1')).toMatchObject({ stepDone: 6, stepTotal: 6, stepSkipped: 1 })
+  // A worker that skipped nothing keeps the row it always had.
+  expect('stepSkipped' in (byId(state.agents(), 'w2') ?? {})).toBe(false)
+  const { rows, terminal } = await panelOf($)
+  expect(rows.find(r => r.includes('>w1<'))).toContain('>6/6 · 1 skipped · report<')
+  expect(rows.find(r => r.includes('>w2<'))).toContain('>6/6<')
+  expect(rows.find(r => r.includes('>w2<'))).not.toContain('skipped')
+  expect(terminal).toContain('6/6 · 1 skipped report · ')
+})
+
+test('the skipped count holds until the worker says otherwise, and never exceeds its steps', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await spawn($, 'w1')
+
+  await stepped($, 'w1', { done: 2, total: 4, skipped: 9 })
+  expect(byId(state.agents(), 'w1')?.stepSkipped).toBe(4)
+  await stepped($, 'w1', { done: 3 })
+  expect(byId(state.agents(), 'w1')?.stepSkipped).toBe(4)
+  await stepped($, 'w1', { done: 4, skipped: 0 })
+  expect('stepSkipped' in (byId(state.agents(), 'w1') ?? {})).toBe(false)
+})

@@ -13,7 +13,7 @@ Task from the user: $ARGUMENTS
 
 ## 0. Preconditions
 
-- The flow is designed for a strong orchestrator model at high effort (Fable high is the reference setup). Whatever the session runs on is the user's deliberate choice: you orchestrate, you do not take the workers' tasks yourself.
+- **You are the session's model.** The orchestrator runs on the model and effort the user selected for the session: Fable when the session is on Fable, Opus when it is on Opus. Never switch the session's model or effort, and never propose another. The flow is designed around a strong model at high effort, but that is the user's call, not a precondition you check. You orchestrate: you do not take the workers' tasks yourself.
 - Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, and the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
 
@@ -32,15 +32,24 @@ Task from the user: $ARGUMENTS
   or a Heavy attempt failed on it, ask before delegating it: the task, why Fable rather than Heavy (what makes it hard,
   what Heavy would risk), the cost of the choice, and your recommendation; Heavy is the alternative offered (Sol, for
   Astra). The user's
-  answer settles that task only; the rest of the plan goes on while it is pending. A design feature for Fable
-  (section 2) is asked the same way.
+  answer settles that task only, unless they set Fable themselves for more (next rule); the rest of the plan goes on
+  while it is pending. A design feature for Fable (section 2) is asked the same way.
+- **A model or an effort the user sets wins over the tier's.** A general instruction (every agent on one model, every
+  review at one effort) covers every task it describes, a specific one the tasks it names, and it holds until they
+  change it: never ask again task by task. Setting Fable this way is the yes its rule asks for. Pass it as `model` /
+  `effort` in each such task's Agent call, write it beside the tier in the plan you present and declare it in the bar
+  (the task's `effort`, `model`), never in the title. A worker already running keeps what it started with, so the
+  task goes to a fresh one. A Codex task takes it in its brief: in the Agent call it would only move the relay.
+- **An agent the project requires** (its own reviewer, its auditor) runs as that type, not as a savvy worker, at the
+  model and effort the project or the user set, passed in the Agent call. It is a task of the plan like any other,
+  declared in the bar with `tier: "other"`, `agent` (its type) and its `model` and `effort`.
 - A second opinion from your own model family adds cost more than insight: take it from the Codex tier when it is
   available.
 
 ## Progress bar
 
 If the tool `mcp__savvy-progress__progress` is available, keep it current; skip silently if it is not. Call it:
-- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `savvy-` prefix, `after` the numbers of the tasks it waits for), `phase: "delegate"` (or `"design"` while in section 2);
+- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `savvy-` prefix, `after` the numbers of the tasks it waits for; plus `effort`, `model` and `agent` where section "Models" says so, repeated every time the task is sent again), `phase: "delegate"` (or `"design"` while in section 2);
 - each time a task is accepted in review: `done` (accepted so far); switch `phase` to `"review"` while reviewing;
 - in that same call, drop the accepted task from `tasks`, and pass `total` and `done` again in that call (a call with `tasks` alone resets `total` to the length of the list and the bar reads 1/1): the panel lists as "Planned" every task in `tasks` it cannot match to a visible run, and a finished run stops being visible, so an accepted task left in the list reads as work not started. `tasks` holds only the tasks still open, numbered again from 1, with `after` renumbered to match;
 - if re-planning changes the tasks: the new `tasks` and `total`;
@@ -252,43 +261,17 @@ applies winning:
    command failing) falls through to the calendar. The user sets the option in `/config`, with
    `/savvy-theme <theme|auto>` or from the theme picker in the panel; a `/savvy-theme` run or the panel's note that
    the theme changed, met during the flow, switches chat to that theme from your next message.
-3. **The calendar**, by the session's current date, in the panel's windows below: a holiday while one is on,
+3. **The calendar**, by the session's current date, in the panel's own windows: a holiday while one is on,
    otherwise a period (the Christmas season, the sales, the school holidays, back to school), otherwise the season. A
    holiday wins over the period it falls in, a period over its season. With the date unknown, no theme.
 
-| Theme | When | Fable | Heavy | Careful | Medium | Light | You | Accepted · returned · escalated | Closing line |
-|-------|------|-------|-------|---------|--------|-------|-----|---------------------------------|--------------|
-| `new-year` | New Year's Day, January 1 | 🌠 | 📅 | 📝 | 🥣 | 🏊 | 🗓️ | 🍀 · 🔁 · 🔥 | `🍀 A clean start to the year.` |
-| `befana` | Epiphany, January 6 | 🧹 | 🪨 | 🧦 | 🍭 | 💨 | 🧙 | 🍬 · 🪨 · 🔥 | `🧦 Stockings filled, no coal.` |
-| `winter-sales` | the winter sales, January 7–20 | 🎈 | 🧥 | 🏷️ | 🛍️ | 🛒 | 🧣 | 💸 · 🔖 · 🔥 | `🛍️ Every bargain bagged.` |
-| `valentine` | Valentine's Day, February 14 | 💘 | 🍫 | 💌 | 🌹 | 🎈 | 💝 | 💕 · 💔 · 🔥 | `💝 Done with love.` |
-| `carnival` | Carnival, the twelve days up to Shrove Tuesday | 🪶 | 🎓 | 🤹 | 🍕 | 🎉 | 🎭 | 🎊 · 🌀 · 🔥 | `🎊 Confetti swept, nothing broken.` |
-| `womens-day` | Women's Day, March 8 | 👑 | 🌿 | 🎀 | 🍰 | 💐 | 🌼 | 💛 · 🍂 · 🔥 | `🌼 Mimosa for everyone.` |
-| `fathers-day` | Father's Day, March 19 | 🏅 | 🪚 | 🔨 | 🧁 | 🧰 | 👔 | ✅ · 🔩 · 🔥 | `👔 Built to last.` |
-| `easter-holidays` | the Easter holidays, Holy Thursday – Easter Tuesday | 🕊️ | 🥾 | 🧳 | 🍰 | 🚲 | 🧺 | 🌿 · 🗺️ · 🔥 | `🧺 Back from the trip, all packed away.` |
-| `easter` | Easter Sunday and Easter Monday | 🐰 | 🧺 | 🎨 | 🍫 | 🐣 | 🥚 | 🌷 · 🥚 · 🔥 | `🐣 Every egg found.` |
-| `liberation` | Liberation Day, April 25 | 🇮🇹 | 🌹 | 🌿 | 💐 | 🏃 | 🕊️ | 🌹 · 🧭 · 🔥 | `🕊️ Free and done.` |
-| `labour-day` | Labour Day, May 1 | 🎸 | ⛏️ | 🧵 | 🥪 | 🏃 | 🛠️ | 🔧 · 🪛 · 🔥 | `🛠️ Hard work, well done.` |
-| `mothers-day` | Mother's Day, the second Sunday of May | 💖 | ☕ | 💌 | 🎂 | 🌷 | 💐 | 💗 · 🩹 · 🔥 | `💐 Made with care, for her.` |
-| `republic-day` | Republic Day, June 2 | ✈️ | 🎺 | 🪢 | 🍨 | 🥁 | 🇮🇹 | 🟩 · 🟥 · 🔥 | `🇮🇹 Done, the flag flying.` |
-| `summer-sales` | the summer sales, two weeks from the first Saturday of July | 🪭 | 🛍️ | 👡 | 🕶️ | 👒 | 🏷️ | 💰 · 🔖 · 🔥 | `🛍️ Sold out, all done.` |
-| `summer-holidays` | the summer holidays, July 1 – August 31 | 🎈 | ⛺ | 🧴 | 🍝 | 🛵 | 🏖️ | 🌴 · 🧭 · 🔥 | `🏖️ Done, off on holiday.` |
-| `ferragosto` | Ferragosto, August 15 | 🦩 | ⛱️ | 🍢 | 🥘 | 🏐 | 🎆 | 🍉 · 🌊 · 🔥 | `🎆 Done, see you at the fireworks.` |
-| `back-to-school` | back to school, September 1–14 | 🎓 | 🎒 | ✏️ | 🍎 | 🛩️ | 📚 | ✔️ · 📝 · 🔥 | `📚 Homework done.` |
-| `halloween` | Halloween, October 31 | 🧛 | 💀 | 🕷️ | 🦇 | 👻 | 🎃 | 🦴 · 🕸️ · 🔥 | `🕸️ No bugs left crawling.` |
-| `all-saints` | All Saints' Day, November 1 | 😇 | 🕯️ | 🪟 | 🍪 | 🔔 | ✨ | 🌟 · 🙏 · 🔥 | `✨ All saints, all done.` |
-| `all-souls` | All Souls' Day, November 2 | 🏮 | 🌼 | 🕯️ | 💮 | 💧 | 🤍 | ✔️ · ↩️ · ⬆️ | `🤍 Done, quietly.` |
-| `black-friday` | Black Friday, the day after the fourth Thursday of November | 🪙 | 📦 | 💳 | 🛍️ | 🛒 | 🖤 | 💰 · 🧾 · 🔥 | `🖤 Every deal closed.` |
-| `immaculate` | the Immaculate Conception, December 8 | 🌟 | 🌲 | 🐑 | 🎀 | 💡 | ⭐ | ✨ · 🧶 · 🔥 | `⭐ The tree is up.` |
-| `christmas` | the Christmas season, December 8 – January 6, outside its own days | 👼 | 🎅 | 🧝 | 🍪 | 🦌 | 🎄 | 🎁 · ❄️ · 🔥 | `🎁 All wrapped up.` |
-| `christmas-eve` | Christmas Eve, December 24 | 💫 | 🐟 | 🎁 | 🥛 | 🛷 | 🌟 | 🔔 · 📜 · 🔥 | `🌟 Everything ready for tonight.` |
-| `christmas-day` | Christmas Day, December 25 | 🎺 | 🎁 | 🎀 | 🍲 | 🚗 | 🔔 | 🎉 · 🧦 · 🔥 | `🎁 Merry Christmas, all unwrapped.` |
-| `st-stephen` | St Stephen's Day, December 26 | 💤 | 🍗 | 🔢 | 🍞 | 👟 | 🛋️ | 😌 · 🍽️ · 🔥 | `🛋️ Done, back to the leftovers.` |
-| `new-years-eve` | New Year's Eve, December 31 | 🎆 | 🍖 | 🍾 | 🥂 | 🎇 | 🕛 | ✨ · ⏳ · 🔥 | `🥂 Counted down and done.` |
-| `spring` | spring, March 1 – May 31 | 🦋 | 🪱 | 🌱 | 🌷 | 🪁 | 🌸 | 🌼 · 🌧️ · 🔥 | `🌸 Everything in bloom.` |
-| `summer` | summer, June 1 – August 31 | 🛟 | 🤿 | 🪣 | 🍉 | 🏄 | 🌞 | 🍦 · 🌊 · 🔥 | `🍦 Done, time for a gelato.` |
-| `autumn` | autumn, September 1 – November 30 | 🦉 | 🍄 | 🌰 | 🍇 | 🍃 | 🍂 | 🍎 · ☔ · 🔥 | `🍂 All raked up.` |
-| `winter` | winter, December 1 – the end of February | ⛸️ | 🎣 | 🧶 | ☕ | 🛷 | ⛄ | 🧣 · 🧊 · 🔥 | `⛄ Warm and done.` |
+The themes are in `references/themes.md`, one section per month, each row a theme with its window (`When`), a mascot
+per tier, your own mark (`You`), the marks for accepted, returned and escalated, and the closing line. Read what the
+choice needs and nothing more, once, when the theme is chosen or changes:
+- by the calendar: the current month's section alone (`## November`), which holds every theme that can fall in that
+  month, and from it the row whose window holds the date;
+- a theme named by the user or pinned by the panel: its row alone (the first line starting with its id between
+  backticks, `` | `winter` | ``).
 
 - Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra. The mascots follow the
   roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the

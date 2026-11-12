@@ -74,9 +74,13 @@ the mod needs.
 
 ## Tools it adds
 
-- `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks.
-- `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`). A worker that does not report
-  shows its context fill in grey instead.
+- `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks. A planned
+  task waits at its tier's model and effort, or at the `effort` and `model` the plan declares for it (what its Agent
+  call will pass); an agent that is no savvy worker is planned with `tier: "other"` and `agent`, its type. A run
+  shows the effort its Agent call asked for, then the one the engine reports for each request.
+- `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`), and `skipped` for the planned
+  steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
+  fill in grey instead.
 
 The cost is a rough estimate from token counts and a built-in per-model price table (`PRICES` in
 `hooks/register.tsx`), not a bill.

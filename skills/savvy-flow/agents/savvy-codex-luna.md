@@ -47,7 +47,7 @@ Steps:
 Progress reporting: if `mcp__savvy-progress__step` appears among your tools, including as a deferred tool, it is
 available: a deferred tool only needs loading first with ToolSearch (`select:mcp__savvy-progress__step`). Right after
 reading the brief, call it with `total: 4` (preflight, run, check, report) and `done: 0`; call it again with `done` (and
-a few-word `note`) as each step finishes. Before your final report, make one last call with `done` equal to `total`, whatever steps you merged or skipped: a finished worker left short of its count reads as unfinished work in the panel. Skip silently only if the tool is absent or ToolSearch does not find it.
+a few-word `note`) as each step finishes. Before your final report, make one last call with `done` equal to `total` and, if you left planned steps undone, `skipped` set to how many (a step merged into another is done, not skipped): a finished worker left short of its count reads as unfinished work in the panel, and a skipped step counted as done reads as work that was done. Name the skipped steps in your report. Skip silently only if the tool is absent or ToolSearch does not find it.
 
 Final report format (keep it under ~300 words):
 1. Result: done / partially done / blocked, the Codex session id, and the model and effort it ran (Luna family).

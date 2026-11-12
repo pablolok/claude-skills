@@ -22,6 +22,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | File | Role |
 | :--- | :--- |
 | `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
+| `references/themes.md` | The chat themes, one section per month: each theme's window, its mascot per tier, the orchestrator's mark, the review marks and the closing line. The orchestrator reads the current month's section, or one theme's row. |
 | `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
@@ -38,13 +39,17 @@ fraction of the context, so a task that needs a skill, a browser or the web goes
 
 ## A strong orchestrator, cheap workers
 
-The orchestrator (Fable is the reference) keeps the plan, the design and the review, and delegates every task. A
+The orchestrator is the session's own model, whichever the user selected (Fable on a Fable session, Opus on an Opus
+one): the skill never switches it or proposes another. It keeps the plan, the design and the review, and delegates
+every task. A
 worker's model is pinned in its agent file; an Agent call of a type with no model of its own (`general-purpose`, a
 fork) inherits the session's model and would run as the orchestrator, so the skill allows only the savvy types, and
 built-in ones (Explore) with an explicit `model`. Audits, verification passes and other legwork get a tier like any
 task. `savvy-fable` never starts on the orchestrator's choice alone, whether it runs on Fable or Opus: for a task
 that looks like Fable work (or one Heavy failed), the orchestrator asks the user first, with the reason, the cost and
-its recommendation, and Heavy runs unless the user says Fable.
+its recommendation, and Heavy runs unless the user says Fable. A model or an effort the user sets for some tasks wins
+over the tier's: it goes in those tasks' Agent calls, in the plan and in the progress bar. An agent the project
+requires (its own reviewer or auditor) runs as its own type and is a task of the plan like any other.
 
 ## Codex (OpenAI models)
 

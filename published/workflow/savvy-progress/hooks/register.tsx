@@ -25,6 +25,9 @@ const PANE = 'savvy-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
 const DONE = '#5fbf8f'
+// What the Agent tool takes as `effort` and as `model`: a task or a call naming anything else names none.
+const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max']
+const MODELS: readonly string[] = ['fable', 'opus', 'sonnet', 'haiku']
 
 type ProgressInput = {
   title?: string
@@ -32,7 +35,7 @@ type ProgressInput = {
   done?: number
   phase?: Phase
   finished?: boolean
-  tasks?: { title?: string; tier?: string; after?: number[] }[]
+  tasks?: { title?: string; tier?: string; after?: number[]; effort?: string; model?: string; agent?: string }[]
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +59,7 @@ const STRINGS = {
     round: 'round',
     failed: 'error',
     after: 'after',
+    skipped: 'skipped',
     tokensWord: 'tokens',
     agentsCount: 'agents',
     isRunning: 'running',
@@ -86,6 +90,7 @@ const STRINGS = {
     round: 'раунд',
     failed: 'ошибка',
     after: 'после',
+    skipped: 'пропущено',
     tokensWord: 'токенов',
     agentsCount: 'агентов',
     isRunning: 'работает',
@@ -252,14 +257,28 @@ const blank = (): Flow => ({
 const isNewFlow = (prev: Flow | null, input: ProgressInput): boolean =>
   !prev || prev.isFinished || (input.title !== undefined && input.title.trim() !== prev.title)
 
+const oneOf = (allowed: readonly string[], value: unknown): string | undefined => {
+  const v = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return allowed.includes(v) ? v : undefined
+}
+
 const cleanTasks = (tasks: ProgressInput['tasks']): PlannedTask[] | undefined =>
   tasks
     ?.filter(t => t.title?.trim())
-    .map(t => ({
-      title: (t.title ?? '').trim(),
-      tier: (t.tier ?? '').replace(/^savvy-/, '').trim().toLowerCase(),
-      after: (t.after ?? []).filter(n => Number.isInteger(n) && n > 0),
-    }))
+    .map(t => {
+      const effort = oneOf(EFFORTS, t.effort)
+      const model = oneOf(MODELS, t.model)
+      const agent = typeof t.agent === 'string' ? t.agent.trim() : ''
+      return {
+        title: (t.title ?? '').trim(),
+        tier: (t.tier ?? '').replace(/^savvy-/, '').trim().toLowerCase(),
+        after: (t.after ?? []).filter(n => Number.isInteger(n) && n > 0),
+        // A task that declares none keeps the shape it always had.
+        ...(effort ? { effort } : {}),
+        ...(model ? { model } : {}),
+        ...(agent ? { agent } : {}),
+      }
+    })
 
 const merge = (prev: Flow | null, input: ProgressInput): Flow => {
   // A new title means a new flow: never carry counters over from an earlier one.
@@ -538,6 +557,26 @@ const elapsed = (a: AgentRun, at: number): number => (a.endedAt ?? Math.max(at, 
 
 type Planned = PlannedTask & { n: number }
 
+const plannedTier = (p: PlannedTask): string => (p.tier in TIER_COLOR ? p.tier : 'other')
+
+// A planned task of no tier waits under its agent type's name, as its run will show.
+const plannedName = (p: PlannedTask): string => {
+  const tier = plannedTier(p)
+  return tier === 'other' ? p.agent || tier : tier
+}
+
+// What a planned task will run on: the model and the effort its plan declares (the
+// user's choice), its tier's otherwise. A Codex task names its intensity alone: the
+// effort of the relay is not Codex's.
+const plannedModel = (p: PlannedTask): string => {
+  const tier = plannedTier(p)
+  const ofTier = TIER_MODEL[tier] ?? ''
+  if (tier in CODEX_WEARS) return ofTier
+  const [model = '', effort = ''] = ofTier.split(' · ')
+  const declared = p.model ? `${p.model.charAt(0).toUpperCase()}${p.model.slice(1)}` : model
+  return [declared, p.effort ?? effort].filter(Boolean).join(' · ')
+}
+
 const plannedOf = (f: Flow | null, list: AgentRun[]): Planned[] => {
   if (!f || f.isFinished) return []
   const started = new Set(list.map(a => norm(a.description)))
@@ -709,6 +748,11 @@ ${tile(0, s.cost, '≈' + fmtCost(t.cost))}${tile(1, s.tokens, fmtTokens(t.token
 const headerHeight = (title: string): number => (title ? 72 : 44)
 
 // The task's own progress when the worker reports steps; a finished run is full.
+// A worker's own count as its row reads it: the steps it left undone stand beside
+// the count, so 6/6 with one skipped is not taken for 6/6.
+const stepCount = (a: AgentRun): string =>
+  a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${tr().skipped}` : ''}` : ''
+
 const progressOf = (a: AgentRun): number | null => {
   if (a.status === 'done') return 1
   if (a.stepTotal) return Math.min(1, (a.stepDone ?? 0) / a.stepTotal)
@@ -729,7 +773,7 @@ const agentSvg = (W: number, a: AgentRun, at: number): string => {
   const barW = textW
   const progress = progressOf(a)
   const stats = `ctx ${ctx}% · ${fmtTokens(a.contextTokens)}  ≈${fmtCost(a.costUsd)}  ${fmtTime(elapsed(a, at))}`
-  const steps = a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? ' · ' + a.stepNote : ''}` : ''
+  const steps = a.stepTotal ? `${stepCount(a)}${a.stepNote ? ' · ' + a.stepNote : ''}` : ''
   const stepsW = Math.max(0, barW - textWidth(stats, 11) - 12)
   // Without reported steps the bar falls back to the context, drawn grey.
   const fillW = Math.round(barW * (progress ?? ctx / 100))
@@ -748,17 +792,17 @@ ${statusMark(W - 8, 16, a.status, color)}
 }
 
 const plannedSvg = (W: number, p: Planned): string => {
-  const tier = p.tier in TIER_COLOR ? p.tier : 'other'
+  const tier = plannedTier(p)
   const color = colorOf(tier)
   const textW = W - 42 - 22
-  const meta = [TIER_MODEL[tier] ?? '']
+  const meta = [plannedModel(p)]
   if (p.after.length) meta.push(`${tr().after} ${p.after.join(', ')}`)
   return svg(
     W,
     46,
     `${crab(0, 6, tier, true)}
 <text class="s" x="42" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(`${p.n}. ${p.title}`, 13, textW))}</text>
-<text x="42" y="34" font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tier)}</tspan><tspan class="m">  ${xml(meta.filter(Boolean).join('  ·  '))}</tspan></text>
+<text x="42" y="34" font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(plannedName(p))}</tspan><tspan class="m">  ${xml(meta.filter(Boolean).join('  ·  '))}</tspan></text>
 ${statusMark(W - 8, 16, 'planned', color)}
 <line class="ln" x1="0" y1="45.5" x2="${W}" y2="45.5"/>`,
   )
@@ -768,7 +812,7 @@ const compactSvg = (W: number, list: AgentRun[], planned: Planned[], t: ReturnTy
   const icons = [
     ...list.filter(a => a.status === 'running').map(a => ({ k: costumeOf(a.type), c: colorOf(tierOf(a.type)), s: 'running', dim: false })),
     ...list.filter(a => a.status !== 'running').map(a => ({ k: costumeOf(a.type), c: colorOf(tierOf(a.type)), s: a.status, dim: false })),
-    ...planned.map(p => ({ k: p.tier in TIER_COLOR ? p.tier : 'other', c: colorOf(p.tier), s: 'planned', dim: true })),
+    ...planned.map(p => ({ k: plannedTier(p), c: colorOf(p.tier), s: 'planned', dim: true })),
   ]
   const fit = Math.max(1, Math.floor((W - 150) / 36))
   const shown = icons.slice(0, fit)
@@ -846,10 +890,12 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number): Age
   })
 }
 
-// The bar's faint layer: savvy workers running now, as the agents list says.
+// The bar's faint layer: the plan's workers running now, as the agents list says. A
+// savvy worker is one; so is an agent of any other type running a task of the plan.
 async function syncRunning($: EngineInterface): Promise<void> {
-  const running = (await read($, agents)).filter(a => a.status === 'running' && isSavvy(a.type)).length
   const f = await read($, flow)
+  const tasks = new Set((f?.tasks ?? []).map(t => norm(t.title)))
+  const running = (await read($, agents)).filter(a => a.status === 'running' && (isSavvy(a.type) || tasks.has(norm(a.description)))).length
   if (f && f.running !== running) await update($, flow, prev => (prev ? { ...prev, running } : prev))
 }
 
@@ -877,6 +923,12 @@ async function adoptAgentId($: EngineInterface, toolUseId: string | undefined, r
 
 // Module scope is fine: a reload only makes the next tick reconcile at once.
 let lastListAt = 0
+
+// The effort an Agent call asks for, by its tool_use_id, while the call is under way:
+// the spawn inside it does not carry it, and the engine names a run's effort only at
+// its first model request. Module scope is fine: a reload in between leaves the row
+// without an effort until that request.
+const askedEffort = new Map<string, string>()
 
 async function reconcile($: EngineInterface): Promise<void> {
   const listedAt = await $.clock.now()
@@ -915,8 +967,23 @@ export const register: Register = (on, options) => {
               type: 'object',
               properties: {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
-                tier: { type: 'string', enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(CODEX_WEARS)] },
+                tier: {
+                  type: 'string',
+                  enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(CODEX_WEARS), 'other'],
+                  description: 'The savvy tier; `other` for an agent of the project that is no savvy worker, named in `agent`.',
+                },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
+                effort: {
+                  type: 'string',
+                  enum: [...EFFORTS],
+                  description: "Only when the task's Agent call passes an `effort` (the user chose it): that effort, shown in place of the tier's.",
+                },
+                model: {
+                  type: 'string',
+                  enum: [...MODELS],
+                  description: "Only when the task's Agent call passes a `model`: that model, shown in place of the tier's.",
+                },
+                agent: { type: 'string', description: "For tier `other`: the Agent call's `subagent_type`, shown as the task's tier." },
               },
               required: ['title', 'tier'],
             },
@@ -929,13 +996,19 @@ export const register: Register = (on, options) => {
       description:
         'For savvy-flow workers: report progress on your own task to the agents panel. ' +
         'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
-        'call it again as each step finishes. Cheap and silent: it only draws a bar.',
+        'call it again as each step finishes, and close with `done` equal to `total` and `skipped` for the steps left undone. ' +
+        'Cheap and silent: it only draws a bar.',
       inputSchema: {
         type: 'object',
         properties: {
           done: { type: 'integer', minimum: 0, description: 'Steps finished so far.' },
           total: { type: 'integer', minimum: 1, description: 'Steps planned; may change if the plan changes.' },
           note: { type: 'string', description: 'The step in progress, a few words.' },
+          skipped: {
+            type: 'integer',
+            minimum: 0,
+            description: 'Planned steps left undone (a step merged into another is done), shown beside the count. Leave it out when there are none.',
+          },
         },
         required: ['done'],
       },
@@ -1020,7 +1093,7 @@ export const register: Register = (on, options) => {
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
-    const input = e as unknown as { done?: number; total?: number; note?: string }
+    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number }
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     // Set on every run of the updater, which may run again on a conflict.
@@ -1031,7 +1104,16 @@ export const register: Register = (on, options) => {
         if (a.agentId !== agentId) return a
         const total = Math.max(0, Math.round(input.total ?? a.stepTotal ?? 0))
         const done = Math.max(0, Math.round(input.done ?? a.stepDone ?? 0))
-        return { ...a, stepTotal: total, stepDone: total ? Math.min(total, done) : done, stepNote: input.note?.trim() || undefined }
+        const skipped = Math.min(total || Infinity, Math.max(0, Math.round(input.skipped ?? a.stepSkipped ?? 0)))
+        const { stepSkipped: _, ...row } = a
+        return {
+          ...row,
+          stepTotal: total,
+          stepDone: total ? Math.min(total, done) : done,
+          stepNote: input.note?.trim() || undefined,
+          // A worker that skipped nothing keeps the row it always had.
+          ...(skipped ? { stepSkipped: skipped } : {}),
+        }
       })
     })
     return { result: isMatched ? 'ok' : `ignored: no panel row for agent ${agentId}` }
@@ -1047,9 +1129,15 @@ export const register: Register = (on, options) => {
       })
       await syncRunning($)
     }
-    const answered = await next(e)
-    await adoptAgentId($, e.tool_use_id, answered.result)
-    return answered
+    const effort = oneOf(EFFORTS, e.effort)
+    if (effort && e.tool_use_id) askedEffort.set(e.tool_use_id, effort)
+    try {
+      const answered = await next(e)
+      await adoptAgentId($, e.tool_use_id, answered.result)
+      return answered
+    } finally {
+      if (e.tool_use_id) askedEffort.delete(e.tool_use_id)
+    }
   })
 
   on('agent.spawn', async ($, e, next) => {
@@ -1057,6 +1145,8 @@ export const register: Register = (on, options) => {
     if (started.deny !== undefined) return started
 
     const at = await $.clock.now()
+    // Until the first model request names the run's own, the effort its Agent call asked for.
+    const effort = askedEffort.get(e.tool_use_id)
     await update($, agents, list => {
       const round = 1 + list.filter(a => norm(a.description) === norm(e.description) && e.description).length
       const run: AgentRun = {
@@ -1065,6 +1155,7 @@ export const register: Register = (on, options) => {
         type: e.subagentType,
         description: e.description,
         model: started.model,
+        ...(effort ? { effort } : {}),
         status: 'running',
         startedAt: at,
         contextTokens: 0,
@@ -1287,7 +1378,7 @@ export const register: Register = (on, options) => {
       const ctx = ctxOf(a)
       const progress = progressOf(a)
       const model = runModel(a)
-      const steps = a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? ' ' + a.stepNote : ''} · ` : ''
+      const steps = a.stepTotal ? `${stepCount(a)}${a.stepNote ? ' ' + a.stepNote : ''} · ` : ''
       return (
         <Box key={a.id} flexDirection="column" marginBottom={1}>
           <Box flexDirection="row" gap={1}>
@@ -1348,16 +1439,15 @@ export const register: Register = (on, options) => {
             {!p.isDoneCollapsed && finished.map(row)}
             {planned.length > 0 && <Text dimColor>{s.planned} · {planned.length}</Text>}
             {planned.map(pl => {
-              const tier = pl.tier in TIER_COLOR ? pl.tier : 'other'
+              const waits = pl.after.length ? `${s.after} ${pl.after.join(', ')}` : ''
               return (
                 <Box key={`plan-${pl.n}`} flexDirection="column" marginBottom={1}>
                   <Text dimColor wrap="truncate-end">
-                    <Text color={colorOf(tier)}>▢</Text> {pl.n}. {pl.title} ◷
+                    <Text color={colorOf(plannedTier(pl))}>▢</Text> {pl.n}. {pl.title} ◷
                   </Text>
                   <Text dimColor wrap="truncate-end">
                     {'  '}
-                    {tier} · {TIER_MODEL[tier] ?? ''}
-                    {pl.after.length ? ` · ${s.after} ${pl.after.join(', ')}` : ''}
+                    {[plannedName(pl), plannedModel(pl), waits].filter(Boolean).join(' · ')}
                   </Text>
                 </Box>
               )

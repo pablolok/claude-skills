@@ -2,8 +2,15 @@ export type Phase = 'plan' | 'design' | 'delegate' | 'review' | 'close'
 
 export type PlannedTask = {
   title: string
+  /** A savvy tier, or `other` for an agent of the project that is no savvy worker. */
   tier: string
   after: number[]
+  /** The effort the task's Agent call passes, when it is not its tier's. */
+  effort?: string
+  /** The model the task's Agent call passes, when it is not its tier's. */
+  model?: string
+  /** For tier `other`: the agent type the task runs as. */
+  agent?: string
 }
 
 export type Flow = {
@@ -40,6 +47,8 @@ export type AgentRun = {
   stepDone?: number
   stepTotal?: number
   stepNote?: string
+  /** Planned steps the worker left undone, as it reports them. */
+  stepSkipped?: number
 }
 
 export type Panel = {

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 import typing
 import unittest
@@ -34,6 +35,16 @@ HOST_ORCHESTRATION_SERVERS = {"mcp__ccd_turn", "mcp__ccd_session"}
 PANEL_MANIFEST = REPO / "skills" / "savvy-progress" / ".claude-plugin" / "plugin.json"
 #: The panel's `theme` values that name no chat theme of their own.
 PANEL_NON_THEMES = {"auto", "classic"}
+#: The chat themes, out of the skill's core: one section per month, read a section or a row at a time.
+THEMES = pathlib.Path("references") / "themes.md"
+MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
+          "December")
+#: A feast that moves with Easter names no month in its window: the months the panel's calendar can put it in
+#: (Carnival, 58 to 47 days before Easter; the Easter holidays, 3 days before to 2 after; Easter and its Monday).
+MOVABLE_FEASTS = {"carnival": ("January", "February", "March"), "easter-holidays": ("March", "April"),
+                  "easter": ("March", "April")}
+#: A window from a day of one month to a day, or the end, of another: `March 1 – May 31`, `the end of February`.
+MONTH_SPAN = re.compile(r"({0}) \d+ – (?:({0}) \d+|the end of ({0}))".format("|".join(MONTHS)))
 
 
 def _read(path: pathlib.Path) -> str:
@@ -43,6 +54,30 @@ def _read(path: pathlib.Path) -> str:
 def _flat(text: str) -> str:
     """The text with every run of whitespace as one space, so a rule reads the same however its lines wrap."""
     return " ".join(text.split())
+
+
+def _months_of(theme: str, window: str) -> typing.Tuple[str, ...]:
+    """The months a theme's window can reach, read off the window as the table words it."""
+    if theme in MOVABLE_FEASTS:
+        return MOVABLE_FEASTS[theme]
+    span = MONTH_SPAN.search(window)
+    if span is None:
+        return tuple(month for month in MONTHS if month in window)
+    first, last = MONTHS.index(span.group(1)), MONTHS.index(span.group(2) or span.group(3))
+    return tuple(MONTHS[(first + step) % 12] for step in range((last - first) % 12 + 1))
+
+
+def _theme_sections(text: str) -> typing.Dict[str, typing.Dict[str, str]]:
+    """Each month's section of the themes file: its rows by theme id."""
+    sections: typing.Dict[str, typing.Dict[str, str]] = {}
+    month = ""
+    for line in text.splitlines():
+        if line.startswith("## "):
+            month = line.removeprefix("## ").strip()
+            sections[month] = {}
+        elif month and line.startswith("| `"):
+            sections[month][line.split("`")[1]] = line
+    return sections
 
 
 def _flow_list(value: str) -> typing.Set[str]:
@@ -116,6 +151,16 @@ class TestWorkers(unittest.TestCase):
                 body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
                 self.assertIn("Before your final report, make one last call with `done` equal to `total`", body)
 
+    def test_every_worker_says_how_many_steps_it_skipped_instead_of_counting_them_done(self) -> None:
+        # A closed count alone reads 6/6 for a worker that skipped a step as for one that did them all.
+        for name in WORKERS:
+            with self.subTest(worker=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn("if you left planned steps undone, `skipped` set to how many (a step merged into another "
+                              "is done, not skipped)", body)
+                self.assertIn("Name the skipped steps in your report.", body)
+                self.assertNotIn("whatever steps you merged or skipped", body)
+
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default
         # entry; declaring them too would register each worker twice, and an own manifest would conflict with it.
@@ -157,6 +202,32 @@ class TestModels(unittest.TestCase):
         self.assertIn("**`savvy-fable` and `savvy-codex-astra` run only with the user's yes**, whatever model you are.", self.text)
         self.assertIn("why Fable rather than Heavy", self.text)
         self.assertIn("Heavy (or Sol) runs unless the user says yes", self.text)
+
+    def test_the_orchestrator_is_the_session_s_model_never_another(self) -> None:
+        self.assertIn("**You are the session's model.** The orchestrator runs on the model and effort the user selected "
+                      "for the session", self.text)
+        self.assertIn("Never switch the session's model or effort, and never propose another.", self.text)
+        self.assertNotIn("reference setup", self.text)
+        self.assertNotIn("Fable is the reference", _flat(_read(PUBLISHED / "README.md")))
+
+    def test_a_general_instruction_on_model_or_effort_covers_every_task_it_describes(self) -> None:
+        self.assertIn("A general instruction (every agent on one model, every review at one effort) covers every task it "
+                      "describes", self.text)
+        self.assertIn("it holds until they change it: never ask again task by task", self.text)
+        self.assertIn("Setting Fable this way is the yes its rule asks for.", self.text)
+        self.assertIn("settles that task only, unless they set Fable themselves for more (next rule)", self.text)
+
+    def test_a_model_or_effort_the_user_sets_reaches_the_call_the_plan_and_the_bar(self) -> None:
+        self.assertIn("**A model or an effort the user sets wins over the tier's.**", self.text)
+        self.assertIn("Pass it as `model` / `effort` in each such task's Agent call", self.text)
+        self.assertIn("declare it in the bar (the task's `effort`, `model`), never in the title", self.text)
+        self.assertIn("A worker already running keeps what it started with", self.text)
+        self.assertIn("A Codex task takes it in its brief", self.text)
+        self.assertIn("plus `effort`, `model` and `agent` where section \"Models\" says so, repeated every time", self.text)
+
+    def test_an_agent_the_project_requires_is_a_task_of_the_plan_and_of_the_bar(self) -> None:
+        self.assertIn("**An agent the project requires** (its own reviewer, its auditor) runs as that type", self.text)
+        self.assertIn('declared in the bar with `tier: "other"`, `agent` (its type) and its `model` and `effort`', self.text)
 
     def test_legwork_and_late_requests_get_a_tier(self) -> None:
         self.assertIn("**Legwork has a tier too**", self.text)
@@ -217,11 +288,42 @@ class TestThemes(unittest.TestCase):
     def test_the_calendar_puts_a_holiday_over_a_period_and_a_period_over_its_season(self) -> None:
         self.assertIn("A holiday wins over the period it falls in, a period over its season.", self.text)
 
+    def test_the_themes_live_in_a_reference_read_a_month_or_a_row_at_a_time(self) -> None:
+        self.assertEqual(_read(PUBLISHED / THEMES), _read(SOURCE / THEMES), "publish the skill")
+        self.assertNotIn("| Theme | When |", self.text, "the table loads with every flow: it belongs in the reference")
+        self.assertIn("The themes are in `references/themes.md`, one section per month", self.text)
+        self.assertIn("the current month's section alone", self.text)
+        self.assertIn("its row alone", self.text)
+
     def test_every_theme_the_panel_can_pin_has_a_chat_row(self) -> None:
         options = json.loads(_read(PANEL_MANIFEST))["userConfig"]["theme"]["options"]
-        for theme in set(options) - PANEL_NON_THEMES:
+        rows = {theme for section in _theme_sections(_read(PUBLISHED / THEMES)).values() for theme in section}
+        self.assertEqual(rows, set(options) - PANEL_NON_THEMES)
+
+    def test_each_month_holds_every_theme_whose_window_can_reach_it_and_no_other(self) -> None:
+        sections = _theme_sections(_read(PUBLISHED / THEMES))
+        self.assertEqual(tuple(sections), MONTHS)
+        rows = {theme: row for section in sections.values() for theme, row in section.items()}
+        for theme, row in sorted(rows.items()):
             with self.subTest(theme=theme):
-                self.assertIn(f"| `{theme}` |", self.text)
+                window = row.split("|")[2].strip()
+                holding = tuple(month for month in MONTHS if theme in sections[month])
+                self.assertEqual(holding, tuple(sorted(_months_of(theme, window), key=MONTHS.index)))
+                # One theme, one row: the same marks whichever month it is read from.
+                self.assertEqual({sections[month][theme] for month in holding}, {row})
+
+    def test_each_theme_row_has_every_mark_the_rules_use(self) -> None:
+        text = _read(PUBLISHED / THEMES)
+        header = next(line for line in text.splitlines() if line.startswith("| Theme |"))
+        columns = [cell.strip() for cell in header.strip("|").split("|")]
+        self.assertEqual(columns, ["Theme", "When", "Fable", "Heavy", "Careful", "Medium", "Light", "You",
+                                   "Accepted · returned · escalated", "Closing line"])
+        for month, section in _theme_sections(text).items():
+            for theme, row in section.items():
+                with self.subTest(month=month, theme=theme):
+                    cells = [cell.strip() for cell in row.strip("|").split("|")]
+                    self.assertEqual(len(cells), len(columns))
+                    self.assertTrue(all(cells), "an empty cell")
 
 
 class TestLicence(unittest.TestCase):

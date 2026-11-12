@@ -26,6 +26,13 @@ SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks
 REGISTERED = ("name: 'progress'", "name: 'step'", "name: 'agents-info'", "'mcp__savvy-progress__progress'",
               "'mcp__savvy-progress__step'", "on('command.run', { command: 'agents-info' }", "name: 'savvy-theme'",
               "on('command.run', { command: 'savvy-theme' }")
+#: What a planned task may declare beside its tier, as the savvy-flow skill tells the orchestrator to: the effort and
+#: the model its Agent call passes (the values that tool takes), and an agent of no tier by its type.
+DECLARED = ("const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max']",
+            "const MODELS: readonly string[] = ['fable', 'opus', 'sonnet', 'haiku']", "enum: [...EFFORTS]",
+            "enum: [...MODELS]", "...Object.keys(CODEX_WEARS), 'other']", "agent: { type: 'string'")
+#: What a worker may add to its closing count, as its definition tells it to: the planned steps it left undone.
+SKIPPED = ("skipped: {", "stepSkipped", "skipped: 'skipped'")
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
@@ -85,6 +92,23 @@ class TestModule(unittest.TestCase):
         source = _read(PUBLISHED / "hooks" / "register.tsx")
         for literal in REGISTERED:
             self.assertIn(literal, source)
+
+    def test_a_planned_task_may_declare_its_effort_its_model_and_an_agent_of_no_tier(self) -> None:
+        source = _read(PUBLISHED / "hooks" / "register.tsx")
+        for literal in DECLARED:
+            with self.subTest(literal=literal):
+                self.assertIn(literal, source)
+        contract = _read(PUBLISHED / "types" / "index.d.ts")
+        for field in ("effort?: string", "model?: string", "agent?: string"):
+            with self.subTest(field=field):
+                self.assertIn(field, contract)
+
+    def test_a_worker_s_step_count_takes_the_steps_it_skipped(self) -> None:
+        source = _read(PUBLISHED / "hooks" / "register.tsx")
+        for literal in SKIPPED:
+            with self.subTest(literal=literal):
+                self.assertIn(literal, source)
+        self.assertIn("stepSkipped?: number", _read(PUBLISHED / "types" / "index.d.ts"))
 
 
 class TestLicence(unittest.TestCase):

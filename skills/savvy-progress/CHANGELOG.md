@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.0] - 2026-11-12
+- A planned task shows the effort and the model its Agent call passes — a task of the progress tool may declare effort and model (shown in place of its tier's), and an agent of no tier with tier other and agent, which then counts on the bar like a worker; a run shows the effort its Agent call asked for from its first frame; the step tool takes skipped, the planned steps a worker left undone, shown beside its count (6/6 · 1 skipped)
+
+
 ## [1.8.1] - 2026-11-12
 - Fixes, ideas from the upstream claude-kit (merged commits 7f311a3 and 37d524b, PRs #52 and #40, issue #57) — the desktop band sizes itself to the slot so the count and the dismiss stay visible; the Tokens total leaves cache reads out; only the main session reports the flow; a step with no panel row says so; a run whose spawn gave no agentId takes it from its Agent call
 
