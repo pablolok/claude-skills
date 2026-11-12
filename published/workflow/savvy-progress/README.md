@@ -34,8 +34,10 @@ the mod needs.
   effort through `step` (for example `Codex · Sol 6.1 · high`). Planned Codex tasks and runs awaiting that declaration
   predict the relay's choice from `~/.codex/models_cache.json` under the user's home: the visible (`list`) model
   ending in the family's suffix with the lowest priority. The cache is read at most once a minute; an absent or
-  unreadable cache leaves the bare intensity (`Codex · Sol`). Prediction uses Luna low, Terra medium, Sol high and
-  Astra high. Codex cost and token counts remain the Claude relay's own.
+  unreadable cache leaves the bare intensity (`Codex · Sol`); a re-read that finds the same models redraws nothing.
+  A run awaiting its declaration predicts the effort too: Luna low, Terra medium, Sol high and Astra high. A planned
+  Codex task names no effort (`Codex · Sol 6.1`): the user's effort for Codex is in its brief, which the bar never
+  sees. Codex cost and token counts remain the Claude relay's own.
 - **Themes**: the figures dress up for the calendar, and every one of them moves, running or not (a running one at
   full pace, the others idling slowly); the bar takes the theme's colors and the panel's header an ornament of its
   own. The crab stays the crab, and each tier keeps its role in every theme: Fable is the rare one that floats or

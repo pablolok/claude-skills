@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.1] - 2026-11-12
+- A planned Codex row names the predicted model but no effort, since the user's effort for Codex is in the brief the bar never sees; a cache re-read that finds the same models no longer redraws the idle panel every minute; the cache path tests pass on every platform
+
+
 ## [1.11.0] - 2026-11-12
 - Worker rows name the model with its version and effort: Codex relays declare their exact model and effort through step; planned and undeclared Codex workers predict the newest visible family model from the home cache, read at most once a minute; Claude planned aliases learn their version from the first resolved run in the session
 

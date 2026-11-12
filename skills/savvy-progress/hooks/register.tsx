@@ -313,7 +313,7 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models) }
+  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: shownModels(await read($, models)) }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
 }
@@ -573,6 +573,10 @@ export const codexModelsFrom = (cache: unknown): Record<string, string> => {
   return Object.fromEntries(Object.entries(best).map(([family, entry]) => [family, entry.slug]))
 }
 
+// The hints as the panel draws them: when the cache was last read is no change to show, so it stays out of the copy
+// and a re-read that finds the same models redraws nothing.
+const shownModels = ({ cacheReadAt: _, ...hints }: ModelHints): ModelHints => hints
+
 const codexModel = (tier: string, hints: ModelHints, declared?: string, effort?: string, withEffort = true): string => {
   const family = tier.replace(/^codex-/, '')
   const slug = declared || hints.codex[family]
@@ -708,12 +712,13 @@ const plannedName = (p: PlannedTask): string => {
 }
 
 // What a planned task will run on: the model and the effort its plan declares (the
-// user's choice), its tier's otherwise. Codex's prediction uses its own effort,
-// not the Claude relay's Agent-call effort.
+// user's choice), its tier's otherwise. A Codex task names the predicted model but
+// no effort: the user's effort for Codex is in its brief, which the bar never sees,
+// and the plan's effort moves only the relay. Its run declares the effort it uses.
 export const plannedModel = (p: PlannedTask, hints: ModelHints = EMPTY_MODELS): string => {
   const tier = plannedTier(p)
   const ofTier = TIER_MODEL[tier] ?? ''
-  if (tier in CODEX_WEARS) return codexModel(tier, hints)
+  if (tier in CODEX_WEARS) return codexModel(tier, hints, undefined, undefined, false)
   const [model = '', effort = ''] = ofTier.split(' · ')
   const declared = p.model ? `${p.model.charAt(0).toUpperCase()}${p.model.slice(1)}` : model
   return [hints.claude[declared.toLowerCase()] || declared, p.effort ?? effort].filter(Boolean).join(' · ')

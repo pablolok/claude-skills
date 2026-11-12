@@ -1199,12 +1199,17 @@ const taskOf = (tier: string) => ({ title: 'task', tier, after: [] })
 
 test('Codex prediction picks the newest visible model of the requested family', () => {
   const codex = codexModelsFrom(MODELS_CACHE)
-  expect(plannedModel(taskOf('codex-sol'), { codex, claude: {} })).toBe('Codex · Sol 6.1 · high')
+  expect(plannedModel(taskOf('codex-sol'), { codex, claude: {} })).toBe('Codex · Sol 6.1')
 })
 
-test('Codex prediction uses each intensity\'s own effort', () => {
+test('a planned Codex task names no effort: the user\'s is in its brief, the plan\'s moves only the relay', () => {
+  const codex = codexModelsFrom(MODELS_CACHE)
+  expect(plannedModel({ ...taskOf('codex-sol'), effort: 'max' }, { codex, claude: {} })).toBe('Codex · Sol 6.1')
+})
+
+test('a Codex run awaiting declaration predicts each intensity\'s own effort', () => {
   for (const [family, effort] of [['luna', 'low'], ['terra', 'medium'], ['sol', 'high'], ['astra', 'high']]) {
-    expect(plannedModel(taskOf(`codex-${family}`), { codex: { [family]: `gpt-6.1-${family}` }, claude: {} }))
+    expect(runModel(run('w1', { type: `savvy-codex-${family}` }), true, { codex: { [family]: `gpt-6.1-${family}` }, claude: {} }))
       .toBe(`Codex · ${codexModelName(`gpt-6.1-${family}`)} · ${effort}`)
   }
 })
@@ -1284,7 +1289,8 @@ test('the step tool rejects a non-string effort', async ($, on) => {
 test('the panel predicts Codex versions for planned tasks and undeclared runs from the home cache', async ($, on) => {
   engine(on, { infos: [] }, 0, { HOME: 'C:/Users/worker' })
   on('fs.read', ($, e) => {
-    expect(e.path.replace(/\\/g, '/')).toBe('C:/Users/worker/.codex/models_cache.json')
+    // A drive path is absolute only on Windows: elsewhere the engine resolves it under the working folder.
+    expect(e.path.replace(/\\/g, '/')).toMatch(/(^|\/)C:\/Users\/worker\/\.codex\/models_cache\.json$/)
     return { value: JSON.stringify(MODELS_CACHE) }
   })
   await start($)
@@ -1292,16 +1298,18 @@ test('the panel predicts Codex versions for planned tasks and undeclared runs fr
   await spawn($, 'running', 'savvy-codex-sol')
   const { rows, terminal } = await panelOf($)
   expect(rows[0]).toContain('Codex · Sol 6.1 · high')
-  expect(rows[1]).toContain('Codex · Terra 6.1 · medium')
+  expect(rows[1]).toContain('Codex · Terra 6.1')
+  expect(rows[1]).not.toContain('Terra 6.1 · medium')
   expect(terminal).toContain('Codex · Sol 6.1 · high')
-  expect(terminal).toContain('Codex · Terra 6.1 · medium')
+  expect(terminal).toContain('Codex · Terra 6.1')
 })
 
 test('Codex cache reads happen at most once a minute and refresh after it', async ($, on) => {
   const { clock } = engine(on, { infos: [] }, 0, { USERPROFILE: 'C:\\Users\\worker' })
   let reads = 0
   on('fs.read', ($, e) => {
-    expect(e.path.replace(/\\/g, '/')).toBe('C:/Users/worker/.codex/models_cache.json')
+    // A drive path is absolute only on Windows: elsewhere the engine resolves it under the working folder.
+    expect(e.path.replace(/\\/g, '/')).toMatch(/(^|\/)C:\/Users\/worker\/\.codex\/models_cache\.json$/)
     reads++
     return { value: JSON.stringify({ models: [{ slug: reads === 1 ? 'gpt-6-sol' : 'gpt-6.1-sol', visibility: 'list', priority: 1 }] }) }
   })
@@ -1309,10 +1317,27 @@ test('Codex cache reads happen at most once a minute and refresh after it', asyn
   await plan($, [{ title: 'planned', tier: 'codex-sol' }])
   await clock.advance(59_000)
   expect(reads).toBe(1)
-  expect((await panelOf($)).terminal).toContain('Codex · Sol 6 · high')
+  expect((await panelOf($)).terminal).toContain('Codex · Sol 6')
+  expect((await panelOf($)).terminal).not.toContain('Sol 6.1')
   await clock.advance(1_000)
   expect(reads).toBe(2)
-  expect((await panelOf($)).terminal).toContain('Codex · Sol 6.1 · high')
+  expect((await panelOf($)).terminal).toContain('Codex · Sol 6.1')
+})
+
+test('a cache re-read that finds the same models leaves the idle panel as it is', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  let reads = 0
+  on('fs.read', () => {
+    reads++
+    return { value: JSON.stringify(MODELS_CACHE) }
+  })
+  await start($)
+  await plan($, [{ title: 'planned', tier: 'codex-sol' }])
+  await clock.advance(2_000)
+  const writes = state.written.length
+  await clock.advance(60_000)
+  expect(reads).toBe(2)
+  expect(state.written.slice(writes)).not.toContain('shown')
 })
 
 test('an unreadable Codex cache falls back and is retried only after a minute', async ($, on) => {
