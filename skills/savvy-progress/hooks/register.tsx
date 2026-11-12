@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 
-import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
+import type { AgentRun, Flow, ModelHints, Panel, Phase, PlannedTask } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -18,6 +18,8 @@ const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const picked = atom({ plugin: 'savvy-progress', key: 'theme' } as const, 'auto')
 const shown = atom({ plugin: 'savvy-progress', key: 'shown' } as const, null)
 const picking = atom({ plugin: 'savvy-progress', key: 'picking' } as const, 0)
+const EMPTY_MODELS: ModelHints = { codex: {}, claude: {} }
+const models = atom({ plugin: 'savvy-progress', key: 'models' } as const, EMPTY_MODELS)
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
@@ -311,7 +313,7 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now) }
+  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models) }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
 }
@@ -551,6 +553,50 @@ const CODEX_WEARS: Record<string, string> = {
   'codex-luna': 'light',
 }
 
+const CODEX_EFFORT: Record<string, string> = { luna: 'low', terra: 'medium', sol: 'high', astra: 'high' }
+
+export const codexModelName = (slug: string): string => {
+  const m = /^gpt-(\d+(?:\.\d+)*?)-(luna|terra|sol|astra)$/.exec(slug)
+  return m ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
+}
+
+// Same rule as the relays: the lowest priority among visible models of the family.
+export const codexModelsFrom = (cache: unknown): Record<string, string> => {
+  const entries = (cache as { models?: unknown } | null)?.models
+  if (!Array.isArray(entries)) return {}
+  const best: Record<string, { slug: string; priority: number }> = {}
+  for (const entry of entries) {
+    if (!entry || typeof entry.slug !== 'string' || entry.visibility !== 'list' || typeof entry.priority !== 'number') continue
+    const family = Object.keys(CODEX_EFFORT).find(f => entry.slug.endsWith(`-${f}`))
+    if (family && (!best[family] || entry.priority < best[family].priority)) best[family] = entry
+  }
+  return Object.fromEntries(Object.entries(best).map(([family, entry]) => [family, entry.slug]))
+}
+
+const codexModel = (tier: string, hints: ModelHints, declared?: string, effort?: string, withEffort = true): string => {
+  const family = tier.replace(/^codex-/, '')
+  const slug = declared || hints.codex[family]
+  // With no cache and no declaration, keep today's bare intensity label.
+  const label = slug ? codexModelName(slug) : family.charAt(0).toUpperCase() + family.slice(1)
+  return `Codex · ${label}${withEffort && (slug || effort) ? ` · ${effort || CODEX_EFFORT[family]}` : ''}`
+}
+
+// Cache attempts, including failures, are limited across ticks and module reloads.
+async function refreshCodexModels($: EngineInterface): Promise<void> {
+  const at = await $.clock.now()
+  const hints = await read($, models)
+  if (hints.cacheReadAt !== undefined && at - hints.cacheReadAt < 60_000) return
+  await update($, models, prev => ({ ...prev, cacheReadAt: at }))
+  let codex: Record<string, string> = {}
+  try {
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
+    if (home) codex = codexModelsFrom(JSON.parse(await $.fs.read(`${home.replace(/[\\/]+$/, '')}/.codex/models_cache.json`)))
+  } catch {
+    // An absent, unreadable or invalid cache leaves the bare intensity label.
+  }
+  await update($, models, prev => ({ ...prev, codex }))
+}
+
 // USD per million tokens: input, output, cache read, cache write (5-minute TTL).
 // The engine reports tokens, not money, so the panel's cost is an estimate.
 const PRICES: [RegExp, [number, number, number, number]][] = [
@@ -603,11 +649,31 @@ const modelName = (id: string): string => {
   return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? '.' + minor : ''}`
 }
 
+// The engine exposes resolved run ids, but no API to resolve an arbitrary alias.
+// The first concrete id for a family fixes its planned label for this session.
+export const learnClaudeModels = (known: Record<string, string>, ids: string[]): Record<string, string> => {
+  const learned = { ...known }
+  for (const id of ids) {
+    const family = /(?:^|\b)(fable|mythos|opus|sonnet|haiku)-\d+/i.exec(id)?.[1].toLowerCase()
+    const alias = family === 'mythos' ? 'fable' : family
+    if (alias && !learned[alias]) learned[alias] = modelName(id).replace(/^Mythos /, 'Fable ')
+  }
+  return learned
+}
+
+async function rememberClaudeModels($: EngineInterface, ids: string[]): Promise<void> {
+  const prev = await read($, models)
+  const claude = learnClaudeModels(prev.claude, ids)
+  if (JSON.stringify(claude) !== JSON.stringify(prev.claude)) {
+    await update($, models, hints => ({ ...hints, claude: learnClaudeModels(hints.claude, ids) }))
+  }
+}
+
 // What a run shows as its model: a Codex relay names its intensity, not the
 // Claude model relaying it (its cost and tokens stay the relay's own).
-const runModel = (a: AgentRun, withEffort = true): string => {
+export const runModel = (a: AgentRun, withEffort = true, hints: ModelHints = EMPTY_MODELS): string => {
   const tier = tierOf(a.type)
-  if (tier in CODEX_WEARS) return TIER_MODEL[tier] ?? tier
+  if (tier in CODEX_WEARS) return codexModel(tier, hints, a.codexModel, a.codexEffort, withEffort)
   return withEffort && a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)
 }
 
@@ -642,15 +708,15 @@ const plannedName = (p: PlannedTask): string => {
 }
 
 // What a planned task will run on: the model and the effort its plan declares (the
-// user's choice), its tier's otherwise. A Codex task names its intensity alone: the
-// effort of the relay is not Codex's.
-const plannedModel = (p: PlannedTask): string => {
+// user's choice), its tier's otherwise. Codex's prediction uses its own effort,
+// not the Claude relay's Agent-call effort.
+export const plannedModel = (p: PlannedTask, hints: ModelHints = EMPTY_MODELS): string => {
   const tier = plannedTier(p)
   const ofTier = TIER_MODEL[tier] ?? ''
-  if (tier in CODEX_WEARS) return ofTier
+  if (tier in CODEX_WEARS) return codexModel(tier, hints)
   const [model = '', effort = ''] = ofTier.split(' · ')
   const declared = p.model ? `${p.model.charAt(0).toUpperCase()}${p.model.slice(1)}` : model
-  return [declared, p.effort ?? effort].filter(Boolean).join(' · ')
+  return [hints.claude[declared.toLowerCase()] || declared, p.effort ?? effort].filter(Boolean).join(' · ')
 }
 
 const plannedOf = (f: Flow | null, list: AgentRun[]): Planned[] => {
@@ -837,13 +903,13 @@ const progressOf = (a: AgentRun): number | null => {
 
 const ctxOf = (a: AgentRun): number => (a.contextMax ? Math.min(100, Math.round((a.contextTokens / a.contextMax) * 100)) : 0)
 
-const agentSvg = (W: number, a: AgentRun, at: number): string => {
+const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints): string => {
   const s = tr()
   const tier = tierOf(a.type)
   const color = colorOf(tier)
   const ctx = ctxOf(a)
   const textW = W - 42 - 22
-  const meta = [runModel(a)]
+  const meta = [runModel(a, true, hints)]
   if (a.round > 1) meta.push(`${s.round} ${a.round}`)
   if (a.status === 'failed') meta.push(s.failed)
   const barW = textW
@@ -867,11 +933,11 @@ ${statusMark(W - 8, 16, a.status, color)}
   )
 }
 
-const plannedSvg = (W: number, p: Planned): string => {
+const plannedSvg = (W: number, p: Planned, hints: ModelHints): string => {
   const tier = plannedTier(p)
   const color = colorOf(tier)
   const textW = W - 42 - 22
-  const meta = [plannedModel(p)]
+  const meta = [plannedModel(p, hints)]
   if (p.after.length) meta.push(`${tr().after} ${p.after.join(', ')}`)
   return svg(
     W,
@@ -1074,6 +1140,7 @@ export const register: Register = (on, options) => {
         'For savvy-flow workers: report progress on your own task to the agents panel. ' +
         'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
         'call it again as each step finishes, and close with `done` equal to `total` and `skipped` for the steps left undone. ' +
+        'Codex relays also declare the exact `model` slug and `effort` they pass to Codex. ' +
         'Cheap and silent: it only draws a bar.',
       inputSchema: {
         type: 'object',
@@ -1081,6 +1148,8 @@ export const register: Register = (on, options) => {
           done: { type: 'integer', minimum: 0, description: 'Steps finished so far.' },
           total: { type: 'integer', minimum: 1, description: 'Steps planned; may change if the plan changes.' },
           note: { type: 'string', description: 'The step in progress, a few words.' },
+          model: { type: 'string', description: 'Codex relays: the exact model slug passed to codex exec (for example gpt-6.1-sol).' },
+          effort: { type: 'string', description: 'Codex relays: the reasoning effort passed to codex exec.' },
           skipped: {
             type: 'integer',
             minimum: 0,
@@ -1102,6 +1171,8 @@ export const register: Register = (on, options) => {
     })
 
     // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
+    await refreshCodexModels($)
+    await rememberClaudeModels($, (await read($, agents)).map(a => a.model))
     await update($, flow, f => (f?.isFinished ? null : f))
     try {
       await reconcile($)
@@ -1113,6 +1184,7 @@ export const register: Register = (on, options) => {
     // engine's list; quiet when nothing runs.
     $.clock.every(1000, () => {
       void (async () => {
+        await refreshCodexModels($)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
           const at = await $.clock.now()
@@ -1170,7 +1242,10 @@ export const register: Register = (on, options) => {
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
-    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number }
+    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string }
+    if ((input.model !== undefined && typeof input.model !== 'string') || (input.effort !== undefined && typeof input.effort !== 'string')) {
+      return { deny: 'model and effort must be strings' }
+    }
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     // Set on every run of the updater, which may run again on a conflict.
@@ -1188,6 +1263,10 @@ export const register: Register = (on, options) => {
           stepTotal: total,
           stepDone: total ? Math.min(total, done) : done,
           stepNote: input.note?.trim() || undefined,
+          ...(tierOf(a.type) in CODEX_WEARS ? {
+            ...(input.model?.trim() ? { codexModel: input.model.trim() } : {}),
+            ...(input.effort?.trim() ? { codexEffort: input.effort.trim() } : {}),
+          } : {}),
           // A worker that skipped nothing keeps the row it always had.
           ...(skipped ? { stepSkipped: skipped } : {}),
         }
@@ -1222,6 +1301,7 @@ export const register: Register = (on, options) => {
     if (started.deny !== undefined) return started
 
     const at = await $.clock.now()
+    await rememberClaudeModels($, [started.model])
     // Until the first model request names the run's own, the effort its Agent call asked for.
     const effort = askedEffort.get(e.tool_use_id)
     await update($, agents, list => {
@@ -1262,6 +1342,7 @@ export const register: Register = (on, options) => {
     if (!agentId || !usage) return result
 
     const model = usage.model || e.model
+    await rememberClaudeModels($, [model])
     // A run that had ended (an idle teammate, a resumed agent) runs again.
     const isRevived = (await read($, agents)).some(a => a.agentId === agentId && a.status !== 'running')
     await update($, agents, list =>
@@ -1300,6 +1381,7 @@ export const register: Register = (on, options) => {
     const agentId = e.agentId
     if (agentId) {
       const at = await $.clock.now()
+      if (e.usage?.model) await rememberClaudeModels($, [e.usage.model])
       await update($, agents, list =>
         list.map(a => {
           if (a.agentId !== agentId) return a
@@ -1389,7 +1471,8 @@ export const register: Register = (on, options) => {
       />
     )
     // The copy once there is one, so the live values' changes do not redraw it.
-    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await read($, now) }
+    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models) }
+    const hints = view.models ?? EMPTY_MODELS
     const list = view.agents
     const f = view.flow
     const p: Panel = await read($, panel)
@@ -1452,16 +1535,16 @@ export const register: Register = (on, options) => {
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
           {running.map(a => (
-            <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${runModel(a, false)}, ${s.isRunning}`} width={W} height={66} />
+            <Svg key={a.id} source={agentSvg(W, a, at, hints)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isRunning}`} width={W} height={66} />
           ))}
           {finished.length > 0 && toggleDone}
           {!p.isDoneCollapsed &&
             finished.map(a => (
-              <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${runModel(a, false)}, ${s.isFinished}`} width={W} height={66} />
+              <Svg key={a.id} source={agentSvg(W, a, at, hints)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isFinished}`} width={W} height={66} />
             ))}
           {planned.length > 0 && section('h-plan', `${s.planned} · ${planned.length}`)}
           {planned.map(pl => (
-            <Svg key={`plan-${pl.n}`} source={plannedSvg(W, pl)} alt={`${pl.n}. ${pl.title}: ${s.isPlanned}`} width={W} height={46} />
+            <Svg key={`plan-${pl.n}`} source={plannedSvg(W, pl, hints)} alt={`${pl.n}. ${pl.title}: ${s.isPlanned}`} width={W} height={46} />
           ))}
         </Box>
       )
@@ -1475,7 +1558,7 @@ export const register: Register = (on, options) => {
       const color = colorOf(tier)
       const ctx = ctxOf(a)
       const progress = progressOf(a)
-      const model = runModel(a)
+      const model = runModel(a, true, hints)
       const steps = a.stepTotal ? `${stepCount(a)}${a.stepNote ? ' ' + a.stepNote : ''} · ` : ''
       return (
         <Box key={a.id} flexDirection="column" marginBottom={1}>
@@ -1546,7 +1629,7 @@ export const register: Register = (on, options) => {
                   </Text>
                   <Text dimColor wrap="truncate-end">
                     {'  '}
-                    {[plannedName(pl), plannedModel(pl), waits].filter(Boolean).join(' · ')}
+                    {[plannedName(pl), plannedModel(pl, hints), waits].filter(Boolean).join(' · ')}
                   </Text>
                 </Box>
               )

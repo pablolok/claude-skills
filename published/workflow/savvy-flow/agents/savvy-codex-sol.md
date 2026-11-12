@@ -25,6 +25,7 @@ Steps:
    `-sol` and whose `visibility` is `list`, take the one with the lowest `priority` (the newest) and pass `-m <slug>`;
    reasoning effort `-c model_reasoning_effort="high"` unless the brief names another. No cache or no such model: run
    without `-m` and say so in the report. A brief that names a model wins over the family.
+   Once resolved, call `mcp__savvy-progress__step` if available with `done: 1`, `model: <resolved slug>` (omit if no `-m`) and `effort: <chosen effort>`.
 5. **Run Codex**, the prompt on stdin, its final message to a file, everything else to a log:
    - task: `codex exec --skip-git-repo-check -C <dir> -s workspace-write -o <last.md> - < <prompt> > <log> 2>&1`;
    - second opinion: the same with `-s read-only`, or `codex exec review --uncommitted` (or `--base <branch>`,

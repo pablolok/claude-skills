@@ -25,9 +25,17 @@ the mod needs.
   of any type (a reviewer or a verifier outside the plan too), is counted beside the tasks (`Review 1/1 · 1 running`),
   and while one runs the bar stops at 99%, so every task accepted reads 100% only once nothing runs. The faint layer
   past the fill stays the plan's own workers, handed a task and not yet accepted.
-- **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model, effort, task
+- **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model and version, effort, task
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
   them.
+  Claude runs name the resolved model the engine reports (for example `Opus 5.5 · xhigh`); a planned alias learns
+  its version from the first resolved run of that family in the session and keeps the bare alias until then. The
+  engine exposes no API to resolve an arbitrary alias. Codex relays declare their exact model slug and reasoning
+  effort through `step` (for example `Codex · Sol 6.1 · high`). Planned Codex tasks and runs awaiting that declaration
+  predict the relay's choice from `~/.codex/models_cache.json` under the user's home: the visible (`list`) model
+  ending in the family's suffix with the lowest priority. The cache is read at most once a minute; an absent or
+  unreadable cache leaves the bare intensity (`Codex · Sol`). Prediction uses Luna low, Terra medium, Sol high and
+  Astra high. Codex cost and token counts remain the Claude relay's own.
 - **Themes**: the figures dress up for the calendar, and every one of them moves, running or not (a running one at
   full pace, the others idling slowly); the bar takes the theme's colors and the panel's header an ornament of its
   own. The crab stays the crab, and each tier keeps its role in every theme: Fable is the rare one that floats or
@@ -80,7 +88,8 @@ the mod needs.
   shows the effort its Agent call asked for, then the one the engine reports for each request.
 - `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`), and `skipped` for the planned
   steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
-  fill in grey instead.
+  fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug) and
+  `effort` (the reasoning effort it passes to Codex); these stay on that run until declared again.
 
 The cost is a rough estimate from token counts and a built-in per-model price table (`PRICES` in
 `hooks/register.tsx`), not a bill.

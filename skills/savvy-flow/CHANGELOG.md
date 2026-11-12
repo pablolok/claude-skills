@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.1] - 2026-11-12
+- All four Codex relays report the model slug and effort resolved in step 4 to the agents panel before running Codex (needs savvy-progress 1.11.0)
+
+
 ## [1.13.0] - 2026-11-12
 - The user's choices hold — the orchestrator is the session's model, never switched or proposed otherwise; a model or an effort the user sets wins over the tier's, a general instruction covering every task it describes, and reaches the Agent call, the plan and the bar; an agent the project requires is a task of the plan, declared in the bar (needs savvy-progress 1.9.0); the themes table moves to references/themes.md, one section per month; a worker reports the steps it skipped instead of counting them done
 

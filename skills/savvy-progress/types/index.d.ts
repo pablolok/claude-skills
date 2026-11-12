@@ -32,6 +32,9 @@ export type AgentRun = {
   description: string
   model: string
   effort?: string
+  /** Codex's own model and effort, declared by its relay; accounting stays Claude's. */
+  codexModel?: string
+  codexEffort?: string
   status: AgentStatus
   startedAt: number
   endedAt?: number
@@ -57,12 +60,20 @@ export type Panel = {
   autoOpenedFor: string
 }
 
+export type ModelHints = {
+  codex: Record<string, string>
+  /** First resolved model label seen for each Claude alias. */
+  claude: Record<string, string>
+  cacheReadAt?: number
+}
+
 // What the agents panel shows, copied from the live values once a second: the
 // panel redraws on this alone, so the copy can wait while its theme picker is open.
 export type PaneView = {
   flow: Flow | null
   agents: AgentRun[]
   now: number
+  models?: ModelHints
 }
 
 declare module 'claude-code' {
@@ -72,6 +83,7 @@ declare module 'claude-code' {
       agents: AgentRun[]
       panel: Panel
       now: number
+      models: ModelHints
       /** The `theme` option's value as last picked: `auto` or a theme's name. */
       theme: string
       /** What the agents panel shows; null until the first copy. */

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.11.0] - 2026-11-12
+- Worker rows name the model with its version and effort: Codex relays declare their exact model and effort through step; planned and undeclared Codex workers predict the newest visible family model from the home cache, read at most once a minute; Claude planned aliases learn their version from the first resolved run in the session
+
+
 ## [1.10.0] - 2026-11-12
 - Italian for the bar and the panel, chosen and never detected (English stays the default), and a language picker in the panel beside the theme's; the language option takes it
 

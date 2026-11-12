@@ -1,9 +1,9 @@
-import type { AgentInfo, CommandRunInput, ConfigSetInput, On, UiFocusInput } from 'claude-code'
+import type { AgentInfo, CommandRunInput, ConfigSetInput, On, ToolRegisterInput, UiFocusInput } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow } from '../types'
-import { costOf, figureSvg, fmtTokens, themeNamed, windowOf } from './register'
+import { codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, runModel, themeNamed, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
@@ -74,7 +74,11 @@ const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record
   mock.env(on, env)
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('settings.read', () => ({ value: {} }))
-  on('tool.register', ($, e) => ({ value: { tool: `mcp__savvy-progress__${e.name}` } }))
+  const registered: ToolRegisterInput[] = []
+  on('tool.register', ($, e) => {
+    registered.push(e)
+    return { value: { tool: `mcp__savvy-progress__${e.name}` } }
+  })
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   let asks = 0
   on('agent.list', () => {
@@ -97,7 +101,7 @@ const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record
     for (const block of e.message.content) if (block.type === 'text') told.push(String(block.text))
     return next(e)
   })
-  return { clock, state, asks: (): number => asks, saved, told }
+  return { clock, state, asks: (): number => asks, saved, told, registered }
 }
 
 // The person typing `/savvy-theme <args>`, and picking `value` for the theme in /config.
@@ -1176,6 +1180,165 @@ test("the engine's word on a run's effort replaces what its Agent call asked for
 })
 
 const stepped = ($: Engine, agentId: string, input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__step', agentId, ...input })
+
+test('a Codex slug names its family and version', () => {
+  expect(codexModelName('gpt-6.1-sol')).toBe('Sol 6.1')
+})
+
+test('an unknown Codex slug is shown as given', () => {
+  expect(codexModelName('custom-model-v7')).toBe('custom-model-v7')
+})
+
+const MODELS_CACHE = { models: [
+  { slug: 'gpt-6-sol', visibility: 'list', priority: 8 },
+  { slug: 'gpt-6.1-sol', visibility: 'list', priority: 2 },
+  { slug: 'gpt-7-sol', visibility: 'hide', priority: 0 },
+  { slug: 'gpt-6.1-terra', visibility: 'list', priority: 1 },
+] }
+const taskOf = (tier: string) => ({ title: 'task', tier, after: [] })
+
+test('Codex prediction picks the newest visible model of the requested family', () => {
+  const codex = codexModelsFrom(MODELS_CACHE)
+  expect(plannedModel(taskOf('codex-sol'), { codex, claude: {} })).toBe('Codex · Sol 6.1 · high')
+})
+
+test('Codex prediction uses each intensity\'s own effort', () => {
+  for (const [family, effort] of [['luna', 'low'], ['terra', 'medium'], ['sol', 'high'], ['astra', 'high']]) {
+    expect(plannedModel(taskOf(`codex-${family}`), { codex: { [family]: `gpt-6.1-${family}` }, claude: {} }))
+      .toBe(`Codex · ${codexModelName(`gpt-6.1-${family}`)} · ${effort}`)
+  }
+})
+
+test('an absent cache leaves the bare Codex intensity', () => {
+  expect(plannedModel(taskOf('codex-sol'), { codex: codexModelsFrom(undefined), claude: {} })).toBe('Codex · Sol')
+})
+
+test('a cache with no matching family leaves the bare Codex intensity', () => {
+  expect(plannedModel(taskOf('codex-astra'), { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Codex · Astra')
+})
+
+test('a run\'s declared Codex model and effort win over prediction', () => {
+  const worker = run('w1', { type: 'savvy-flow:savvy-codex-sol', codexModel: 'gpt-6.1-sol', codexEffort: 'xhigh' })
+  expect(runModel(worker, true, { codex: { sol: 'gpt-6-sol' }, claude: {} })).toBe('Codex · Sol 6.1 · xhigh')
+})
+
+test('a Codex run awaiting declaration shows prediction with Codex\'s effort', () => {
+  const worker = run('w1', { type: 'savvy-codex-sol', effort: 'low' })
+  expect(runModel(worker, true, { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Codex · Sol 6.1 · high')
+})
+
+test('a Claude planned task shows the alias version learned from a resolved run', () => {
+  const claude = learnClaudeModels({}, ['claude-opus-5-5'])
+  expect(plannedModel(taskOf('heavy'), { codex: {}, claude })).toBe('Opus 5.5 · xhigh')
+})
+
+test('a Claude planned task keeps its bare alias until a resolved run teaches it', () => {
+  expect(plannedModel(taskOf('heavy'), { codex: {}, claude: learnClaudeModels({}, ['opus']) })).toBe('Opus · xhigh')
+})
+
+test('the first resolved Claude model fixes its family\'s planned version', () => {
+  expect(learnClaudeModels({ opus: 'Opus 5.5' }, ['claude-opus-6-0'])).toEqual({ opus: 'Opus 5.5' })
+})
+
+test('a planned explicit Claude alias uses its learned version', () => {
+  const claude = learnClaudeModels({}, ['claude-sonnet-5-5', 'claude-fable-5-2', 'claude-haiku-5-5'])
+  expect(plannedModel({ ...taskOf('light'), model: 'fable' }, { codex: {}, claude })).toBe('Fable 5.2 · low')
+})
+
+test('the step schema declares optional model and effort strings', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  expect(registered.find(t => t.name === 'step')?.inputSchema).toMatchObject({ properties: { model: { type: 'string' }, effort: { type: 'string' } }, required: ['done'] })
+})
+
+test('the step tool accepts a Codex model and effort and preserves them through later relay usage', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  answering(on)
+  await start($)
+  await spawn($, 'w1', 'savvy-flow:savvy-codex-sol')
+  expect(await stepped($, 'w1', { done: 1, model: 'gpt-6.1-sol', effort: 'high' })).toMatchObject({ result: 'ok' })
+  await stepOf($, 'w1', 0)
+  await stepped($, 'w1', { done: 2 })
+  expect(byId(state.agents(), 'w1')).toMatchObject({ model: 'claude-opus-5-5', codexModel: 'gpt-6.1-sol', codexEffort: 'high' })
+  const { rows, terminal } = await panelOf($)
+  expect(rows[0]).toContain('Codex · Sol 6.1 · high')
+  expect(terminal).toContain('Codex · Sol 6.1 · high')
+})
+
+test('the step tool rejects a non-string model', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await spawn($, 'w1', 'savvy-codex-sol')
+  expect(await stepped($, 'w1', { done: 1, model: 42 })).toMatchObject({ deny: 'model and effort must be strings' })
+  expect(byId(state.agents(), 'w1')?.codexModel).toBeUndefined()
+})
+
+test('the step tool rejects a non-string effort', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await spawn($, 'w1', 'savvy-codex-sol')
+  expect(await stepped($, 'w1', { done: 1, effort: false })).toMatchObject({ deny: 'model and effort must be strings' })
+  expect(byId(state.agents(), 'w1')?.codexEffort).toBeUndefined()
+})
+
+test('the panel predicts Codex versions for planned tasks and undeclared runs from the home cache', async ($, on) => {
+  engine(on, { infos: [] }, 0, { HOME: 'C:/Users/worker' })
+  on('fs.read', ($, e) => {
+    expect(e.path.replace(/\\/g, '/')).toBe('C:/Users/worker/.codex/models_cache.json')
+    return { value: JSON.stringify(MODELS_CACHE) }
+  })
+  await start($)
+  await plan($, [{ title: 'planned', tier: 'codex-terra' }])
+  await spawn($, 'running', 'savvy-codex-sol')
+  const { rows, terminal } = await panelOf($)
+  expect(rows[0]).toContain('Codex · Sol 6.1 · high')
+  expect(rows[1]).toContain('Codex · Terra 6.1 · medium')
+  expect(terminal).toContain('Codex · Sol 6.1 · high')
+  expect(terminal).toContain('Codex · Terra 6.1 · medium')
+})
+
+test('Codex cache reads happen at most once a minute and refresh after it', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { USERPROFILE: 'C:\\Users\\worker' })
+  let reads = 0
+  on('fs.read', ($, e) => {
+    expect(e.path.replace(/\\/g, '/')).toBe('C:/Users/worker/.codex/models_cache.json')
+    reads++
+    return { value: JSON.stringify({ models: [{ slug: reads === 1 ? 'gpt-6-sol' : 'gpt-6.1-sol', visibility: 'list', priority: 1 }] }) }
+  })
+  await start($)
+  await plan($, [{ title: 'planned', tier: 'codex-sol' }])
+  await clock.advance(59_000)
+  expect(reads).toBe(1)
+  expect((await panelOf($)).terminal).toContain('Codex · Sol 6 · high')
+  await clock.advance(1_000)
+  expect(reads).toBe(2)
+  expect((await panelOf($)).terminal).toContain('Codex · Sol 6.1 · high')
+})
+
+test('an unreadable Codex cache falls back and is retried only after a minute', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  let reads = 0
+  on('fs.read', () => { reads++; throw new Error('unreadable') })
+  await start($)
+  await plan($, [{ title: 'planned', tier: 'codex-sol' }])
+  await clock.advance(59_000)
+  expect(reads).toBe(1)
+  expect((await panelOf($)).terminal).toContain('Codex · Sol')
+  expect((await panelOf($)).terminal).not.toContain('Sol 6')
+  await clock.advance(1_000)
+  expect(reads).toBe(2)
+})
+
+test('the panel learns a Claude planned alias from a run', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  await plan($, [{ title: 'planned', tier: 'heavy' }])
+  expect((await panelOf($)).terminal).toContain('Opus · xhigh')
+  await spawn($, 'running')
+  const { rows, terminal } = await panelOf($)
+  expect(rows[1]).toContain('Opus 5.5 · xhigh')
+  expect(terminal).toContain('Opus 5.5 · xhigh')
+})
 
 test('a worker that closes its count with steps skipped shows how many, beside the count', { options: { theme: 'classic' } }, async ($, on) => {
   const { state } = engine(on, { infos: [] }, 0)
