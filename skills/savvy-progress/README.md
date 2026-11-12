@@ -101,6 +101,7 @@ Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 | File | Role |
 | :--- | :--- |
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
+| `.claude-plugin/icon.png` | The mod's icon: the crab over a progress bar, a 512 px square. |
 | `hooks/hooks.json` | Names the hooks module. |
 | `hooks/register.tsx` | The module: the two tools, `/agents-info`, `/savvy-theme`, the bar and the panel with its theme picker. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |

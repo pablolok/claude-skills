@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.9.1] - 2026-11-12
+- The module's tests type-check against the engine's current types (the slot above the prompt takes more props); the mod ships an icon, the crab over a progress bar, so plugin validation raises no warning
+
+
 ## [1.9.0] - 2026-11-12
 - A planned task shows the effort and the model its Agent call passes — a task of the progress tool may declare effort and model (shown in place of its tier's), and an agent of no tier with tier other and agent, which then counts on the bar like a worker; a run shows the effort its Agent call asked for from its first frame; the step tool takes skipped, the planned steps a worker left undone, shown beside its count (6/6 · 1 skipped)
 

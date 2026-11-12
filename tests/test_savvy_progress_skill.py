@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import struct
 import sys
 import unittest
 
@@ -22,6 +23,11 @@ SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks
            "hooks/dress-autumn.ts", "hooks/dress-winter.ts", "types/index.d.ts",
            "plugin-entry.json",
            "metadata.json", "README.md", "LICENSE")
+#: The mod's icon, where `claude plugin validate` looks for it: a square PNG, 512 to 2048 px a side, under 2 MB.
+ICON = pathlib.Path(".claude-plugin") / "icon.png"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+ICON_SIDES = range(512, 2049)
+ICON_MAX_BYTES = 2 * 1024 * 1024
 #: What sessions and the savvy-flow skill call: the two tools (mcp__savvy-progress__<name>) and the commands.
 REGISTERED = ("name: 'progress'", "name: 'step'", "name: 'agents-info'", "'mcp__savvy-progress__progress'",
               "'mcp__savvy-progress__step'", "on('command.run', { command: 'agents-info' }", "name: 'savvy-theme'",
@@ -53,6 +59,17 @@ class TestPublishedMod(unittest.TestCase):
             with self.subTest(file=rel):
                 self.assertTrue((PUBLISHED / rel).is_file(), f"publish the mod: {rel} is missing")
                 self.assertEqual(_read(PUBLISHED / rel), _read(SOURCE / rel), "publish the mod")
+
+    def test_the_icon_is_published_as_a_square_png_of_a_size_the_validator_takes(self) -> None:
+        icon = (SOURCE / ICON).read_bytes()
+        self.assertTrue((PUBLISHED / ICON).is_file(), "publish the mod: the icon is missing")
+        self.assertEqual((PUBLISHED / ICON).read_bytes(), icon, "publish the mod")
+        self.assertEqual(icon[:8], PNG_SIGNATURE)
+        self.assertEqual(icon[12:16], b"IHDR")
+        width, height = struct.unpack(">II", icon[16:24])
+        self.assertEqual(width, height, "a square icon")
+        self.assertIn(width, ICON_SIDES)
+        self.assertLess(len(icon), ICON_MAX_BYTES)
 
     def test_it_is_registered_as_a_plugin_with_no_skill(self) -> None:
         self.assertEqual(_json(INSTALL_CONFIG)["skills"][MOD], {"category": "workflow", "skill": False})

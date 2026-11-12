@@ -805,9 +805,12 @@ test('a pick in /config redraws the panel too', { options: { theme: 'classic' } 
   await ui.unmount()
 })
 
+// The slot above the prompt as the engine hands it to the bar: 100 columns wide, no survey in the way.
+const ABOVE_PROMPT = { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 10, bodyColumns: 100, scroll: { offset: 0, bodyRows: 10 }, view: {} }
+
 // The bar above the prompt on the desktop, as its drawing's alt reads it: `title: label, percent`.
 const bar = async ($: Engine): Promise<string> => {
-  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: { bodyColumns: 100, hasSurvey: false } })
+  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: ABOVE_PROMPT })
   const [row] = await ui.findAll({ type: 'Svg' })
   await ui.unmount()
   return String(row?.props.alt)
@@ -856,7 +859,7 @@ test('on the desktop the bar sizes itself to the slot, so the count and the dism
   await start($)
   state.seed(FLOW, flowOf())
 
-  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: { bodyColumns: 100, hasSurvey: false } })
+  const ui = await $.ui.mount({ plugin: 'savvy-progress', component: 'AbovePrompt', surface: 'desktop', props: ABOVE_PROMPT })
   const [svg] = await ui.findAll({ type: 'Svg' })
   const boxes = await ui.findAll({ type: 'Box' })
   const count = await ui.findAll({ type: 'Button', text: '×' })
