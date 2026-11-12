@@ -31,6 +31,12 @@ export type AgentRun = {
   name?: string
   /** SendMessage's local summary, held until the engine actually resumes this agent. */
   nextTitle?: string
+  /** Last model turn seen; a queued message must not rename a step in that same turn. */
+  turnId?: string
+  /** The engine's agent roster reports waiting on work owned by this worker. */
+  isWaiting?: boolean
+  /** An answered turn still needs the roster to confirm that the worker finished. */
+  pendingCompletion?: boolean
   type: string
   description: string
   model: string
@@ -96,6 +102,10 @@ export type CodexStatus = {
 export type UsageReadings = {
   claude?: PlanUsage
   codex?: PlanUsage
+  /** Last valid Codex plan observation, retained when status files disappear. */
+  codexReadAt?: number
+  codexUpdatedAt?: number
+  codexSource?: { name: string; mtimeMs: number }
   statuses: Record<string, CodexStatus>
   statusMtimes?: Record<string, number>
   cacheReadAt?: number

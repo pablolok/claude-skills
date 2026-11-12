@@ -86,7 +86,7 @@ export async function readRolloutTail(path, openFile = open) {
 }
 
 export async function findRollout(directory, sessionId) {
-  if (typeof sessionId !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(sessionId)) return null
+  if (sessionId !== undefined && (typeof sessionId !== 'string' || !/^[a-zA-Z0-9_-]{1,120}$/.test(sessionId))) return null
   let newest = null, mtime = -Infinity
   const walk = async (dir, depth) => {
     let entries
@@ -95,7 +95,8 @@ export async function findRollout(directory, sessionId) {
       if (entry.isSymbolicLink()) continue
       const path = join(dir, entry.name)
       if (depth < 3 && entry.isDirectory() && (depth === 0 ? /^\d{4}$/ : /^\d{2}$/).test(entry.name)) await walk(path, depth + 1)
-      else if (depth === 3 && entry.isFile() && entry.name.startsWith('rollout-') && entry.name.endsWith('.jsonl') && entry.name.includes(sessionId)) {
+      else if (depth === 3 && entry.isFile() && entry.name.startsWith('rollout-') && entry.name.endsWith('.jsonl') &&
+          (sessionId === undefined || entry.name.includes(sessionId))) {
         try { const info = await stat(path); if (info.mtimeMs > mtime) { newest = path; mtime = info.mtimeMs } } catch { /* Rotated during discovery. */ }
       }
     }
@@ -201,6 +202,24 @@ export async function atomicStatus(path, status) {
   finally { await unlink(temporary).catch(() => {}) }
 }
 
+// Read existing history without launching Codex or consuming a JSON stream.
+export async function snapshotStatus({ directory = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'savvy-status'),
+  sessionsDirectory = join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'sessions'),
+  now = Date.now, locate = findRollout, read = readRolloutTail } = {}) {
+  const path = await locate(sessionsDirectory)
+  if (!path) throw new Error('no Codex rollout found for snapshot')
+  const metadata = await read(path)
+  const limits = rateLimits(metadata.rateLimits)
+  if (!limits) throw new Error('newest Codex rollout has no plan rate limits in its tail')
+  const status = { rateLimits: limits, model: bounded(metadata.model, 120), updatedAt: now() }
+  await mkdir(directory, { recursive: true })
+  const target = join(directory, 'snapshot.json')
+  const lock = await open(`${target}.lock`, 'wx')
+  try { await atomicStatus(target, status) }
+  finally { await lock.close(); await unlink(`${target}.lock`).catch(() => {}) }
+  return status
+}
+
 // Serialized writes coalesce busy event streams; an idle running process still
 // publishes a heartbeat each second. EOF forces the final atomic snapshot.
 export function statusWriter(write, interval = 1000, now = Date.now) {
@@ -275,7 +294,11 @@ export async function runStatus(name, { directory = join(process.env.CODEX_HOME 
   return status
 }
 
+export function main([name, model], options = {}) {
+  return name === '--snapshot' ? snapshotStatus(options) : runStatus(name, { ...options, model: model ?? options.model })
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  runStatus(process.argv[2], { model: process.argv[3] }).then(status => { if (status.state === 'failed') process.exitCode = 1 })
+  main(process.argv.slice(2)).then(status => { if (status.state === 'failed') process.exitCode = 1 })
     .catch(error => { console.error(`codex-status: ${error.message}`); process.exitCode = 1 })
 }

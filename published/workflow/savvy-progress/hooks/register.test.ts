@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, UsageReadings } from '../types'
-import { claudePlanUsage, codexCostOf, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
+import { claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
@@ -62,6 +62,7 @@ const store = (on: On) => {
     reads,
     written,
     agents: (): AgentRun[] => (values.get(AGENTS)?.value ?? []) as AgentRun[],
+    usage: (): UsageReadings => (values.get('usage')?.value ?? { statuses: {} }) as UsageReadings,
     flow: (): Flow | null | undefined => values.get(FLOW)?.value as Flow | null | undefined,
   }
 }
@@ -504,10 +505,10 @@ test('a Codex figure leaves the crab as it was, even when its drawing throws', (
 })
 
 const CODEX_SEEN: [string, string, string][] = [
-  ['codex-astra', '#9B7BE0', 'Codex · Astra'],
-  ['codex-sol', '#E0A526', 'Codex · Sol'],
-  ['codex-terra', '#6E9B4A', 'Codex · Terra'],
-  ['codex-luna', '#8FA3BF', 'Codex · Luna'],
+  ['codex-astra', '#9B7BE0', 'Astra'],
+  ['codex-sol', '#E0A526', 'Sol'],
+  ['codex-terra', '#6E9B4A', 'Terra'],
+  ['codex-luna', '#8FA3BF', 'Luna'],
 ]
 
 test("a Codex run shows its intensity, not the relay's model, plugin-prefixed or bare", { options: { theme: 'classic' } }, async ($, on) => {
@@ -527,7 +528,7 @@ test("a Codex run shows its intensity, not the relay's model, plugin-prefixed or
       const [tier, , label] = seen
       if (!svg.includes(label) || !alt.includes(label)) faults.push(`${tier}: no ${label}`)
       if (/Sonnet/.test(svg) || /Sonnet/.test(alt)) faults.push(`${tier}: shows the relay's model`)
-      if (!svg.includes('≈—')) faults.push(`${tier}: missing session should leave cost unknown`)
+      if (svg.includes('≈—')) faults.push(`${tier}: missing session shows a cost placeholder`)
       if (!svg.includes('class="badge"')) faults.push(`${tier}: no badge`)
     }
   }
@@ -546,9 +547,9 @@ test('a planned Codex task, named with or without savvy-, waits as its intensity
   const [, terra, luna] = (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source))
   await ui.unmount()
   expect(terra).toContain('<tspan fill="#6E9B4A">codex-terra</tspan>')
-  expect(terra).toContain('Codex · Terra')
+  expect(terra).toContain('Terra')
   expect(terra).toContain('class="c-medium"')
-  expect(luna).toContain('Codex · Luna')
+  expect(luna).toContain('Luna')
   expect(luna).toContain('class="c-light"')
 })
 
@@ -992,6 +993,7 @@ test('a run whose spawn answered no agentId takes it from its Agent call, so its
 
   await stepOf($, 'a-77', 0)
   expect(byId(state.agents(), 'toolu_scout')).toMatchObject({ steps: 1, tokens: 1500 })
+  listed.infos = [info('a-77', 'completed')]
   await $.turn.complete({ answer: 'done', durationMs: 1, isAborted: false, turnId: 't1', agentId: 'a-77', reason: 'answer' })
   expect(byId(state.agents(), 'toolu_scout')?.status).toBe('done')
 })
@@ -1015,14 +1017,15 @@ const plan = ($: Engine, tasks: Record<string, unknown>[]) =>
   $.tool.call({ tool: 'mcp__savvy-progress__progress', title: 'Fix bug', total: tasks.length, phase: 'delegate', tasks })
 
 // The panel's rows beneath its header on the desktop, and the whole panel as the terminal draws it.
-const panelOf = async ($: Engine): Promise<{ rows: string[]; terminal: string }> => {
+const panelOf = async ($: Engine): Promise<{ header: string; rows: string[]; terminal: string }> => {
   const desktop = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  const rows = (await desktop.findAll({ type: 'Svg' })).slice(1).map(e => String(e.props.source))
+  const drawings = (await desktop.findAll({ type: 'Svg' })).map(e => String(e.props.source))
+  const [header = '', ...rows] = drawings
   await desktop.unmount()
   const text = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const terminal = JSON.stringify(await text.drawn())
   await text.unmount()
-  return { rows, terminal }
+  return { header, rows, terminal }
 }
 
 test("a planned task waits at the effort and the model the plan declares, at its tier's otherwise", { options: { theme: 'classic' } }, async ($, on) => {
@@ -1077,7 +1080,7 @@ test('a Codex task waits as its intensity, whatever effort the plan declares', {
   await plan($, [{ title: 'second opinion', tier: 'codex-sol', effort: 'max', model: 'fable' }])
 
   const { rows } = await panelOf($)
-  expect(rows[0]).toContain('Codex · Sol')
+  expect(rows[0]).toContain('Sol')
   expect(rows[0]).not.toContain('max')
   expect(rows[0]).not.toContain('Fable')
 })
@@ -1107,7 +1110,7 @@ test("an agent of the project that is no savvy worker waits under its own type, 
   // The run took its task's place: one row for it, one still planned.
   expect(running.rows).toHaveLength(2)
   expect(running.rows.filter(r => r.includes('Review of the diff'))).toHaveLength(1)
-  expect(running.rows.find(r => r.includes('Review of the diff'))).toContain('ctx 0%')
+  expect(running.rows.find(r => r.includes('Review of the diff'))).not.toContain('ctx 0%')
   // A task of the plan, so the faint layer counts it as it counts a savvy worker.
   expect(state.flow()?.running).toBe(1)
   expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 1 running, 0%')
@@ -1199,37 +1202,37 @@ const taskOf = (tier: string) => ({ title: 'task', tier, after: [] })
 
 test('Codex prediction picks the newest visible model of the requested family', () => {
   const codex = codexModelsFrom(MODELS_CACHE)
-  expect(plannedModel(taskOf('codex-sol'), { codex, claude: {} })).toBe('Codex · Sol 6.1')
+  expect(plannedModel(taskOf('codex-sol'), { codex, claude: {} })).toBe('Sol 6.1')
 })
 
 test('a planned Codex task names no effort: the user\'s is in its brief, the plan\'s moves only the relay', () => {
   const codex = codexModelsFrom(MODELS_CACHE)
-  expect(plannedModel({ ...taskOf('codex-sol'), effort: 'max' }, { codex, claude: {} })).toBe('Codex · Sol 6.1')
+  expect(plannedModel({ ...taskOf('codex-sol'), effort: 'max' }, { codex, claude: {} })).toBe('Sol 6.1')
 })
 
 test('a Codex run awaiting declaration predicts each intensity\'s own effort', () => {
   for (const [family, effort] of [['luna', 'low'], ['terra', 'medium'], ['sol', 'high'], ['astra', 'high']] as const) {
     expect(runModel(run('w1', { type: `savvy-codex-${family}` }), true, { codex: { [family]: `gpt-6.1-${family}` }, claude: {} }))
-      .toBe(`Codex · ${codexModelName(`gpt-6.1-${family}`)} · ${effort}`)
+      .toBe(`${codexModelName(`gpt-6.1-${family}`)} · ${effort}`)
   }
 })
 
 test('an absent cache leaves the bare Codex intensity', () => {
-  expect(plannedModel(taskOf('codex-sol'), { codex: codexModelsFrom(undefined), claude: {} })).toBe('Codex · Sol')
+  expect(plannedModel(taskOf('codex-sol'), { codex: codexModelsFrom(undefined), claude: {} })).toBe('Sol')
 })
 
 test('a cache with no matching family leaves the bare Codex intensity', () => {
-  expect(plannedModel(taskOf('codex-astra'), { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Codex · Astra')
+  expect(plannedModel(taskOf('codex-astra'), { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Astra')
 })
 
 test('a run\'s declared Codex model and effort win over prediction', () => {
   const worker = run('w1', { type: 'savvy-flow:savvy-codex-sol', codexModel: 'gpt-6.1-sol', codexEffort: 'xhigh' })
-  expect(runModel(worker, true, { codex: { sol: 'gpt-6-sol' }, claude: {} })).toBe('Codex · Sol 6.1 · xhigh')
+  expect(runModel(worker, true, { codex: { sol: 'gpt-6-sol' }, claude: {} })).toBe('Sol 6.1 · xhigh')
 })
 
 test('a Codex run awaiting declaration shows prediction with Codex\'s effort', () => {
   const worker = run('w1', { type: 'savvy-codex-sol', effort: 'low' })
-  expect(runModel(worker, true, { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Codex · Sol 6.1 · high')
+  expect(runModel(worker, true, { codex: codexModelsFrom(MODELS_CACHE), claude: {} })).toBe('Sol 6.1 · high')
 })
 
 test('a Claude planned task shows the alias version learned from a resolved run', () => {
@@ -1268,8 +1271,8 @@ test('the step tool accepts a Codex model and effort and preserves them through 
   await stepped($, 'w1', { done: 2 })
   expect(byId(state.agents(), 'w1')).toMatchObject({ model: 'claude-opus-5-5', codexModel: 'gpt-6.1-sol', codexEffort: 'high' })
   const { rows, terminal } = await panelOf($)
-  expect(rows[0]).toContain('Codex · Sol 6.1 · high')
-  expect(terminal).toContain('Codex · Sol 6.1 · high')
+  expect(rows[0]).toContain('Sol 6.1 · high')
+  expect(terminal).toContain('Sol 6.1 · high')
 })
 
 test('the step tool rejects a non-string model', async ($, on) => {
@@ -1299,11 +1302,11 @@ test('the panel predicts Codex versions for planned tasks and undeclared runs fr
   await plan($, [{ title: 'planned', tier: 'codex-terra' }])
   await spawn($, 'running', 'savvy-codex-sol')
   const { rows, terminal } = await panelOf($)
-  expect(rows[0]).toContain('Codex · Sol 6.1 · high')
-  expect(rows[1]).toContain('Codex · Terra 6.1')
+  expect(rows[0]).toContain('Sol 6.1 · high')
+  expect(rows[1]).toContain('Terra 6.1')
   expect(rows[1]).not.toContain('Terra 6.1 · medium')
-  expect(terminal).toContain('Codex · Sol 6.1 · high')
-  expect(terminal).toContain('Codex · Terra 6.1')
+  expect(terminal).toContain('Sol 6.1 · high')
+  expect(terminal).toContain('Terra 6.1')
 })
 
 test('Codex cache reads happen at most once a minute and refresh after it', async ($, on) => {
@@ -1319,11 +1322,11 @@ test('Codex cache reads happen at most once a minute and refresh after it', asyn
   await plan($, [{ title: 'planned', tier: 'codex-sol' }])
   await clock.advance(59_000)
   expect(reads).toBe(1)
-  expect((await panelOf($)).terminal).toContain('Codex · Sol 6')
+  expect((await panelOf($)).terminal).toContain('Sol 6')
   expect((await panelOf($)).terminal).not.toContain('Sol 6.1')
   await clock.advance(1_000)
   expect(reads).toBe(2)
-  expect((await panelOf($)).terminal).toContain('Codex · Sol 6.1')
+  expect((await panelOf($)).terminal).toContain('Sol 6.1')
 })
 
 test('a cache re-read that finds the same models leaves the idle panel as it is', async ($, on) => {
@@ -1350,7 +1353,7 @@ test('an unreadable Codex cache falls back and is retried only after a minute', 
   await plan($, [{ title: 'planned', tier: 'codex-sol' }])
   await clock.advance(59_000)
   expect(reads).toBe(1)
-  expect((await panelOf($)).terminal).toContain('Codex · Sol')
+  expect((await panelOf($)).terminal).toContain('Sol')
   expect((await panelOf($)).terminal).not.toContain('Sol 6')
   await clock.advance(1_000)
   expect(reads).toBe(2)
@@ -1571,13 +1574,13 @@ test('an absent status directory leaves no Codex usage header', async ($, on) =>
   engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
   const files = statusFiles(on); files.faults.missing = true
   await start($)
-  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+  expect((await panelOf($)).header).not.toContain('Codex · plan')
 })
 test('an unreadable status file leaves no Codex usage header', async ($, on) => {
   engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
   const files = statusFiles(on); files.faults.unreadable = true
   await start($)
-  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+  expect((await panelOf($)).header).not.toContain('Codex · plan')
 })
 test('a status without rate limits produces no plan usage', () => {
   expect(codexStatusFrom(JSON.stringify({ ...STATUS_ONE, rateLimits: null }))?.rateLimits).toBeUndefined()
@@ -1616,14 +1619,156 @@ test('unchanged finished status files are not reread', async ($, on) => {
   await clock.advance(6000)
   expect(files.reads).toEqual(['run-one'])
 })
-test('the header takes rate limits from the newest status file', async ($, on) => {
+test('a newer status without plan limits preserves the last reading', async ($, on) => {
   const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
   const files = statusFiles(on)
   await start($)
-  expect((await panelOf($)).terminal).toContain('Codex 5h')
+  expect((await panelOf($)).header).toContain('Codex · plan')
   files.files.newest = { text: JSON.stringify({ ...STATUS_ONE, rateLimits: null, updatedAt: 300 }), mtimeMs: 300 }
   await clock.advance(3000)
-  expect((await panelOf($)).terminal).not.toContain('Codex 5h')
+  expect((await panelOf($)).header).toContain('7d  9%')
+})
+
+const SAVED_CODEX: UsageReadings = { statuses: {}, codex: READINGS.codex, codexReadAt: 0, codexUpdatedAt: 100 }
+const SNAPSHOT = { rateLimits: CODEX_LIMITS, model: 'gpt-6.1-sol', updatedAt: 200 }
+
+test('a plan-only snapshot parses without run accounting fields', () => {
+  expect(codexPlanFrom(JSON.stringify(SNAPSHOT))).toEqual({ rateLimits: READINGS.codex, updatedAt: 200 })
+})
+
+test('a plan-only snapshot cannot become an agent run status', () => {
+  expect(codexStatusFrom(JSON.stringify(SNAPSHOT))).toBeUndefined()
+})
+
+test('a plan snapshot with an invalid timestamp is ignored', () => {
+  expect(codexPlanFrom(JSON.stringify({ ...SNAPSHOT, updatedAt: 'yesterday' }))).toBeUndefined()
+})
+
+test('oversized plan snapshots are ignored', () => {
+  expect(codexPlanFrom(JSON.stringify({ ...SNAPSHOT, output: 'x'.repeat(17_000) }))).toBeUndefined()
+})
+
+test('a plan parser does not accept a malformed full run status', () => {
+  expect(codexPlanFrom(JSON.stringify({ ...STATUS_ONE, totalTokenUsage: null }))).toBeUndefined()
+})
+
+test('a successful Codex reading persists the time it was read', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  statusFiles(on)
+  await start($)
+  expect(state.usage()).toMatchObject({ codex: READINGS.codex, codexReadAt: 10_000, codexUpdatedAt: 100 })
+})
+
+test('an unchanged status never refreshes the saved reading age', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  statusFiles(on)
+  await start($)
+  await clock.advance(6000)
+  expect(state.usage().codexReadAt).toBe(0)
+})
+
+test('Codex usage survives a restart with no status directory or relays', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 7_200_000, { HOME: '/home/worker' })
+  const files = statusFiles(on); files.faults.missing = true
+  state.seed('usage', SAVED_CODEX)
+  await start($)
+  expect((await panelOf($)).header).toContain('7d  9%')
+})
+
+test('a gap in status files retains the last Codex reading', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  await start($)
+  for (const name of Object.keys(files.files)) delete files.files[name]
+  await clock.advance(3000)
+  expect(state.usage().codex).toEqual(READINGS.codex)
+})
+
+test('an unreadable replacement retains the last Codex reading', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on, { ...STATUS_ONE, state: 'running' })
+  await start($)
+  files.faults.unreadable = true
+  await clock.advance(3000)
+  expect(state.usage().codex).toEqual(READINGS.codex)
+})
+
+test('an older observation cannot replace a newer persisted reading', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  statusFiles(on, { ...STATUS_ONE, updatedAt: 50, rateLimits: { ...CODEX_LIMITS, primary: { ...CODEX_LIMITS.primary, used_percent: 99 } } })
+  state.seed('usage', SAVED_CODEX)
+  await start($)
+  expect(state.usage().codex).toEqual(READINGS.codex)
+})
+
+test('a newer plan snapshot replaces the persisted reading', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  files.files.snapshot = { text: JSON.stringify({ ...SNAPSHOT, rateLimits: { ...CODEX_LIMITS, primary: { ...CODEX_LIMITS.primary, used_percent: 57 } } }), mtimeMs: 300 }
+  state.seed('usage', SAVED_CODEX)
+  await start($)
+  expect(state.usage()).toMatchObject({ codex: { fiveHour: { percentUsed: 57 } }, codexReadAt: 10_000, codexUpdatedAt: 200 })
+})
+
+test('a plan-only snapshot supplies usage before any relay runs', async ($, on) => {
+  engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  for (const name of Object.keys(files.files)) delete files.files[name]
+  files.files.snapshot = { text: JSON.stringify(SNAPSHOT), mtimeMs: 300 }
+  await start($)
+  expect((await panelOf($)).header).toContain('7d  9%')
+})
+
+test('an unchanged plan-only snapshot is not reread on every poll', async ($, on) => {
+  const { clock } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = statusFiles(on)
+  for (const name of Object.keys(files.files)) delete files.files[name]
+  files.files.snapshot = { text: JSON.stringify(SNAPSHOT), mtimeMs: 300 }
+  await start($)
+  await clock.advance(6000)
+  expect(files.reads).toEqual(['snapshot'])
+})
+
+test('the saved reading age is drawn in the label grey', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 7_200_000)
+  state.seed('usage', SAVED_CODEX)
+  await start($)
+  expect((await panelOf($)).header).toContain('<tspan class="s" font-weight="400"> · 2h ago</tspan>')
+})
+
+test('reading ages advance while no agents are running', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [] }, 59_000)
+  state.seed('usage', SAVED_CODEX)
+  await start($)
+  await clock.advance(1000)
+  expect((await panelOf($)).header).toContain(' · 1m ago</tspan>')
+})
+
+test('an expired Codex window shows zero with a reset label and empty meter', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 2000)
+  state.seed('usage', { statuses: {}, codex: { fiveHour: { percentUsed: 96, resetsAt: new Date(1000).toISOString() } }, codexReadAt: 0 })
+  await start($)
+  const header = (await panelOf($)).header
+  expect(header).toContain('5h  0% reset<tspan')
+  expect(header).toContain('width="0" height="4" rx="2" fill="#E0A526"')
+})
+
+test('resetting one Codex window preserves the other window', () => {
+  expect(planUsageText({ codex: { fiveHour: { percentUsed: 65, resetsAt: new Date(1000).toISOString() },
+    week: { percentUsed: 18, resetsAt: new Date(3000).toISOString() } } }, 2000)).toBe('Claude —  Codex 0/18%')
+})
+
+test('a Codex window is not reset until strictly after its reset time', () => {
+  expect(planUsageText({ codex: { fiveHour: { percentUsed: 65, resetsAt: new Date(1000).toISOString() } } }, 1000)).toBe('Claude —  Codex 65/—%')
+})
+
+test('rendering an expired reading preserves the original stored observation', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 2000)
+  const plan = { fiveHour: { percentUsed: 96, resetsAt: new Date(1000).toISOString() } }
+  state.seed('usage', { statuses: {}, codex: plan, codexReadAt: 0 })
+  await start($)
+  await panelOf($)
+  expect(state.usage().codex).toEqual(plan)
 })
 test('a live Codex action becomes its row step note without declared steps', async ($, on) => {
   const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
@@ -1719,50 +1864,206 @@ test('the step description asks for a concrete action note', async ($, on) => {
   expect(registered.find(t => t.name === 'step')?.description).toContain('reading CreatureProbe.cs')
   expect(registered.find(t => t.name === 'step')?.description).toContain('never working')
 })
-test('a wide plan header shows both families and each window reset', () => {
-  const text = planUsageText(READINGS)
-  expect(text).toContain('Claude 5h 41% ↻')
-  expect(text).toContain('7d 94% ↻')
-  expect(text).toContain('Codex 5h 2% ↻')
-  expect(text.split('↻').length).toBe(5)
-})
-test('a narrow plan header fits both families on sixty columns', () => {
-  const text = planUsageText(READINGS, 60)
-  expect([...text].length).toBeLessThanOrEqual(60)
-  expect(text).toContain('Claude')
-  expect(text).toContain('Codex')
-  expect(text).toContain('↻')
-})
-test('a forty-column plan header preserves both families percentages', () => {
-  const text = planUsageText(READINGS, 40)
-  expect([...text].length).toBeLessThanOrEqual(40)
-  expect(text).toContain('Claude 5h41%·7d94%')
-  expect(text).toContain('Codex 5h2%·7d9%')
-})
-test('a rendered narrow usage line requests truncation instead of wrapping', async ($, on) => {
+// The desktop header, at a chosen width, and any text drawn outside its SVG.
+const headerOf = async ($: Engine, columns = 60) => {
+  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: columns }, surface: 'desktop' })
+  const [drawing] = await ui.findAll({ type: 'Svg' })
+  const texts = JSON.stringify(await ui.findAll({ type: 'Text' }))
+  await ui.unmount()
+  return { source: String(drawing?.props.source), width: Number(drawing?.props.width), height: Number(drawing?.props.height), texts }
+}
+
+const planBoxes = (source: string) => [...source.matchAll(/<rect class="tile" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="82" rx="8"\/>/g)]
+  .map(m => ({ x: Number(m[1]), y: Number(m[2]), width: Number(m[3]) }))
+
+test('plan usage occupies two equal tiles beneath the metric tiles', async ($, on) => {
   const { state } = engine(on, { infos: [] })
   await start($)
   state.seed('usage', READINGS)
-  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, bodyColumns: 40 }, surface: 'desktop' })
-  const header = (await ui.findAll({ type: 'Text' })).find(e => JSON.stringify(e).includes('Claude 5h'))
-  expect(header?.props.wrap).toBe('truncate-end')
-  await ui.unmount()
+  state.seed(FLOW, flowOf())
+  const header = await headerOf($)
+  expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 233 }, { x: 239, y: 90, width: 233 }])
+  expect(header.source).toContain('Claude · plan</text>')
+  expect(header.source).toContain('Codex · plan</text>')
+  expect(header.height).toBe(176)
 })
-test('the plan header omits Claude when the engine has no plan reading', () => {
-  expect(planUsageText({ codex: READINGS.codex })).not.toContain('Claude')
+
+test('each plan window displays its percentage and reset time on one line', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  const { source } = await headerOf($)
+  expect(source).toContain('5h  41%  ↻')
+  expect(source).toContain('7d  94%  ↻')
+  expect(source.split('↻')).toHaveLength(5)
 })
+
+test('plan meters use the row bar geometry and family colours', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  const { source } = await headerOf($)
+  expect(source).toContain('width="88.15" height="4" rx="2" fill="#D97757"')
+  expect(source).toContain('width="4.3" height="4" rx="2" fill="#E0A526"')
+})
+
+test('a plan meter turns red at ninety percent', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: { percentUsed: 89 }, week: { percentUsed: 90 } } })
+  const { source } = await headerOf($)
+  expect(source).toContain('width="191.35" height="4" rx="2" fill="#D97757"')
+  expect(source).toContain('width="193.5" height="4" rx="2" fill="#D0453F"')
+})
+
+test('below 360 pixels plan tiles stack at full width', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  const header = await headerOf($, 45)
+  expect(header.width).toBe(352)
+  expect(planBoxes(header.source)).toEqual([{ x: 0, y: 62, width: 352 }, { x: 0, y: 150, width: 352 }])
+  expect(header.height).toBe(236)
+})
+
+test('at 360 pixels plan tiles share one row', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  expect(planBoxes((await headerOf($, 46)).source)).toEqual([{ x: 0, y: 62, width: 177 }, { x: 183, y: 62, width: 177 }])
+})
+
+test('an unread family gets a dash and no plan meter', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { statuses: {}, codex: READINGS.codex })
+  const { source } = await headerOf($)
+  const claudeTile = source.slice(source.indexOf('Claude · plan'), source.indexOf('Codex · plan'))
+  expect(claudeTile).toContain('>—</text>')
+  expect(claudeTile).not.toContain('height="4"')
+})
+
+test('no plan readings leave the header at its original height', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  const header = await headerOf($)
+  expect(planBoxes(header.source)).toEqual([])
+  expect(header.height).toBe(60)
+})
+
+test('an empty plan object supplies no second row', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { statuses: {}, claude: {}, codex: {} })
+  expect(planBoxes((await headerOf($)).source)).toEqual([])
+})
+
+test('expanded plan usage has no plain text line outside the SVG', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  expect((await headerOf($)).texts).not.toContain('41%')
+})
+
+test('compact usage preserves both windows in one short line', () => {
+  expect(planUsageText({ claude: { fiveHour: { percentUsed: 65 }, week: { percentUsed: 96 } },
+    codex: { fiveHour: { percentUsed: 57 }, week: { percentUsed: 18 } } })).toBe('Claude 65/96%  Codex 57/18%')
+})
+
+test('compact plan usage is grey text inside its SVG', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  state.seed('panel', { isCompact: true, isDoneCollapsed: false, autoOpenedFor: '' })
+  const header = await headerOf($)
+  expect(header.source).toContain('<text class="s" x="0" y="80"')
+  expect(header.source).toContain('>Claude 41/94%  Codex 2/9%</text>')
+  expect(header.height).toBe(84)
+  expect(header.texts).not.toContain('41%')
+})
+
+test('compact usage leaves an unread family unknown', () => {
+  expect(planUsageText({ codex: READINGS.codex })).toBe('Claude —  Codex 2/9%')
+})
+
+test('the narrowest panel preserves plan percentages on single text lines', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', READINGS)
+  const { source } = await headerOf($, 24)
+  const values = [...source.matchAll(/<text class="t"[^>]*>([^<]*%)\s*(?:↻[^<]*)?<\/text>/g)].map(m => m[1].trim())
+  expect(values).toEqual(['5h  41%', '7d  94%', '5h  2%', '7d  9%'])
+})
+
+test('cost tiles leave both families unknown before any usage arrives', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [run('fresh')])
+  const { source } = await headerOf($)
+  const cost = source.slice(source.indexOf('Cost ≈'), source.indexOf('Tokens</text>'))
+  expect(cost).toContain('>Claude —</text>')
+  expect(cost).toContain('>Codex —</text>')
+})
+
+test('token tiles leave an unread Codex family unknown', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [run('worker', { tokens: 200 })])
+  const { source } = await headerOf($)
+  const tokens = source.slice(source.indexOf('Tokens</text>'), source.indexOf('Time</text>'))
+  expect(tokens).toContain('>Claude 200</text>')
+  expect(tokens).toContain('>Codex —</text>')
+})
+
+test('an observed zero usage stays a known zero in totals', () => {
+  expect(totals([run('worker', { steps: 1 })], 0).claude).toEqual({ cost: 0, tokens: 0 })
+})
+
+const statsOf = (source: string): string => /<text class="s"[^>]*y="49"[^>]*>([^<]*)<\/text>/.exec(source)?.[1] ?? ''
+
+test('a Codex row places its model directly after its tier tag', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [relay({ codexModel: 'gpt-6.1-sol', codexEffort: 'high' })])
+  const { rows, terminal } = await panelOf($)
+  expect(rows[0]).toContain('>codex-sol</tspan><tspan class="s">  Sol 6.1 · high</tspan>')
+  expect(terminal).toContain('codex-sol · Sol 6.1 · high')
+})
+
+test('a row with no accounting reading shows only its elapsed time', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [relay({ startedAt: 0, endedAt: 30_000 })])
+  expect(statsOf((await panelOf($)).rows[0]!)).toBe('0:30')
+})
+
+test('row stats show known context, tokens, cost and time', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [run('worker', { steps: 1, contextTokens: 100_000, costUsd: 0.42, status: 'done', endedAt: 30_000 })])
+  expect(statsOf((await panelOf($)).rows[0]!)).toBe('ctx 10% · 100k ≈$0.42 0:30')
+})
+
+test('a Codex row with known tokens and unknown pricing omits cost', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [relay()])
+  state.seed('usage', { statuses: { 'run-one': { ...READINGS.statuses['run-one']!, model: 'custom-model' } } })
+  expect(statsOf((await panelOf($)).rows[0]!)).toBe('1.1M 0:00')
+})
+
 test('Claude plan usage comes from the engine session usage API', async ($, on) => {
   engine(on, { infos: [] })
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: CLAUDE_LIMITS } }))
   await start($)
-  expect((await panelOf($)).terminal).toContain('Claude 5h 41%')
+  expect((await panelOf($)).header).toContain('5h  41%')
 })
 test('Claude session.measure refreshes the plan windows', async ($, on) => {
   engine(on, { infos: [] })
   on('session.measure', ($, e) => ({ changed: e.changed }))
   await start($)
   await $.session.measure({ context: { window: 1_000_000 }, rateLimits: CLAUDE_LIMITS, changed: ['rateLimits'] })
-  expect((await panelOf($)).terminal).toContain('Claude 5h 41%')
+  expect((await panelOf($)).header).toContain('5h  41%')
 })
 test('the rendered totals show each familys own cost', async ($, on) => {
   const { state } = engine(on, { infos: [] })
@@ -1776,6 +2077,390 @@ const resume = ($: Engine, title = 'old title', name?: string) => $.agent.spawn(
   prompt: 'Do the next task.', description: title, subagentType: 'savvy-flow:savvy-careful',
   provider: { plugin: 'engine', tier: 'core' }, parentModel: 'claude-opus-5-5', background: true, fork: false,
   resume: { agentId: 'worker' }, ...(name ? { name } : {}) })
+
+// Contract fixture, not a live capture: 2.1.295's tool adapter flattens arguments;
+// SendMessage's direct-agent resume reuses the loop instead of calling agent.spawn.
+const REUSED_RELAY_SEND = { tool: 'SendMessage', tool_use_id: 'send-plan-design', to: 'worker',
+  summary: "Fit plan usage into the panel's own design", message: 'Implement the requested panel design.' } satisfies Parameters<Engine['tool']['call']>[0]
+const REUSED_RELAY_STEP = { turnId: 'resumed-relay-turn', index: 0, model: 'claude-opus-5-5', messageCount: 2, agentId: 'worker' } satisfies Parameters<Engine['turn']['step']>[0]
+
+// 2.1.295 contract fixtures, not a live capture: the turn emitter has no
+// background flag. Its roster maps an agent's own background work to `waiting`.
+const WAITING_WORKER_STOP = { agentId: 'worker', turnId: 'waiting-turn', answer: 'Waiting for background work.',
+  durationMs: 1000, isAborted: false, reason: 'answer' } satisfies Parameters<Engine['turn']['complete']>[0]
+const WAITING_WORKER_INFO = { id: 'worker', description: 'Run background checks', type: 'savvy-codex-sol', status: 'waiting' } satisfies AgentInfo
+
+test('a legacy Codex relay without a status file stays running when its roster says waiting', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker', { type: 'savvy-codex-sol' })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(byId(state.agents(), 'worker')?.status).toBe('running')
+})
+
+test('a project worker waiting on background work stays running too', async ($, on) => {
+  const { state } = engine(on, { infos: [{ ...WAITING_WORKER_INFO, type: 'code-reviewer' }] })
+  state.seed(AGENTS, [run('worker', { type: 'code-reviewer' })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(byId(state.agents(), 'worker')?.status).toBe('running')
+})
+
+test('a waiting worker with all reported steps stays below a full bar', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker', { stepDone: 4, stepTotal: 4 })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(progressOf(byId(state.agents(), 'worker')!)).toBe(0.99)
+})
+
+test('a waiting worker with no reported steps does not get a full fallback bar', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(progressOf(byId(state.agents(), 'worker')!)).toBe(0)
+})
+
+test('a waiting worker has no finished checkmark in the panel', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect((await panelOf($)).terminal).not.toContain('✓')
+})
+
+test('periodic reconciliation keeps a waiting worker live', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [WAITING_WORKER_INFO] }, 0)
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  await clock.advance(10_000)
+  expect(byId(state.agents(), 'worker')?.status).toBe('running')
+})
+
+test('a waiting worker keeps its elapsed clock open', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(byId(state.agents(), 'worker')?.endedAt).toBeUndefined()
+})
+
+for (const status of ['completed', 'idle', 'failed', 'killed'] as const) {
+  test(`a waiting worker settles when its roster changes to ${status}`, async ($, on) => {
+    const listed = { infos: [WAITING_WORKER_INFO] as AgentInfo[] }
+    const { state, clock } = engine(on, listed, 0)
+    state.seed(AGENTS, [run('worker')])
+    on('turn.complete', () => ({ text: '' }))
+    await start($)
+    await $.turn.complete(WAITING_WORKER_STOP)
+    listed.infos = [{ ...WAITING_WORKER_INFO, status }]
+    await clock.advance(5000)
+    expect(byId(state.agents(), 'worker')?.status).toBe(status === 'completed' || status === 'idle' ? 'done' : 'failed')
+  })
+}
+
+test('a final roster completion releases a waiting workers full bar', async ($, on) => {
+  const listed = { infos: [WAITING_WORKER_INFO] as AgentInfo[] }
+  const { state, clock } = engine(on, listed, 0)
+  state.seed(AGENTS, [run('worker', { stepDone: 4, stepTotal: 4 })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  listed.infos = [{ ...WAITING_WORKER_INFO, status: 'completed' }]
+  await clock.advance(5000)
+  expect(progressOf(byId(state.agents(), 'worker')!)).toBe(1)
+})
+
+test('an answer cannot briefly finish a worker before the roster publishes its wait', async ($, on) => {
+  const listed = { infos: [{ ...WAITING_WORKER_INFO, status: 'running' }] as AgentInfo[] }
+  const { state, clock } = engine(on, listed, 0)
+  state.seed(AGENTS, [run('worker', { stepDone: 4, stepTotal: 4 })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(byId(state.agents(), 'worker')).toMatchObject({ status: 'running', pendingCompletion: true })
+  listed.infos = [WAITING_WORKER_INFO]
+  await clock.advance(5000)
+  expect(byId(state.agents(), 'worker')).toMatchObject({ status: 'running', isWaiting: true })
+})
+
+test('a just-ended worker whose roster is still running has a capped bar', async ($, on) => {
+  const { state } = engine(on, { infos: [{ ...WAITING_WORKER_INFO, status: 'running' }] })
+  state.seed(AGENTS, [run('worker', { stepDone: 4, stepTotal: 4 })])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(progressOf(byId(state.agents(), 'worker')!)).toBe(0.99)
+})
+
+test('a normal finish settles after the roster completes its asynchronous cleanup', async ($, on) => {
+  const listed = { infos: [{ ...WAITING_WORKER_INFO, status: 'running' }] as AgentInfo[] }
+  const { state, clock } = engine(on, listed, 0)
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  listed.infos = [{ ...WAITING_WORKER_INFO, status: 'completed' }]
+  await clock.advance(5000)
+  expect(byId(state.agents(), 'worker')?.status).toBe('done')
+})
+
+test('reload repairs a previously finished row that the roster now reports as waiting', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker', { status: 'done', endedAt: 1000 })])
+  await start($)
+  expect(byId(state.agents(), 'worker')).toMatchObject({ status: 'running', isWaiting: true })
+})
+
+test('another workers wait does not keep a genuinely completed worker running', async ($, on) => {
+  const { state } = engine(on, { infos: [{ ...WAITING_WORKER_INFO, status: 'completed' }, { ...WAITING_WORKER_INFO, id: 'other-worker' }] })
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(byId(state.agents(), 'worker')?.status).toBe('done')
+})
+
+test('an aborted worker is not kept alive by an old waiting roster entry', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker')])
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete({ ...WAITING_WORKER_STOP, reason: 'aborted', isAborted: true })
+  expect(byId(state.agents(), 'worker')?.status).toBe('failed')
+})
+
+test('a waiting planned worker keeps an accepted flow below one hundred percent', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker')])
+  state.seed(FLOW, flowOf({ done: 1, total: 1 }))
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(await bar($)).toContain('99%')
+})
+
+test('opt-in tracing records the actual turn stop fields', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  state.seed(AGENTS, [run('worker')])
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  const stop = logs.find(l => l.includes('"event":"turn.complete"')) ?? ''
+  expect(stop).toContain('"agentId":"worker"')
+  expect(stop).toContain('"reason":"answer"')
+})
+
+test('opt-in stop tracing records the workers authoritative waiting status', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  state.seed(AGENTS, [run('worker')])
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  expect(logs.find(l => l.includes('"event":"agent.list:stop"'))).toContain('"status":"waiting"')
+})
+
+const reusedStep = async ($: Engine, over: Partial<typeof REUSED_RELAY_STEP> = {}) => {
+  const stream = $.turn.step({ ...REUSED_RELAY_STEP, ...over })
+  for await (const chunk of stream) void chunk
+  return stream.result
+}
+
+test('SendMessage reuse applies its title before the next model request without a spawn', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { type: 'savvy-codex-sol', status: 'done',
+    description: "Show each worker's model version in the panel" })])
+  on('turn.step', async function* (_, e) {
+    expect(byId(state.agents(), e.agentId!)?.description).toBe(REUSED_RELAY_SEND.summary)
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const }
+  })
+  on('tool.call', { tool: 'SendMessage' }, async (_, e) => {
+    expect(e.agentId).toBeUndefined()
+    expect(e.summary).toBe(REUSED_RELAY_SEND.summary)
+    await reusedStep($)
+    return { result: { success: true, resumedAgentId: 'worker' } }
+  })
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+})
+
+test('a directly reused relay redraws its panel title', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { status: 'done' })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect((await panelOf($)).rows[0]).toContain(REUSED_RELAY_SEND.summary)
+})
+
+test('a directly reused agent starts round one for a new title', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { status: 'done', round: 3 })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect(byId(state.agents(), 'worker')?.round).toBe(1)
+})
+
+test('a directly reused agent increments the round only once for the same title', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { description: REUSED_RELAY_SEND.summary, status: 'done' })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  await reusedStep($, { index: 1 })
+  expect(byId(state.agents(), 'worker')?.round).toBe(2)
+})
+
+test('a queued title does not rename another step of the current turn', async ($, on) => {
+  const { state } = engine(on, { infos: [info('worker', 'running')] })
+  state.seed(AGENTS, [run('worker', { description: 'current task', turnId: REUSED_RELAY_STEP.turnId })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($, { index: 1 })
+  expect(byId(state.agents(), 'worker')?.description).toBe('current task')
+})
+
+test('a queued title takes effect on the next turn of a running loop', async ($, on) => {
+  const { state } = engine(on, { infos: [info('worker', 'running')] })
+  state.seed(AGENTS, [run('worker', { description: 'current task', turnId: 'previous-turn' })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect(byId(state.agents(), 'worker')?.description).toBe(REUSED_RELAY_SEND.summary)
+})
+
+test('a failed SendMessage result cannot leave a queued title for a later turn', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done' })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: false, message: 'not delivered' } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect(byId(state.agents(), 'worker')?.description).toBe('old title')
+})
+
+test('direct reuse clears the previous tasks progress', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { status: 'done', stepDone: 4, stepTotal: 4, stepNote: 'old action', stepSkipped: 1 })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect(byId(state.agents(), 'worker')?.stepTotal).toBeUndefined()
+  expect(byId(state.agents(), 'worker')?.stepNote).toBeUndefined()
+})
+
+test('resume tracing is silent by default', async ($, on) => {
+  engine(on, { infos: [] })
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  expect(logs).toEqual([])
+})
+
+test('opt-in resume tracing records main-session SendMessage routing fields', async ($, on) => {
+  engine(on, { infos: [] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  const logs: string[] = []
+  on('ui.log', (_, e) => { expect(e.to).toBe('debug'); logs.push(e.text); return { value: undefined } })
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  const call = logs.find(l => l.includes('"event":"tool.call:SendMessage"')) ?? ''
+  expect(call).toContain('"to":"worker"')
+  expect(call).toContain('"summary":"Fit plan usage into the panel\'s own design"')
+})
+
+test('opt-in resume tracing records a reused agents model event', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  state.seed(AGENTS, [run('worker', { status: 'done', nextTitle: REUSED_RELAY_SEND.summary })])
+  answering(on)
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  await start($)
+  await reusedStep($)
+  const step = logs.find(l => l.includes('"event":"turn.step"')) ?? ''
+  expect(step).toContain('"agentId":"worker"')
+  expect(step).toContain('"turnId":"resumed-relay-turn"')
+})
+
+test('opt-in resume tracing records an explicit spawn resume', async ($, on) => {
+  engine(on, { infos: [] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  await start($)
+  await resume($)
+  expect(logs.find(l => l.includes('"event":"agent.spawn"'))).toContain('"resume":{"agentId":"worker"}')
+})
+
+test('resume tracing records message shape without the message body', async ($, on) => {
+  engine(on, { infos: [] }, 0, { SAVVY_PROGRESS_DEBUG_RESUME: '1' })
+  const logs: string[] = []
+  on('ui.log', (_, e) => { logs.push(e.text); return { value: undefined } })
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await $.tool.call({ ...REUSED_RELAY_SEND, message: 'private task body' })
+  expect(logs.join('\n')).not.toContain('private task body')
+  expect(logs.join('\n')).toContain('"message":{"type":"string","length":17}')
+})
+
+test('a reload keeps a first run at round one', async ($, on) => {
+  const { state } = engine(on, { infos: [info('worker', 'running')] })
+  state.seed(AGENTS, [run('worker', { description: 'old title' })])
+  await start($)
+  await start($)
+  expect(byId(state.agents(), 'worker')?.round).toBe(1)
+})
+
+test('reload reconciliation deduplicates rows by agent id', async ($, on) => {
+  const { state } = engine(on, { infos: [info('worker', 'running')] })
+  state.seed(AGENTS, [run('tool-id', { agentId: 'worker' }), run('worker')])
+  await start($)
+  expect(state.agents().map(a => [a.agentId, a.round])).toEqual([['worker', 1]])
+})
+
+test('a new agent on the same title starts at round one', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { description: 'same title', status: 'done', round: 3 })])
+  await start($)
+  await spawn($, 'same title')
+  expect(byId(state.agents(), 'same title')?.round).toBe(1)
+})
+
+test('a repeated initial spawn after reload stays at round one', async ($, on) => {
+  const { state } = engine(on, { infos: [info('worker', 'running')] })
+  state.seed(AGENTS, [run('tool-id', { agentId: 'worker', description: 'worker' })])
+  await start($)
+  await spawn($, 'worker')
+  expect(state.agents().map(a => [a.agentId, a.round])).toEqual([['worker', 1]])
+})
 
 test('a resumed worker takes the new SendMessage summary as its task title', async ($, on) => {
   const { state } = engine(on, { infos: [] })
@@ -1797,12 +2482,12 @@ test('a different resumed task starts at round one', async ($, on) => {
   expect(byId(state.agents(), 'worker')).toMatchObject({ description: 'Run EditMode tests', round: 1 })
   expect(byId(state.agents(), 'worker')?.stepTotal).toBeUndefined()
 })
-test('resuming the same task increments its round', async ($, on) => {
+test('returning to the same task starts round two', async ($, on) => {
   const { state } = engine(on, { infos: [] })
-  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done', round: 2 })])
+  state.seed(AGENTS, [run('worker', { description: 'old title', status: 'done' })])
   await start($)
   await resume($)
-  expect(byId(state.agents(), 'worker')?.round).toBe(3)
+  expect(byId(state.agents(), 'worker')?.round).toBe(2)
 })
 test('a queued SendMessage summary survives until the later resume', async ($, on) => {
   const { state } = engine(on, { infos: [] })

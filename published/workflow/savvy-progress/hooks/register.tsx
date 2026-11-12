@@ -316,7 +316,7 @@ async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
   const { cacheReadAt: _, statusMtimes: __, ...usage } = await read($, usageReadings)
-  const view = { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: shownModels(await read($, models)), usage }
+  const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlan(usage.codex) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
 }
@@ -585,7 +585,7 @@ const codexModel = (tier: string, hints: ModelHints, declared?: string, effort?:
   const slug = declared || hints.codex[family]
   // With no cache and no declaration, keep today's bare intensity label.
   const label = slug ? codexModelName(slug) : family.charAt(0).toUpperCase() + family.slice(1)
-  return `Codex · ${label}${withEffort && (slug || effort) ? ` · ${effort || CODEX_EFFORT[family]}` : ''}`
+  return `${label}${withEffort && (slug || effort) ? ` · ${effort || CODEX_EFFORT[family]}` : ''}`
 }
 
 // Cache attempts, including failures, are limited across ticks and module reloads.
@@ -651,6 +651,16 @@ const STATUS_POLL_MS = 3000
 const STATUS_STALE_MS = 15_000
 
 // The writer publishes only bounded fields. The panel never opens a Codex rollout.
+const codexLimitsFrom = (limits: { primary?: unknown; secondary?: unknown } | undefined): PlanUsage | undefined => {
+  const window = (value: unknown, minutes: number) => {
+    const w = value as { used_percent?: unknown; window_minutes?: unknown; resets_at?: unknown } | undefined
+    return w?.window_minutes === minutes && nonnegative(w.used_percent) && nonnegative(w.resets_at) && Number.isFinite(new Date(w.resets_at * 1000).getTime())
+      ? { percentUsed: w.used_percent, resetsAt: new Date(w.resets_at * 1000).toISOString() } : undefined
+  }
+  const fiveHour = window(limits?.primary, 300), week = window(limits?.secondary, 10080)
+  return fiveHour || week ? { fiveHour, week } : undefined
+}
+
 export const codexStatusFrom = (text: string): CodexStatus | undefined => {
   try {
     if (text.length > STATUS_MAX_BYTES) return undefined
@@ -663,14 +673,26 @@ export const codexStatusFrom = (text: string): CodexStatus | undefined => {
         !u || ![u.input_tokens, u.cached_input_tokens, u.output_tokens].every(nonnegative) ||
         !(u.reasoning_output_tokens === null || nonnegative(u.reasoning_output_tokens)) ||
         u.cached_input_tokens > u.input_tokens) return undefined
-    const window = (w: { used_percent?: unknown; window_minutes?: unknown; resets_at?: unknown } | undefined, minutes: number) =>
-      w?.window_minutes === minutes && nonnegative(w.used_percent) && nonnegative(w.resets_at) && Number.isFinite(new Date(w.resets_at * 1000).getTime())
-        ? { percentUsed: w.used_percent, resetsAt: new Date(w.resets_at * 1000).toISOString() } : undefined
-    const fiveHour = window(value.rateLimits?.primary, 300), week = window(value.rateLimits?.secondary, 10080)
     return { version: 1, sessionId: value.sessionId, model: value.model, state: value.state, action: value.action,
       totalTokenUsage: { input_tokens: u.input_tokens, cached_input_tokens: u.cached_input_tokens,
         output_tokens: u.output_tokens, reasoning_output_tokens: u.reasoning_output_tokens },
-      rateLimits: fiveHour || week ? { fiveHour, week } : undefined, updatedAt: value.updatedAt }
+      rateLimits: codexLimitsFrom(value.rateLimits), updatedAt: value.updatedAt }
+  } catch { return undefined }
+}
+
+// A manual snapshot has no run state, session id or token counters.
+export const codexPlanFrom = (text: string): { rateLimits: PlanUsage; updatedAt: number } | undefined => {
+  try {
+    if (text.length > STATUS_MAX_BYTES) return undefined
+    const value = JSON.parse(text)
+    if (!value || !nonnegative(value.updatedAt) ||
+        !(value.model === null || typeof value.model === 'string' && value.model.length <= 120)) return undefined
+    if ('version' in value) {
+      const status = codexStatusFrom(text)
+      return status?.rateLimits ? { rateLimits: status.rateLimits, updatedAt: status.updatedAt } : undefined
+    }
+    const rateLimits = codexLimitsFrom(value.rateLimits)
+    return rateLimits ? { rateLimits, updatedAt: value.updatedAt } : undefined
   } catch { return undefined }
 }
 
@@ -694,13 +716,13 @@ async function syncCodexRuns($: EngineInterface): Promise<void> {
   await syncRunning($)
 }
 
-async function refreshCodexUsage($: EngineInterface): Promise<void> {
+async function refreshCodexUsage($: EngineInterface, force = false): Promise<void> {
   const at = await $.clock.now()
   const previous = await read($, usageReadings)
-  if (previous.cacheReadAt !== undefined && at - previous.cacheReadAt < STATUS_POLL_MS) return
+  if (!force && previous.cacheReadAt !== undefined && at - previous.cacheReadAt < STATUS_POLL_MS) return
   await update($, usageReadings, prev => ({ ...prev, cacheReadAt: at }))
   const statuses: UsageReadings['statuses'] = {}, statusMtimes: Record<string, number> = {}
-  let codex: PlanUsage | undefined
+  let latest: { rateLimits: PlanUsage; updatedAt: number; source: { name: string; mtimeMs: number } } | undefined
   try {
     const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
     if (home) {
@@ -709,47 +731,48 @@ async function refreshCodexUsage($: EngineInterface): Promise<void> {
         f.name.endsWith('.json') && STATUS_NAME.test(f.name.slice(0, -5)) && f.size <= STATUS_MAX_BYTES)
         .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name))
       const wanted = new Set((await read($, agents)).map(a => a.codexStatus).filter(Boolean))
-      if (files[0]) wanted.add(files[0].name.slice(0, -5))
+      wanted.add('snapshot')
       for (const file of files) {
         const name = file.name.slice(0, -5)
-        if (!wanted.has(name)) continue
+        // Find the newest valid plan, even if newer files contain only run state.
+        if (!wanted.has(name) && latest && file.mtimeMs <= latest.updatedAt) continue
         const cached = previous.statuses[name]
         let status = cached
+        let plan = cached?.rateLimits ? { rateLimits: cached.rateLimits, updatedAt: cached.updatedAt } : undefined
+        const savedSnapshot = name === 'snapshot' && previous.codex && previous.codexUpdatedAt !== undefined &&
+          previous.codexSource?.name === name && previous.codexSource.mtimeMs === file.mtimeMs
+        if (savedSnapshot) plan = { rateLimits: previous.codex!, updatedAt: previous.codexUpdatedAt! }
         // Running files refresh every three seconds; finished files only on a changed mtime.
-        if (!cached || cached.state === 'running' || previous.statusMtimes?.[name] !== file.mtimeMs) {
-          try { status = codexStatusFrom(await $.fs.read(`${directory}/${file.name}`)) } catch { status = undefined }
+        else if (!cached || cached.state === 'running' || previous.statusMtimes?.[name] !== file.mtimeMs) {
+          try {
+            const text = await $.fs.read(`${directory}/${file.name}`)
+            status = codexStatusFrom(text)
+            plan = codexPlanFrom(text)
+          } catch { status = undefined; plan = undefined }
         }
         if (status) { statuses[name] = status; statusMtimes[name] = file.mtimeMs }
+        if (plan && (!latest || plan.updatedAt > latest.updatedAt)) latest = { ...plan, source: { name, mtimeMs: file.mtimeMs } }
       }
-      const newest = files[0] && statuses[files[0].name.slice(0, -5)]
-      codex = newest ? newest.rateLimits : undefined
     }
-  } catch { /* An absent status directory supplies no Codex line. */ }
-  await update($, usageReadings, prev => ({ ...prev, codex, statuses, statusMtimes }))
+  } catch { /* Keep the panel's last plan reading across filesystem gaps. */ }
+  await update($, usageReadings, prev => ({ ...prev, statuses, statusMtimes,
+    ...(latest && (prev.codexUpdatedAt === undefined || latest.updatedAt > prev.codexUpdatedAt)
+      ? { codex: latest.rateLimits, codexReadAt: at, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : {}) }))
   await syncCodexRuns($)
 }
 
-export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex'>, columns = Infinity): string => {
-  const family = (name: string, plan: PlanUsage | undefined, style: number) => {
-    if (!plan) return ''
-    const resetTime = (value?: PlanUsage['fiveHour']) => {
-      const reset = value?.resetsAt && new Date(value.resetsAt)
-      return reset && Number.isFinite(reset.getTime())
-        ? reset.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }) : ''
-    }
-    const window = (label: string, value?: PlanUsage['fiveHour']) => {
-      if (!value) return ''
-      const time = style === 0 && resetTime(value)
-      return `${label}${style >= 2 ? '' : ' '}${value.percentUsed}%${time ? ` ↻${time}` : ''}`
-    }
-    const time = style === 1 || style === 2 ? resetTime(plan.week ?? plan.fiveHour) : ''
-    return `${name} ${[window('5h', plan.fiveHour), window('7d', plan.week)].filter(Boolean).join(style >= 2 ? '·' : ' · ')}${time ? `${style === 1 ? ' ' : ''}↻${time}` : ''}`
-  }
-  const text = (style: number) => [family('Claude', usage.claude, style), family('Codex', usage.codex, style)].filter(Boolean).join(style >= 2 ? ' ' : '   ')
-  for (const style of [0, 1, 2]) if ([...text(style)].length <= columns) return text(style)
-  // At very narrow widths keep both percentages before reset times; the UI
-  // truncates the final fallback on one line instead of wrapping over the tiles.
-  return text(3)
+const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
+const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex'>): boolean => hasPlan(usage.claude) || hasPlan(usage.codex)
+
+const isReset = (value: PlanUsage['fiveHour'], at: number): boolean => Boolean(value?.resetsAt && at > Date.parse(value.resetsAt))
+const planAt = (plan: PlanUsage | undefined, at: number): PlanUsage | undefined => plan && Object.fromEntries(
+  Object.entries(plan).map(([key, value]) => [key, isReset(value, at) ? { ...value, percentUsed: 0 } : value]))
+
+export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex'>, at = 0): string => {
+  if (!hasPlans(usage)) return ''
+  const family = (name: string, plan?: PlanUsage) => hasPlan(plan)
+    ? `${name} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : `${name} —`
+  return [family('Claude', usage.claude), family('Codex', planAt(usage.codex, at))].join('  ')
 }
 
 const codexAccount = (a: AgentRun, usage: UsageReadings) => {
@@ -758,12 +781,19 @@ const codexAccount = (a: AgentRun, usage: UsageReadings) => {
     cost: codexCostOf(status.model || a.codexModel || tierOf(a.type), status.totalTokenUsage) } : { tokens: undefined, cost: undefined }
 }
 
+const hasClaudeUsage = (a: AgentRun): boolean => a.steps > 0 || a.tokens > 0 || a.contextTokens > 0 || a.costUsd > 0
+
 const rowAccount = (a: AgentRun, usage: UsageReadings) => tierOf(a.type) in CODEX_WEARS
-  ? codexAccount(a, usage) : { tokens: a.contextTokens, cost: a.costUsd }
+  ? codexAccount(a, usage) : { tokens: hasClaudeUsage(a) ? a.contextTokens : undefined, cost: hasClaudeUsage(a) ? a.costUsd : undefined }
 
 const accountText = (a: AgentRun, usage: UsageReadings): string => {
   const value = rowAccount(a, usage)
-  return `${value.tokens === undefined ? '—' : fmtTokens(value.tokens)} ≈${value.cost === undefined ? '—' : fmtCost(value.cost)}`
+  return [value.tokens === undefined ? '' : fmtTokens(value.tokens), value.cost === undefined ? '' : `≈${fmtCost(value.cost)}`].filter(Boolean).join(' ')
+}
+
+const rowStats = (a: AgentRun, usage: UsageReadings, at: number): string => {
+  const ctx = a.contextMax && (a.steps > 0 || a.contextTokens > 0) ? `ctx ${ctxOf(a)}%` : ''
+  return [[ctx, accountText(a, usage)].filter(Boolean).join(' · '), fmtTime(elapsed(a, at))].filter(Boolean).join(' ')
 }
 
 type Usage = {
@@ -898,8 +928,10 @@ const plannedOf = (f: Flow | null, list: AgentRun[]): Planned[] => {
 
 export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPTY_USAGE) => {
   // Every engine request is Claude's, including the relay around Codex.
-  const claude = { cost: list.reduce((s, a) => s + a.costUsd, 0), tokens: list.reduce((s, a) => s + a.tokens, 0) }
-  const codex = { cost: 0, tokens: 0 }
+  const knownClaude = list.some(hasClaudeUsage)
+  const claude = { cost: knownClaude ? list.reduce((s, a) => s + a.costUsd, 0) : undefined,
+    tokens: knownClaude ? list.reduce((s, a) => s + a.tokens, 0) : undefined }
+  const codex: { cost: number | undefined; tokens: number | undefined } = { cost: undefined, tokens: undefined }
   const sessions = new Map<string, { tokens: number; cost?: number }>()
   for (const a of list) {
     const status = a.codexStatus && usage.statuses[a.codexStatus]
@@ -908,14 +940,19 @@ export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPT
     const previous = sessions.get(status.sessionId)
     if (own.tokens !== undefined && (!previous || own.tokens >= previous.tokens)) sessions.set(status.sessionId, { tokens: own.tokens, cost: own.cost })
   }
-  for (const own of sessions.values()) { codex.tokens += own.tokens; codex.cost += own.cost ?? 0 }
+  for (const own of sessions.values()) {
+    codex.tokens = (codex.tokens ?? 0) + own.tokens
+    if (own.cost !== undefined) codex.cost = (codex.cost ?? 0) + own.cost
+  }
   const start = Math.min(...list.map(a => a.startedAt))
   const end = Math.max(...list.map(a => a.endedAt ?? Math.max(at, a.startedAt)))
   return { claude, codex, time: list.length ? end - start : 0 }
 }
 
-const familyCosts = (t: ReturnType<typeof totals>) => `Claude ${fmtCost(t.claude.cost)} · Codex ${fmtCost(t.codex.cost)}`
-const familyTokens = (t: ReturnType<typeof totals>) => `Claude ${fmtTokens(t.claude.tokens)} · Codex ${fmtTokens(t.codex.tokens)}`
+const knownCost = (cost?: number): string => cost === undefined ? '—' : fmtCost(cost)
+const knownTokens = (tokens?: number): string => tokens === undefined ? '—' : fmtTokens(tokens)
+const familyCosts = (t: ReturnType<typeof totals>) => `Claude ${knownCost(t.claude.cost)} · Codex ${knownCost(t.codex.cost)}`
+const familyTokens = (t: ReturnType<typeof totals>) => `Claude ${knownTokens(t.claude.tokens)} · Codex ${knownTokens(t.codex.tokens)}`
 
 // --- desktop drawings: each row is one SVG, as the band above the prompt is.
 
@@ -1049,7 +1086,39 @@ const svg = (W: number, H: number, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${PANE_CSS}${crabCss()}${body}</svg>`
 
 // The pane's own title already says "Agents": the header names the flow, if any.
-const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: number): string => {
+const tile = (x: number, y: number, width: number, height: number, label: string, body: string): string =>
+  `<rect class="tile" x="${x}" y="${y}" width="${width}" height="${height}" rx="8"/>
+<text class="s" x="${x + 9}" y="${y + 16}" font-family="${FONT}" font-size="11">${xml(label)}</text>${body}`
+
+const tileValue = (x: number, y: number, width: number, value: string, bold = true, suffix = ''): string =>
+  `<text class="t" x="${x + 9}" y="${y}" font-family="${FONT}" font-size="11"${bold ? ' font-weight="600"' : ''} font-variant-numeric="tabular-nums">${xml(fitText(value, 11, width - 18 - textWidth(suffix, 11)))}${suffix ? `<tspan class="s" font-weight="400">${xml(suffix)}</tspan>` : ''}</text>`
+
+const readingAge = (readAt: number, at: number): string => {
+  const minutes = Math.max(0, Math.floor((at - readAt) / 60_000))
+  return minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`
+}
+
+const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number): string => {
+  const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at)}`
+  const window = (label: string, value: PlanUsage['fiveHour'], offset: number): string => {
+    const resetWindow = isReset(value, at)
+    const percentUsed = resetWindow ? 0 : value?.percentUsed
+    const percent = value ? `${label}  ${percentUsed}%${resetWindow ? ' reset' : ''}` : `${label}  —`
+    const reset = value?.resetsAt ? new Date(value.resetsAt) : undefined
+    const time = !resetWindow && reset && Number.isFinite(reset.getTime())
+      ? `  ↻${reset.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}` : ''
+    const suffix = value ? age : ''
+    const text = textWidth(percent + time + suffix, 11) <= width - 18 ? percent + time : percent
+    const meterW = width - 18
+    return tileValue(x, y + offset, width, text, true, suffix) + (value
+      ? `<rect class="k" x="${x + 9}" y="${y + offset + 6}" width="${meterW}" height="4" rx="2"/><rect x="${x + 9}" y="${y + offset + 6}" width="${meterW * Math.min(100, Math.max(0, percentUsed!)) / 100}" height="4" rx="2" fill="${percentUsed! >= 90 ? '#D0453F' : color}"/>` : '')
+  }
+  return tile(x, y, width, 82, `${name} · plan`, hasPlan(plan)
+    ? window('5h', plan?.fiveHour, 33) + window('7d', plan?.week, 62)
+    : tileValue(x, y + 33, width, '—'))
+}
+
+const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: number, usage: UsageReadings): string => {
   const s = tr()
   const dress = dressOf()
   const fitted = fitText(title, 14, dress ? W - 64 : W)
@@ -1058,21 +1127,26 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
   const gap = 6
   const tw = (W - gap * 2) / 3
   const top = title ? 28 : 0
-  const tile = (i: number, k: string, v: string, second = '') =>
-    `<rect class="tile" x="${i * (tw + gap)}" y="${top}" width="${tw}" height="56" rx="8"/>
-<text class="s" x="${i * (tw + gap) + 9}" y="${top + 16}" font-family="${FONT}" font-size="11">${k}</text>
-<text class="t" x="${i * (tw + gap) + 9}" y="${top + 33}" font-family="${FONT}" font-size="11" font-weight="600" font-variant-numeric="tabular-nums">${xml(fitText(v, 11, tw - 18))}</text>
-${second ? `<text class="t" x="${i * (tw + gap) + 9}" y="${top + 48}" font-family="${FONT}" font-size="11">${xml(fitText(second, 11, tw - 18))}</text>` : ''}`
+  const metricTile = (i: number, k: string, v: string, second = '') => {
+    const x = i * (tw + gap)
+    return tile(x, top, tw, 56, k, tileValue(x, top + 33, tw, v) + (second ? tileValue(x, top + 48, tw, second, false) : ''))
+  }
+  const stacked = W < 360
+  const planW = stacked ? W : (W - gap) / 2
+  const plans = hasPlans(usage)
+    ? planTile(0, top + 62, planW, 'Claude', usage.claude, CLAY, 0)
+      + planTile(stacked ? 0 : planW + gap, top + 62 + (stacked ? 88 : 0), planW, 'Codex', usage.codex, colorOf('codex-sol'), at, usage.codexReadAt) : ''
   return svg(
     W,
-    headerHeight(title),
+    headerHeight(title, W, usage),
     `${weather}${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitted)}</text>` : ''}
 ${title ? (dress?.ornament(W) ?? '') : ''}
-${tile(0, s.cost + ' ≈', `Claude ${fmtCost(t.claude.cost)}`, `Codex ${fmtCost(t.codex.cost)}`)}${tile(1, s.tokens, `Claude ${fmtTokens(t.claude.tokens)}`, `Codex ${fmtTokens(t.codex.tokens)}`)}${tile(2, s.time, fmtTime(t.time))}`,
+${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, `Codex ${knownCost(t.codex.cost)}`)}${metricTile(1, s.tokens, `Claude ${knownTokens(t.claude.tokens)}`, `Codex ${knownTokens(t.codex.tokens)}`)}${metricTile(2, s.time, fmtTime(t.time))}${plans}`,
   )
 }
 
-const headerHeight = (title: string): number => (title ? 88 : 60)
+const headerHeight = (title: string, W: number, usage: UsageReadings): number =>
+  (title ? 88 : 60) + (hasPlans(usage) ? 88 * (W < 360 ? 2 : 1) : 0)
 
 // The task's own progress when the worker reports steps; a finished run is full.
 // A worker's own count as its row reads it: the steps it left undone stand beside
@@ -1081,8 +1155,9 @@ const stepCount = (a: AgentRun): string =>
   a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${a.stepSkipped === 1 ? tr().skippedOne : tr().skipped}` : ''}` : ''
 
 export const progressOf = (a: AgentRun): number | null => {
-  if (a.stepTotal) return Math.min(a.codexState === 'running' ? 0.99 : 1, (a.stepDone ?? 0) / a.stepTotal)
-  if (a.codexState === 'running') return 0
+  const waiting = a.codexState === 'running' || a.isWaiting || a.pendingCompletion
+  if (a.stepTotal) return Math.min(waiting ? RUNNING_CAP : 1, (a.stepDone ?? 0) / a.stepTotal)
+  if (waiting) return 0
   return a.status === 'done' ? 1 : null
 }
 
@@ -1099,7 +1174,7 @@ const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints, usage: 
   if (a.status === 'failed') meta.push(s.failed)
   const barW = textW
   const progress = progressOf(a)
-  const stats = `ctx ${ctx}% · ${accountText(a, usage)}  ${fmtTime(elapsed(a, at))}`
+  const stats = rowStats(a, usage, at)
   const steps = [a.stepTotal ? stepCount(a) : '', a.stepNote].filter(Boolean).join(' · ')
   const stepsW = Math.max(0, barW - textWidth(stats, 11) - 12)
   // Without reported steps the bar falls back to the context, drawn grey.
@@ -1135,7 +1210,7 @@ ${statusMark(W - 8, 16, 'planned', color)}
   )
 }
 
-const compactSvg = (W: number, list: AgentRun[], planned: Planned[], t: ReturnType<typeof totals>): string => {
+const compactSvg = (W: number, list: AgentRun[], planned: Planned[], t: ReturnType<typeof totals>, usage: UsageReadings, at: number): string => {
   const icons = [
     ...list.filter(a => a.status === 'running').map(a => ({ k: costumeOf(a.type), c: colorOf(tierOf(a.type)), s: 'running', dim: false })),
     ...list.filter(a => a.status !== 'running').map(a => ({ k: costumeOf(a.type), c: colorOf(tierOf(a.type)), s: a.status, dim: false })),
@@ -1150,12 +1225,15 @@ const compactSvg = (W: number, list: AgentRun[], planned: Planned[], t: ReturnTy
   const x = shown.length * 36 + (more ? 4 : 0)
   return svg(
     W,
-    68,
+    compactHeight(usage),
     `${body}${more ? `<text class="s" x="${x}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : ''}
 <text class="s" x="0" y="48" font-family="${FONT}" font-size="11">≈ ${xml(familyCosts(t))}</text>
-<text class="s" x="0" y="64" font-family="${FONT}" font-size="11">${xml(familyTokens(t))} · ${fmtTime(t.time)}</text>`,
+<text class="s" x="0" y="64" font-family="${FONT}" font-size="11">${xml(familyTokens(t))} · ${fmtTime(t.time)}</text>
+${hasPlans(usage) ? `<text class="s" x="0" y="80" font-family="${FONT}" font-size="11">${xml(fitText(planUsageText(usage, at), 11, W))}</text>` : ''}`,
   )
 }
+
+const compactHeight = (usage: UsageReadings): number => hasPlans(usage) ? 84 : 68
 
 // --- terminal drawing: the same rows in text.
 
@@ -1191,9 +1269,8 @@ async function autoOpen($: EngineInterface, key: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Reconcile: a run leaves `running` on its `turn.complete`, and one that never
-// comes (a killed agent, a loop lost to a reload or a resume) would leave a
-// ghost; the engine's own list of agent loops settles it.
+// Reconcile: an answered turn can leave its worker waiting on background work.
+// The roster confirms its finish and settles ghosts lost to a kill or reload.
 
 const LIST_EVERY_MS = 5000
 
@@ -1207,12 +1284,27 @@ const ENDED: Partial<Record<AgentInfo['status'], AgentRun['status']>> = {
 // `listedAt` is when the list was asked for: a run started since may not be in it yet.
 const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usage: UsageReadings): AgentRun[] => {
   const statusOf = new Map(infos.map((i): [string, AgentInfo['status']] => [i.id, i.status]))
-  return list.map((a): AgentRun => {
+  const unique = new Map<string, AgentRun>()
+  for (const a of list) {
+    const key = a.agentId || a.id
+    const previous = unique.get(key)
+    if (!previous || a.startedAt >= previous.startedAt) unique.set(key, a)
+  }
+  return [...unique.values()].map((a): AgentRun => {
     let relay = a.codexStatus ? { ...a, status: a.relayStatus ?? a.status, endedAt: a.relayEndedAt ?? a.endedAt } : a
-    if (relay.status === 'running') {
-      const listed = relay.agentId && statusOf.get(relay.agentId)
-      if (!relay.agentId || (listed === undefined && !relay.isWorkflow && relay.startedAt < listedAt)) relay = { ...relay, status: 'failed', endedAt: listedAt }
-      else if (listed && ENDED[listed]) relay = { ...relay, status: ENDED[listed]!, endedAt: listedAt }
+    const listed = relay.agentId && statusOf.get(relay.agentId)
+    // A completed task notification is not necessarily a finished worker. The
+    // roster maps its own live shells/monitors and keepalives to `waiting`.
+    if (listed === 'waiting' && relay.status !== 'failed') {
+      relay = { ...relay, status: 'running', endedAt: undefined, isWaiting: true, pendingCompletion: undefined }
+    } else if (relay.status === 'running') {
+      const settled = (status: AgentRun['status']): AgentRun => ({ ...relay, status, endedAt: listedAt,
+        isWaiting: undefined, pendingCompletion: undefined })
+      // A just-ended turn may have been evicted already, or be a workflow agent
+      // absent from this roster. Its answer still settles it in that case.
+      if (listed === undefined && relay.pendingCompletion) relay = settled('done')
+      else if (!relay.agentId || (listed === undefined && !relay.isWorkflow && relay.startedAt < listedAt)) relay = settled('failed')
+      else if (listed && ENDED[listed]) relay = settled(ENDED[listed]!)
     }
     return a.codexStatus ? codexRun({ ...relay, relayStatus: relay.status, relayEndedAt: relay.endedAt }, usage, listedAt) : relay
   })
@@ -1258,10 +1350,56 @@ let lastListAt = 0
 // without an effort until that request.
 const askedEffort = new Map<string, string>()
 
-async function reconcile($: EngineInterface): Promise<void> {
+// Off by default. Preserve event keys/nesting and routing fields, not message bodies.
+const resumeDebugShape = (value: unknown, key = '', depth = 0): unknown => {
+  if (typeof value === 'string') return /^(tool|to|summary|description|agentId|parentAgentId|parentId|tool_use_id|turnId|name|model|subagentType|resumedAgentId|teammateId|plugin|tier|kind|hook_event_name|agent_id|agent_type|id|type|status|reason)$/.test(key)
+    ? value.slice(0, 500) : { type: 'string', length: value.length }
+  if (!value || typeof value !== 'object') return value
+  if (depth >= 4) return { keys: Object.keys(value).slice(0, 40) }
+  if (Array.isArray(value)) return value.slice(0, 8).map(v => resumeDebugShape(v, key, depth + 1))
+  return Object.fromEntries(Object.entries(value).slice(0, 40).map(([k, v]) => [k, resumeDebugShape(v, k, depth + 1)]))
+}
+
+async function debugResume($: EngineInterface, event: string, received: unknown, decision: unknown = {}): Promise<void> {
+  try {
+    if (await $.env.get('SAVVY_PROGRESS_DEBUG_RESUME') !== '1') return
+    $.ui.log(`[savvy-progress:resume-debug] ${JSON.stringify({ at: await $.clock.now(), event,
+      received: resumeDebugShape(received), decision: resumeDebugShape(decision) })}`, { to: 'debug' })
+  } catch { /* Diagnostics must never prevent a send or a resume. */ }
+}
+
+// SendMessage can reuse an agent directly, without an agent.spawn event.
+// Consume its title on a new model turn, before requesting the model or usage.
+async function beginQueuedTask($: EngineInterface, agentId: string, turnId: string, index: number): Promise<void> {
+  const at = await $.clock.now()
+  let applied = false
+  await update($, agents, list => {
+    applied = false
+    return list.map(a => {
+      if (a.agentId !== agentId) return a
+      const isNewTurn = (a.relayStatus ?? a.status) !== 'running' || (index === 0 && a.turnId !== turnId)
+      if (!a.nextTitle || !isNewTurn) return a.turnId === turnId ? a : { ...a, turnId }
+      applied = true
+      return { id: a.id, agentId: a.agentId, type: a.type, description: a.nextTitle,
+        ...(a.name ? { name: a.name } : {}), model: a.model, ...(a.effort ? { effort: a.effort } : {}),
+        round: norm(a.nextTitle) === norm(a.description) ? a.round + 1 : 1,
+        turnId, status: 'running', startedAt: at, contextMax: a.contextMax, contextTokens: 0, tokens: 0, costUsd: 0, steps: 0,
+        ...(a.isWorkflow ? { isWorkflow: true } : {}) }
+    })
+  })
+  if (applied) {
+    await update($, now, () => at)
+    await syncRunning($)
+    await showPanel($)
+  }
+}
+
+async function reconcile($: EngineInterface, stoppingAgentId?: string): Promise<void> {
   const listedAt = await $.clock.now()
   lastListAt = listedAt
   const infos = await $.agent.list()
+  if (stoppingAgentId) await debugResume($, 'agent.list:stop', infos.filter(a => a.id === stoppingAgentId || a.parentId === stoppingAgentId),
+    { agentId: stoppingAgentId })
   const usage = await read($, usageReadings)
   await update($, agents, list => reconciled(list, infos, listedAt, usage))
   await syncRunning($)
@@ -1367,7 +1505,7 @@ export const register: Register = (on, options) => {
       // A host without usage readings supplies no Claude line, including after a reload.
       await update($, usageReadings, prev => ({ ...prev, claude: undefined }))
     }
-    await refreshCodexUsage($)
+    await refreshCodexUsage($, true)
     await rememberClaudeModels($, (await read($, agents)).map(a => a.model))
     await update($, flow, f => (f?.isFinished ? null : f))
     try {
@@ -1481,12 +1619,12 @@ export const register: Register = (on, options) => {
   })
 
   // summary is local to SendMessage's tool.call: session.send does not carry it.
-  // Hold it until agent.spawn.resume identifies the actual resumed loop.
+  // A resume may use agent.spawn, or reuse the loop and go straight to turn.step.
   on('tool.call', { tool: 'SendMessage' }, async ($, e, next) => {
     const summary = typeof e.summary === 'string' ? e.summary.trim() : ''
     const to = typeof e.to === 'string' ? e.to : ''
     const rows = await read($, agents)
-    let target = rows.find(a => a.agentId === to || a.name === to)
+    let target = rows.find(a => a.agentId === to || a.name === to || a.id === to)
     if (summary && !target && to) {
       try {
         const id = (await $.agent.list()).find(a => a.name === to || a.id === to || a.teammateId === to)?.id
@@ -1494,10 +1632,13 @@ export const register: Register = (on, options) => {
       } catch { /* A host without a roster can still address a stored id/name. */ }
     }
     const id = target?.id
+    await debugResume($, 'tool.call:SendMessage', e, { id, agentId: target?.agentId, description: target?.description })
     if (summary && id) await update($, agents, list => list.map(a => a.id === id ? { ...a, nextTitle: summary } : a))
     try {
       const result = await next(e)
-      if (!result.deny) return result
+      await debugResume($, 'tool.call:SendMessage:result', result, { id })
+      const delivery = result.result as { success?: boolean } | undefined
+      if (!result.deny && !result.isError && delivery?.success !== false) return result
       if (id) await update($, agents, list => list.map(a => a.id === id && a.nextTitle === summary ? { ...a, nextTitle: undefined } : a))
       return result
     } catch (error) {
@@ -1528,7 +1669,9 @@ export const register: Register = (on, options) => {
   })
 
   on('agent.spawn', async ($, e, next) => {
+    await debugResume($, 'agent.spawn', e)
     const started = await next(e)
+    await debugResume($, 'agent.spawn:result', started)
     if (started.deny !== undefined) return started
 
     const at = await $.clock.now()
@@ -1538,8 +1681,9 @@ export const register: Register = (on, options) => {
     await update($, agents, list => {
       const previous = e.resume && list.find(a => a.agentId === e.resume?.agentId)
       const description = previous?.nextTitle || e.description
-      const round = previous ? norm(description) === norm(previous.description) ? previous.round + 1 : 1
-        : 1 + list.filter(a => norm(a.description) === norm(description) && description).length
+      const existing = previous || list.find(a => started.agentId && a.agentId === started.agentId)
+      const round = existing && norm(description) === norm(existing.description)
+        ? existing.round + (previous ? 1 : 0) : 1
       const run: AgentRun = {
         id: started.agentId ?? e.tool_use_id,
         agentId: started.agentId,
@@ -1558,7 +1702,7 @@ export const register: Register = (on, options) => {
         round,
         ...(e.workflow ? { isWorkflow: true } : {}),
       }
-      return [...list.filter(a => a.id !== run.id), run].slice(-200)
+      return [...list.filter(a => a.id !== run.id && (!run.agentId || a.agentId !== run.agentId)), run].slice(-200)
     })
     await update($, now, () => at)
     await syncRunning($)
@@ -1571,6 +1715,12 @@ export const register: Register = (on, options) => {
 
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
+    if (e.agentId) {
+      const row = (await read($, agents)).find(a => a.agentId === e.agentId)
+      if (e.index === 0 || row?.nextTitle) await debugResume($, 'turn.step', e,
+        { agentId: row?.agentId, description: row?.description, summary: row?.nextTitle, turnId: row?.turnId })
+      await beginQueuedTask($, e.agentId, e.turnId, e.index)
+    }
     const result = yield* next(e)
     const agentId = e.agentId
     const usage = result.usage
@@ -1613,9 +1763,17 @@ export const register: Register = (on, options) => {
     return result
   })
 
+  // This event's background_tasks is session-wide; it is diagnostic evidence,
+  // not proof that every stopping worker owns the listed background tasks.
+  on('classic.SubagentStop', async ($, e, next) => {
+    await debugResume($, 'classic.SubagentStop', e)
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     const agentId = e.agentId
     if (agentId) {
+      await debugResume($, 'turn.complete', e)
       const at = await $.clock.now()
       if (e.usage?.model) await rememberClaudeModels($, [e.usage.model])
       await update($, agents, list =>
@@ -1625,9 +1783,14 @@ export const register: Register = (on, options) => {
           const fallback = a.steps === 0 && e.usage
           return {
             ...a,
-            status: e.reason === 'answer' ? 'done' : 'failed',
-            endedAt: at,
-            ...(a.codexStatus ? { relayStatus: e.reason === 'answer' ? 'done' as const : 'failed' as const, relayEndedAt: at } : {}),
+            // An answer ends a model turn, while the worker can still own live
+            // background work. Keep it live until the roster confirms a finish.
+            status: e.reason === 'answer' ? 'running' : 'failed',
+            pendingCompletion: e.reason === 'answer' || undefined,
+            isWaiting: e.reason === 'answer' ? a.isWaiting : undefined,
+            endedAt: e.reason === 'answer' ? undefined : at,
+            ...(a.codexStatus ? { relayStatus: e.reason === 'answer' ? 'running' as const : 'failed' as const,
+              relayEndedAt: e.reason === 'answer' ? undefined : at } : {}),
             ...(fallback && e.usage
               ? {
                   model: e.usage.model || a.model,
@@ -1641,7 +1804,12 @@ export const register: Register = (on, options) => {
       await update($, now, () => at)
       await syncCodexRuns($)
     }
-    return next(e)
+    const result = await next(e)
+    if (agentId && e.reason === 'answer') {
+      try { await reconcile($, agentId) } catch { /* Keep the answer pending; the next tick retries. */ }
+      await showPanel($)
+    }
+    return result
   })
 
   // The theme picker taking the panel's focus holds the panel still; the focus
@@ -1708,11 +1876,9 @@ export const register: Register = (on, options) => {
       />
     )
     // The copy once there is one, so the live values' changes do not redraw it.
-    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await read($, now), models: await read($, models), usage: await read($, usageReadings) }
+    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await $.clock.now(), models: await read($, models), usage: await read($, usageReadings) }
     const hints = view.models ?? EMPTY_MODELS
     const usage = view.usage ?? EMPTY_USAGE
-    const planText = planUsageText(usage, Math.max(24, e.props.bodyColumns || 40))
-    const planHeader = planText ? <Text wrap="truncate-end">{planText}</Text> : null
     const list = view.agents
     const f = view.flow
     const p: Panel = await read($, panel)
@@ -1763,16 +1929,14 @@ export const register: Register = (on, options) => {
       if (p.isCompact) {
         return (
           <Box flexDirection="column" gap={1}>
-            {planHeader}
-            <Svg source={compactSvg(W, list, planned, t)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={68} />
+            <Svg source={compactSvg(W, list, planned, t, usage, at)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={compactHeight(usage)} />
             {controls}
           </Box>
         )
       }
       return (
         <Box flexDirection="column">
-          {planHeader}
-          <Svg source={headerSvg(W, title, t, at)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title)} />
+          <Svg source={headerSvg(W, title, t, at, usage)} alt={title ? `${title}: ${summary}` : summary} width={W} height={headerHeight(title, W, usage)} />
           {controls}
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
@@ -1814,15 +1978,14 @@ export const register: Register = (on, options) => {
           </Box>
           <Text dimColor wrap="truncate-end">
             {'  '}
-            {tier === 'other' ? a.type : tier} · {model}
-            {a.round > 1 ? ` · ${s.round} ${a.round}` : ''}
+            {[tier === 'other' ? a.type : tier, model, a.round > 1 ? `${s.round} ${a.round}` : ''].filter(Boolean).join(' · ')}
           </Text>
           <Text wrap="truncate-end">
             {'  '}
             {progress === null ? <Text dimColor>{ctxBar(ctx, barW)}</Text> : <Text color={color}>{ctxBar(progress * 100, barW)}</Text>}
             <Text dimColor>
               {' '}
-              {steps}ctx {ctx}% · {accountText(a, usage)} {fmtTime(elapsed(a, at))}
+              {steps}{rowStats(a, usage, at)}
             </Text>
           </Text>
         </Box>
@@ -1831,7 +1994,6 @@ export const register: Register = (on, options) => {
 
     return (
       <Box flexDirection="column">
-        {planHeader}
         <Box flexDirection="row" justifyContent="space-between">
           <Text bold wrap="truncate-end">
             {title}

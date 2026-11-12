@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.15.1] - 2026-11-13
+- codex-status.mjs --snapshot refreshes the Codex plan reading from the newest session log without running Codex
+
+
 ## [1.15.0] - 2026-11-12
 - Codex relays pipe codex exec --json through scripts/codex-status.mjs, a small status file per run (session, model, current action, tokens, plan usage) the agents panel reads; every worker's step note names its actual action
 

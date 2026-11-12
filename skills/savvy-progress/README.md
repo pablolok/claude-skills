@@ -43,7 +43,13 @@ the mod needs.
   action as its step note. A fresh snapshot saying `running` keeps the row running after its Claude relay stops;
   once its heartbeat is older than 15 seconds, the next poll uses the relay's own state instead.
   A finished worker with declared but unfinished steps keeps its steps' ratio; it does not jump to a full bar.
+  An answered turn whose engine roster still reports `running` or `waiting` stays live, with its bar capped at
+  99%, until the roster confirms completion. This applies to every worker, including relays with no `codexStatus`.
+  A waiting worker finishes when its roster becomes `idle` or `completed`, and fails if it becomes `failed` or
+  `killed`; it need not issue another model request to update the panel.
   A resumed worker takes a new task title from SendMessage's `summary` and starts at round 1 for that title.
+  This also works when SendMessage reuses an existing loop without `agent.spawn`: the queued title takes effect
+  before that agent's next model turn, without renaming steps of its current turn.
 - **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`) and follows `session.measure`. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
@@ -151,6 +157,46 @@ work is covered by its subscription; the displayed API-equivalent estimate is no
 
 Set them with `/plugin configure savvy-progress@pablolok-skills`, or
 `claude plugin install savvy-progress@pablolok-skills --config language=en --config theme=classic`.
+
+## Diagnosing worker resumes and stops
+
+Worker lifecycle tracing is off by default. To capture the next SendMessage and agent's events in a CLI session,
+start Claude with the environment flag and a debug log:
+
+```powershell
+$env:SAVVY_PROGRESS_DEBUG_RESUME = '1'
+claude --debug-file savvy-progress-resume.log
+```
+
+Reproduce the resume and look for `[savvy-progress:resume-debug]`. The entries record the received SendMessage
+`tool.call`, its result, `agent.spawn` and its result when present, and the agent's first `turn.step` (or a step
+with a queued title). It also records `classic.SubagentStop`, `turn.complete`, and the stopping worker's
+`agent.list` entry and child-agent entries as `agent.list:stop`. They retain event keys and nesting, routing ids,
+titles, turn ids, stop reasons, roster status and the matched row.
+Message bodies, prompts and other string content are represented by their type and length; records are bounded.
+Unset `SAVVY_PROGRESS_DEBUG_RESUME` to disable the trace. The flag does not send messages or enable model calls.
+
+Evidence for the regression: inspection of the installed Claude Code 2.1.295 engine adapter confirms flattened
+`tool.call` arguments (`to`, `summary`, `message`, `tool_use_id`, with no sender `agentId` for a main-session call).
+Its direct-agent SendMessage resume reuses the loop without dispatching `agent.spawn`. The tests use these
+contract-shaped calls and `turn.step` with `agentId`, `turnId`, `index`, `model` and `messageCount`; they reproduce
+reuse without a spawn. These are contract/harness fixtures, not a capture of the reported live session. That
+session's actual route and event ordering remain unconfirmed until a trace is captured.
+
+Confirmed stop contracts in the same installed engine:
+
+- `turn.complete` carries `agentId`, `turnId`, `answer`, `durationMs`, `isAborted`, `reason` and optional `usage`.
+  An ordinary answered stop uses `reason: "answer"`; there is no background-work flag on this event.
+- `classic.SubagentStop` carries `agent_id`, `agent_type`, `stop_hook_active` and optional `background_tasks`.
+  Each background task has `id`, `type`, `status`, `description` and optional type-specific fields. This array is
+  session-wide, not a list of work owned only by the stopping worker; the panel logs it but does not infer ownership.
+- `$.agent.list()` carries `id` and `status`. The engine maps a completed worker with live keepalives, or an idle
+  worker with its own running background shell or monitor, to `status: "waiting"`. An answer is therefore held
+  pending while the roster is still `running`, and `waiting` keeps it live until a terminal roster observation.
+
+The tests pair these contract-shaped stop and roster observations, including the possible asynchronous transition
+from `running` to `waiting`. No live session was observable from the sandbox: the reported worker's actual stop
+payload and timing are unconfirmed, and that transition order is a tested race scenario rather than a live capture.
 
 ## What it holds
 

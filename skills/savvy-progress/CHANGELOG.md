@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.0] - 2026-11-13
+- The plan usage drawn in the panel's own style: a Claude and a Codex plan tile under Cost, Tokens and Time, each window with a meter in its family's colour (red past 90 %), stacked when narrow, one line in the compact view; the last Codex reading kept with its age across restarts; '—' for a family with no data; Codex rows name the model once; rounds counted by agent and title; a resumed worker's new title and a worker waiting on its own background work handled from the engine's real contracts (an opt-in trace, SAVVY_PROGRESS_DEBUG_RESUME=1)
+
+
 ## [1.12.0] - 2026-11-12
 - The header shows each subscription's 5-hour and weekly usage (Claude from the engine's rate limits, Codex from the runs' status files) and the totals split by family (Claude, Codex); a Codex row counts and prices Codex's own tokens, shows its current action, and stays running while Codex works; a finished run with unfinished steps shows their ratio; a worker resumed for a new task takes the new title
 

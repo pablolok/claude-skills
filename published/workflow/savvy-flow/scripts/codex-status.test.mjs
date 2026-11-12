@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, open, readFile, readdir, rm, stat, utimes, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PassThrough, Readable } from 'node:stream'
 import { setImmediate as immediate, setTimeout as delay } from 'node:timers/promises'
-import { ROLLOUT_TAIL_BYTES, STATUS_MAX_BYTES, actionOf, applyEvent, atomicStatus, findRollout, initialStatus,
-  readRolloutTail, rolloutReader, rolloutTailFrom, runStatus as runStatusWithRollouts, shortAction, statusWriter, validName } from './codex-status.mjs'
+import { ROLLOUT_TAIL_BYTES, STATUS_MAX_BYTES, actionOf, applyEvent, atomicStatus, findRollout, initialStatus, main,
+  readRolloutTail, rolloutReader, rolloutTailFrom, runStatus as runStatusWithRollouts, shortAction, snapshotStatus, statusWriter, validName } from './codex-status.mjs'
 
 const root = dirname(fileURLToPath(import.meta.url))
 // Unit tests do not inspect the user's actual session history.
@@ -309,4 +309,75 @@ test('run completion forces a fresh metadata read after initial discovery', asyn
   await runStatus('final', { directory: await directory(t), input: input(stream('session')), output: null,
     metadata: async (id, force) => { calls.push({ id, force }); return {} } })
   assert.deepEqual(calls, [{ id: 'session', force: false }, { id: 'session', force: true }])
+})
+
+async function snapshotFixture(t) {
+  const dir = await directory(t), sessions = join(dir, 'sessions'), day = join(sessions, '2026', '11', '12')
+  await mkdir(day, { recursive: true })
+  const rollout = join(day, 'rollout-2026-11-12-session.jsonl')
+  await writeFile(rollout, await fixture('codex-rollout-tail.jsonl'))
+  return { dir, sessions, rollout }
+}
+
+test('snapshot mode writes only plan limits, model and observation time', async t => {
+  const { dir, sessions } = await snapshotFixture(t)
+  await snapshotStatus({ directory: dir, sessionsDirectory: sessions, now: () => 1234 })
+  assert.deepEqual(JSON.parse(await readFile(join(dir, 'snapshot.json'), 'utf8')),
+    { rateLimits: tailLimits, model: 'gpt-6.1-sol', updatedAt: 1234 })
+})
+
+test('snapshot mode discovers the newest rollout without a session id', async t => {
+  const { dir, sessions, rollout } = await snapshotFixture(t)
+  const newer = join(sessions, '2026', '11', '12', 'rollout-2026-11-12-new-session.jsonl')
+  await writeFile(newer, (await fixture('codex-rollout-tail.jsonl')).replaceAll('gpt-6.1-sol', 'gpt-6.1-terra'))
+  await utimes(rollout, 1000, 1000)
+  await utimes(newer, 2000, 2000)
+  assert.equal((await snapshotStatus({ directory: dir, sessionsDirectory: sessions })).model, 'gpt-6.1-terra')
+})
+
+test('snapshot mode uses the positioned last-512-KiB reader', async t => {
+  const { dir, sessions, rollout } = await snapshotFixture(t)
+  const handle = await open(rollout, 'w')
+  const size = 17 * 1024 * 1024
+  try { await handle.truncate(size); await handle.write('\n' + await fixture('codex-rollout-tail.jsonl'), size) }
+  finally { await handle.close() }
+  const reads = []
+  await snapshotStatus({ directory: dir, sessionsDirectory: sessions, read: path => readRolloutTail(path, async (...args) => {
+    const file = await open(...args)
+    return { stat: () => file.stat(), close: () => file.close(), read: (...readArgs) => {
+      reads.push({ length: readArgs[2], position: readArgs[3] })
+      return file.read(...readArgs)
+    } }
+  }) })
+  assert.deepEqual(reads, [{ length: ROLLOUT_TAIL_BYTES, position: (await stat(rollout)).size - ROLLOUT_TAIL_BYTES }])
+})
+
+test('snapshot mode can atomically refresh its previous snapshot', async t => {
+  const { dir, sessions } = await snapshotFixture(t)
+  await snapshotStatus({ directory: dir, sessionsDirectory: sessions, now: () => 1000 })
+  await snapshotStatus({ directory: dir, sessionsDirectory: sessions, now: () => 2000 })
+  assert.equal(JSON.parse(await readFile(join(dir, 'snapshot.json'), 'utf8')).updatedAt, 2000)
+  assert.deepEqual((await readdir(dir)).filter(name => name !== 'sessions'), ['snapshot.json'])
+})
+
+test('snapshot mode preserves an existing reading when no rollout is available', async t => {
+  const dir = await directory(t), target = join(dir, 'snapshot.json')
+  await writeFile(target, 'previous reading')
+  await assert.rejects(snapshotStatus({ directory: dir, sessionsDirectory: join(dir, 'missing') }), /no Codex rollout/)
+  assert.equal(await readFile(target, 'utf8'), 'previous reading')
+})
+
+test('snapshot mode preserves an existing reading when the tail has no plan limits', async t => {
+  const { dir, sessions, rollout } = await snapshotFixture(t)
+  await writeFile(join(dir, 'snapshot.json'), 'previous reading')
+  await writeFile(rollout, '{"type":"turn_context","payload":{"model":"gpt-6.1-sol"}}\n')
+  await assert.rejects(snapshotStatus({ directory: dir, sessionsDirectory: sessions }), /no plan rate limits/)
+  assert.equal(await readFile(join(dir, 'snapshot.json'), 'utf8'), 'previous reading')
+})
+
+test('the --snapshot entry point never accesses stdin', async t => {
+  const { dir, sessions } = await snapshotFixture(t)
+  await main(['--snapshot'], { directory: dir, sessionsDirectory: sessions,
+    get input() { throw new Error('snapshot must not access stdin') } })
+  assert.deepEqual(JSON.parse(await readFile(join(dir, 'snapshot.json'), 'utf8')).rateLimits, tailLimits)
 })
