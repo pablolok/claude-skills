@@ -68,10 +68,10 @@ const store = (on: On) => {
 const NO_AGENT_ID = 'Start, answering no agentId.'
 
 // The engine beneath the plugin: what its session.start and its hooks call on `$`.
-const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000) => {
+const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record<string, string> = {}) => {
   const clock = mock.clock(on, { now })
   const state = store(on)
-  mock.env(on, {})
+  mock.env(on, env)
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('settings.read', () => ({ value: {} }))
   on('tool.register', ($, e) => ({ value: { tool: `mcp__savvy-progress__${e.name}` } }))
@@ -1207,4 +1207,120 @@ test('the skipped count holds until the worker says otherwise, and never exceeds
   expect(byId(state.agents(), 'w1')?.stepSkipped).toBe(4)
   await stepped($, 'w1', { done: 4, skipped: 0 })
   expect('stepSkipped' in (byId(state.agents(), 'w1') ?? {})).toBe(false)
+})
+
+test('with the language option on it, the bar and the panel speak Italian', { options: { theme: 'classic', language: 'it' } }, async ($, on) => {
+  engine(on, { infos: [] }, 0)
+  await start($)
+  await plan($, [{ title: 'w1', tier: 'careful' }, { title: 'later', tier: 'fable', effort: 'xhigh', after: [1] }])
+  await spawn($, 'w1')
+  await spawn($, 'w2')
+  await stepped($, 'w1', { done: 6, total: 6, skipped: 1 })
+  await stepped($, 'w2', { done: 6, total: 6, skipped: 2 })
+
+  expect(await bar($)).toBe('Fix bug: Compiti 0/2 · 2 in corso, 0%')
+  const { rows, terminal } = await panelOf($)
+  expect(rows.find(r => r.includes('>w1<'))).toContain('>6/6 · 1 saltato<')
+  expect(rows.find(r => r.includes('>w2<'))).toContain('>6/6 · 2 saltati<')
+  expect(rows.find(r => r.includes('later'))).toContain('Fable · xhigh  ·  dopo 1')
+  expect(terminal).toContain('"In corso"')
+  expect(terminal).toContain('"Pianificati"')
+  expect(terminal).not.toContain('"Running"')
+  expect(terminal).toContain('dopo 1')
+
+  // The theme picker and what it lists.
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [themes] = await ui.findAll({ type: 'Select' })
+  await ui.unmount()
+  const labels = ((themes?.props.options ?? []) as { label?: string }[]).map(o => o.label ?? '')
+  expect(themes?.props.label).toBe('Tema')
+  expect(labels[0]).toContain('Automatico, secondo il calendario')
+  expect(labels).toContain('Carnevale — i 12 giorni fino al martedì grasso')
+  expect(labels.join('|')).not.toContain('Carnival')
+
+  expect((await $.command.run({ ...typed(''), command: 'agents-info' })).text).toMatch(/^Pannello degli agenti (aperto|chiuso)\.$/)
+  const listed = (await $.command.run(typed(''))).text ?? ''
+  expect(listed).toContain('Tema: ')
+  expect(listed).toContain('  winter — Inverno — 1 dic – fine febbraio')
+  expect((await $.command.run(typed('nope'))).text).toBe('Nessun tema chiamato "nope". /savvy-theme senza nome li elenca.')
+})
+
+test('the language option on ru keeps what Russian always read', { options: { theme: 'classic', language: 'ru' } }, async ($, on) => {
+  engine(on, { infos: [] }, 0)
+  await start($)
+  await report($)
+  await spawn($, 'w1')
+  await stepped($, 'w1', { done: 2, total: 2, skipped: 1 })
+
+  expect(await bar($)).toBe('Fix bug: Задачи 0/2 · 1 в работе, 0%')
+  expect((await panelOf($)).rows.find(r => r.includes('>w1<'))).toContain('>2/2 · 1 пропущено<')
+  const listed = (await $.command.run(typed(''))).text ?? ''
+  expect(listed).toContain('Theme: ')
+  expect(listed).toContain('  carnival — Carnival — 12 days to Shrove Tuesday')
+})
+
+test('English is the default: on auto an Italian system stays English, and Italian is only ever chosen', { options: { theme: 'classic' } }, async ($, on) => {
+  engine(on, { infos: [] }, 0, { LANG: 'it_IT.UTF-8' })
+  await start($)
+  await report($)
+  await spawn($, 'w1')
+
+  expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 1 running, 0%')
+})
+
+test('on auto a Russian system still reads Russian', { options: { theme: 'classic', language: 'auto' } }, async ($, on) => {
+  engine(on, { infos: [] }, 0, { LANG: 'ru_RU.UTF-8' })
+  await start($)
+  await report($)
+
+  expect(await bar($)).toBe('Fix bug: Задачи 0/2, 0%')
+})
+
+test("the panel's language picker lists every language, and a pick redraws at once and is kept in the option", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state, saved } = engine(on, { infos: [info('w1', 'running')] })
+  await start($)
+  state.seed(AGENTS, [run('w1')])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [themes, languages] = await ui.findAll({ type: 'Select' })
+  expect(themes?.props.label).toBe('Theme')
+  expect(languages?.props.label).toBe('Language')
+  expect(languages?.props.value).toBe('auto')
+  expect((languages?.props.options as { value: string; label?: string }[]).map(o => [o.value, o.label])).toEqual([
+    ['auto', 'Auto, by the settings'],
+    ['en', 'English'],
+    ['ru', 'Русский'],
+    ['it', 'Italiano'],
+  ])
+
+  await ui.select({ key: 'language', value: 'it' })
+  await ui.unmount()
+
+  expect(saved).toEqual([{ key: 'savvy-progress.language', value: 'it' }])
+  expect(await bar($)).toBe('Fix bug: Compiti 0/2 · 1 in corso, 0%')
+  const again = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [, picked] = await again.findAll({ type: 'Select' })
+  await again.unmount()
+  expect(picked?.props.label).toBe('Lingua')
+  expect(picked?.props.value).toBe('it')
+})
+
+test('the language picker taking the focus holds the panel still, as the theme picker does', { options: { theme: 'auto' } }, async ($, on) => {
+  const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
+  on('ui.focus', () => ({}))
+  await start($)
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000 })])
+  state.seed(FLOW, flowOf())
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await clock.advance(1000)
+  const before = await panelNow($)
+
+  await $.ui.focus(clicked('language'))
+  state.seed(AGENTS, [run('w1', { startedAt: 10_000, tokens: 90_000 })])
+  await clock.advance(3000)
+  expect(await panelNow($)).toBe(before)
+
+  await $.ui.focus(clicked('compact'))
+  expect(await panelNow($)).toContain('90k')
+  await ui.unmount()
 })

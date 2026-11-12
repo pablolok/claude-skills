@@ -96,6 +96,42 @@ export const THEME_LABEL: Record<Theme, string> = {
   winter: 'Winter — Dec 1 – end of February',
 }
 
+// The same, for a panel that speaks Italian.
+export const THEME_LABEL_IT: Record<Theme, string> = {
+  classic: 'Classico — nessun tema',
+  'new-year': 'Capodanno — 1 gen',
+  befana: 'Epifania, la Befana — 6 gen',
+  'winter-sales': 'Saldi invernali — 7–20 gen',
+  valentine: 'San Valentino — 14 feb',
+  carnival: 'Carnevale — i 12 giorni fino al martedì grasso',
+  'womens-day': 'Festa della donna — 8 mar',
+  'fathers-day': 'Festa del papà — 19 mar',
+  'easter-holidays': 'Vacanze pasquali — dal giovedì santo al martedì dopo Pasqua',
+  easter: 'Pasqua e Pasquetta',
+  liberation: 'Festa della Liberazione — 25 apr',
+  'labour-day': 'Festa dei lavoratori — 1 mag',
+  'mothers-day': 'Festa della mamma — seconda domenica di maggio',
+  'republic-day': 'Festa della Repubblica — 2 giu',
+  'summer-holidays': 'Vacanze estive — 1 lug – 31 ago',
+  'summer-sales': 'Saldi estivi — due settimane dal primo sabato di luglio',
+  ferragosto: 'Ferragosto — 15 ago',
+  'back-to-school': 'Rientro a scuola — 1–14 set',
+  halloween: 'Halloween — 31 ott',
+  'all-saints': 'Ognissanti — 1 nov',
+  'all-souls': 'Commemorazione dei defunti — 2 nov',
+  'black-friday': 'Black Friday — il giorno dopo il quarto giovedì di novembre',
+  immaculate: 'Immacolata Concezione — 8 dic',
+  christmas: 'Periodo natalizio — 8 dic – 6 gen',
+  'christmas-eve': 'Vigilia di Natale — 24 dic',
+  'christmas-day': 'Natale — 25 dic',
+  'st-stephen': 'Santo Stefano — 26 dic',
+  'new-years-eve': 'San Silvestro — 31 dic',
+  spring: 'Primavera — 1 mar – 31 mag',
+  summer: 'Estate — 1 giu – 31 ago',
+  autumn: 'Autunno — 1 set – 30 nov',
+  winter: 'Inverno — 1 dic – fine febbraio',
+}
+
 // ---------------------------------------------------------------------------
 // Calendar: a holiday wins over a period, a period over the season it falls in.
 

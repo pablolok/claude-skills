@@ -4,7 +4,7 @@ import type { AgentInfo, EngineInterface, Register } from 'claude-code'
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
-import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, costumeIn, themeOf, themeOn } from './themes'
+import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
 import type { Dress, Theme } from './themes'
 
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
@@ -39,10 +39,15 @@ type ProgressInput = {
 }
 
 // ---------------------------------------------------------------------------
-// Language: the `language` option, else Claude Code's `language` setting, else the
-// process locale; English when nothing says Russian.
+// Language: the `language` option (also picked in the panel), else Claude Code's
+// `language` setting, else the process locale; English when nothing says Russian.
+// Italian is only ever chosen: the default stays English on an Italian system too.
 
-type Lang = 'en' | 'ru'
+const LANGS = ['en', 'ru', 'it'] as const
+type Lang = (typeof LANGS)[number]
+// Each language under its own name, whatever the panel speaks.
+const LANG_NAME: Record<Lang, string> = { en: 'English', ru: 'Русский', it: 'Italiano' }
+const LANG_OPTION = 'savvy-progress.language'
 
 const STRINGS = {
   en: {
@@ -59,6 +64,7 @@ const STRINGS = {
     round: 'round',
     failed: 'error',
     after: 'after',
+    skippedOne: 'skipped',
     skipped: 'skipped',
     tokensWord: 'tokens',
     agentsCount: 'agents',
@@ -75,6 +81,11 @@ const STRINGS = {
     busy: 'running',
     theme: 'Theme',
     auto: 'Auto, by the calendar',
+    language: 'Language',
+    langAuto: 'Auto, by the settings',
+    themeIs: 'Theme',
+    noTheme: (name: string) => `No theme named "${name}". /savvy-theme with no name lists them.`,
+    notKept: 'Not kept for the next sessions',
   },
   ru: {
     pane: 'Агенты',
@@ -90,6 +101,7 @@ const STRINGS = {
     round: 'раунд',
     failed: 'ошибка',
     after: 'после',
+    skippedOne: 'пропущено',
     skipped: 'пропущено',
     tokensWord: 'токенов',
     agentsCount: 'агентов',
@@ -106,17 +118,64 @@ const STRINGS = {
     busy: 'в работе',
     theme: 'Тема',
     auto: 'Авто, по календарю',
+    // The command's answers stay as Russian always read them.
+    language: 'Язык',
+    langAuto: 'Авто, по настройкам',
+    themeIs: 'Theme',
+    noTheme: (name: string) => `No theme named "${name}". /savvy-theme with no name lists them.`,
+    notKept: 'Not kept for the next sessions',
+  },
+  it: {
+    pane: 'Agenti',
+    cost: 'Costo',
+    tokens: 'Token',
+    time: 'Tempo',
+    collapse: 'Comprimi',
+    expand: 'Espandi',
+    running: 'In corso',
+    finished: 'Finiti',
+    planned: 'Pianificati',
+    empty: 'Ancora nessun agente.',
+    round: 'giro',
+    failed: 'errore',
+    after: 'dopo',
+    skippedOne: 'saltato',
+    skipped: 'saltati',
+    tokensWord: 'token',
+    agentsCount: 'agenti',
+    isRunning: 'in corso',
+    isFinished: 'finito',
+    isPlanned: 'pianificato',
+    opened: 'Pannello degli agenti aperto.',
+    closed: 'Pannello degli agenti chiuso.',
+    done: 'Fatto',
+    plan: 'Piano',
+    design: 'Design',
+    tasks: 'Compiti',
+    review: 'Revisione',
+    busy: 'in corso',
+    theme: 'Tema',
+    auto: 'Automatico, secondo il calendario',
+    language: 'Lingua',
+    langAuto: 'Automatica, secondo le impostazioni',
+    themeIs: 'Tema',
+    noTheme: (name: string) => `Nessun tema chiamato "${name}". /savvy-theme senza nome li elenca.`,
+    notKept: 'Non salvato per le prossime sessioni',
   },
 } as const
 
 // Module scope is fine here: session.start sets it again on every (re)load.
 let lang: Lang = 'en'
 const tr = () => STRINGS[lang]
+// The option as last set or picked: `auto` or a language. Module scope as above.
+let langOption = 'auto'
+
+const isLang = (v: unknown): v is Lang => LANGS.some(l => l === v)
 
 const isRussian = (v: unknown): boolean => typeof v === 'string' && /^(ru|russian|рус)/i.test(v.trim())
 
 async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
-  if (option === 'en' || option === 'ru') return option
+  if (isLang(option)) return option
   try {
     const settings = (await $.settings.read()) as Record<string, unknown>
     if (typeof settings.language === 'string' && settings.language.trim()) return isRussian(settings.language) ? 'ru' : 'en'
@@ -190,8 +249,24 @@ export const themeNamed = (name: string): string | undefined => {
   return THEMES.find(t => t === key) ?? ALIASES[key]
 }
 
-const describeTheme = (value: string, ms: number): string =>
-  value === 'auto' ? `auto (${THEME_LABEL[themeOn(ms)]})` : THEME_LABEL[themeOf(value, ms)]
+// A theme as the picker and `/savvy-theme` name it, in the panel's language.
+const themeLabel = (t: Theme): string => (lang === 'it' ? THEME_LABEL_IT[t] : THEME_LABEL[t])
+
+const describeTheme = (value: string, ms: number, labelOf: (t: Theme) => string = themeLabel): string =>
+  value === 'auto' ? `auto (${labelOf(themeOn(ms))})` : labelOf(themeOf(value, ms))
+
+// A language picked in the panel: it speaks it from the next drawing, and the option
+// keeps it across sessions (its change reloads the plugin, which reads it again).
+async function pickLanguage($: EngineInterface, value: string): Promise<void> {
+  langOption = value === 'auto' || isLang(value) ? value : 'auto'
+  lang = await detectLang($, langOption)
+  $.ui.invalidate('ui.render')
+}
+
+async function saveLanguage($: EngineInterface, value: string): Promise<void> {
+  // Not kept: the pick still holds until the next load.
+  await $.config.set({ key: LANG_OPTION, value }).catch(() => undefined)
+}
 
 // One pick, from wherever it came: the atom redraws the bar and the panel; the
 // option keeps it across sessions (savvy-flow's chat reads it there). A pick
@@ -202,7 +277,8 @@ async function pickTheme($: EngineInterface, value: string, isSeen: boolean): Pr
   // calendar, so ask for both again rather than lean on what they read.
   $.ui.invalidate('ui.render')
   if (isSeen) return
-  const text = `savvy-progress: the theme is now ${describeTheme(value, await $.clock.now())}; savvy-flow's chat follows it from the next message.`
+  // Told to the model, so in English whatever the panel speaks.
+  const text = `savvy-progress: the theme is now ${describeTheme(value, await $.clock.now(), t => THEME_LABEL[t])}; savvy-flow's chat follows it from the next message.`
   await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }).catch(() => undefined)
 }
 
@@ -751,7 +827,7 @@ const headerHeight = (title: string): number => (title ? 72 : 44)
 // A worker's own count as its row reads it: the steps it left undone stand beside
 // the count, so 6/6 with one skipped is not taken for 6/6.
 const stepCount = (a: AgentRun): string =>
-  a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${tr().skipped}` : ''}` : ''
+  a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${a.stepSkipped === 1 ? tr().skippedOne : tr().skipped}` : ''}` : ''
 
 const progressOf = (a: AgentRun): number | null => {
   if (a.status === 'done') return 1
@@ -941,7 +1017,8 @@ async function reconcile($: EngineInterface): Promise<void> {
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
-    lang = await detectLang($, options.language)
+    langOption = options.language === 'auto' || isLang(options.language) ? options.language : 'auto'
+    lang = await detectLang($, langOption)
     await update($, picked, () => (typeof options.theme === 'string' ? options.theme : 'auto'))
     await applyTheme($)
     await $.tool.register({
@@ -1052,14 +1129,14 @@ export const register: Register = (on, options) => {
     const at = await $.clock.now()
     const asked = e.args.trim()
     if (!asked) {
-      const rows = [`  auto — ${tr().auto}`, ...THEMES.map(t => `  ${t} — ${THEME_LABEL[t]}`)]
-      return { text: `Theme: ${describeTheme(await read($, picked), at)}.\n${rows.join('\n')}` }
+      const rows = [`  auto — ${tr().auto}`, ...THEMES.map(t => `  ${t} — ${themeLabel(t)}`)]
+      return { text: `${tr().themeIs}: ${describeTheme(await read($, picked), at)}.\n${rows.join('\n')}` }
     }
     const value = themeNamed(asked)
-    if (!value) return { text: `No theme named "${asked}". /savvy-theme with no name lists them.` }
+    if (!value) return { text: tr().noTheme(asked) }
     await pickTheme($, value, true)
     const deny = await saveTheme($, value)
-    return { text: `Theme: ${describeTheme(value, at)}.${deny ? ` Not kept for the next sessions: ${deny}` : ''}` }
+    return { text: `${tr().themeIs}: ${describeTheme(value, at)}.${deny ? ` ${tr().notKept}: ${deny}` : ''}` }
   })
 
   // A pick in `/config`: the panel follows it at once (this plugin's own save is not one).
@@ -1253,7 +1330,7 @@ export const register: Register = (on, options) => {
   on('ui.focus', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
     const result = await next(e)
     if (result.deny) return result
-    if (e.element === 'theme' && (e.plugin ?? 'savvy-progress') === 'savvy-progress') {
+    if ((e.element === 'theme' || e.element === 'language') && (e.plugin ?? 'savvy-progress') === 'savvy-progress') {
       const at = await $.clock.now()
       await update($, picking, () => at)
     } else if (await read($, picking)) {
@@ -1270,13 +1347,13 @@ export const register: Register = (on, options) => {
     await applyTheme($)
     // The theme picker, on every surface that draws one.
     const Select = 'Select' in ui ? ui.Select : undefined
-    const calendar = THEME_LABEL[themeOn(await $.clock.now())]
+    const calendar = themeLabel(themeOn(await $.clock.now()))
     const themePicker = Select && (
       <Select
         key="theme"
         label={s.theme}
         value={await read($, picked)}
-        options={[{ value: 'auto', label: `${s.auto}: ${calendar}` }, ...THEMES.map(t => ({ value: t, label: THEME_LABEL[t] }))]}
+        options={[{ value: 'auto', label: `${s.auto}: ${calendar}` }, ...THEMES.map(t => ({ value: t, label: themeLabel(t) }))]}
         onSelect={value => {
           // The list is closed: the panel catches up and redraws in the new theme,
           // then holds still again, the focus staying on the picker. The hold is
@@ -1287,6 +1364,26 @@ export const register: Register = (on, options) => {
             const at = await $.clock.now()
             await update($, picking, () => at)
             await saveTheme($, value)
+          })()
+        }}
+      />
+    )
+    // The language picker beside it: a pick speaks at once and is kept in the option.
+    const languagePicker = Select && (
+      <Select
+        key="language"
+        label={s.language}
+        value={langOption}
+        options={[{ value: 'auto', label: s.langAuto }, ...LANGS.map(l => ({ value: l, label: LANG_NAME[l] }))]}
+        onSelect={value => {
+          // As for a theme: the panel catches up in the new language, then holds
+          // still again; the hold is renewed before the save, which reloads the plugin.
+          void (async () => {
+            await pickLanguage($, value)
+            await showPanel($, true)
+            const at = await $.clock.now()
+            await update($, picking, () => at)
+            await saveLanguage($, value)
           })()
         }}
       />
@@ -1323,9 +1420,10 @@ export const register: Register = (on, options) => {
     )
     const isEmpty = list.length === 0 && planned.length === 0
     const controls = (
-      <Box flexDirection="row" alignItems="center" gap={1}>
+      <Box flexDirection="row" flexWrap="wrap" alignItems="center" gap={1}>
         {toggleCompact}
         {themePicker}
+        {languagePicker}
       </Box>
     )
     const summary = `≈${fmtCost(t.cost)}, ${fmtTokens(t.tokens)} ${s.tokensWord}, ${fmtTime(t.time)}`
@@ -1417,6 +1515,7 @@ export const register: Register = (on, options) => {
           ≈{fmtCost(t.cost)} · {fmtTokens(t.tokens)} {s.tokensWord} · {fmtTime(t.time)}
         </Text>
         {themePicker}
+        {languagePicker}
         {p.isCompact ? (
           <Text wrap="truncate-end">
             {[...running, ...finished].map(a => (

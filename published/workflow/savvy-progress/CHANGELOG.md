@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.10.0] - 2026-11-12
+- Italian for the bar and the panel, chosen and never detected (English stays the default), and a language picker in the panel beside the theme's; the language option takes it
+
+
 ## [1.9.1] - 2026-11-12
 - The module's tests type-check against the engine's current types (the slot above the prompt takes more props); the mod ships an icon, the crab over a progress bar, so plugin validation raises no warning
 

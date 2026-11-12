@@ -87,8 +87,10 @@ The cost is a rough estimate from token counts and a built-in per-model price ta
 
 ## Settings
 
-- `language`: `auto` (default), `en` or `ru`. `auto` follows Claude Code's `language` setting, then the system
-  locale, and falls back to English.
+- `language`: `auto` (default), `en`, `ru` or `it`. `auto` follows Claude Code's `language` setting, then the system
+  locale, and reads English unless they say Russian; Italian is only ever chosen, so the default stays English on an
+  Italian system too. The panel's language picker, beside the theme picker, sets it as well: the panel speaks the
+  language at once and the option keeps it.
 - `theme`: `auto` (default), `classic`, or one theme pinned until `auto` is chosen again (every id `/savvy-theme`
   lists, from `new-year` to `winter`). `auto` follows the calendar above by the local date, and moves on when the date
   does; `classic` keeps the tiers' everyday costumes (astronaut, detective, engineer, chef, racer, pirate).

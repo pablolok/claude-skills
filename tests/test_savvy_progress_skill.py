@@ -95,7 +95,7 @@ class TestManifest(unittest.TestCase):
     def test_the_language_option_and_the_types_are_kept(self) -> None:
         manifest = _json(PUBLISHED / MANIFEST)
         language = manifest["userConfig"]["language"]
-        self.assertEqual((language["default"], language["options"]), ("auto", ["auto", "en", "ru"]))
+        self.assertEqual((language["default"], language["options"]), ("auto", ["auto", "en", "ru", "it"]))
         self.assertTrue((PUBLISHED / manifest["types"]).is_file(), manifest["types"])
 
     def test_hooks_json_names_the_module_the_folder_ships(self) -> None:
