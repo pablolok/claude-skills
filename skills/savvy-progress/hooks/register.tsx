@@ -1131,11 +1131,12 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
     const x = i * (tw + gap)
     return tile(x, top, tw, 56, k, tileValue(x, top + 33, tw, v) + (second ? tileValue(x, top + 48, tw, second, false) : ''))
   }
-  const stacked = W < 360
+  // Only a family with a reading gets a tile: a lone family (no Codex) spans the row.
+  const families = planFamilies(usage)
+  const stacked = W < 360 || families.length < 2
   const planW = stacked ? W : (W - gap) / 2
-  const plans = hasPlans(usage)
-    ? planTile(0, top + 62, planW, 'Claude', usage.claude, CLAY, 0)
-      + planTile(stacked ? 0 : planW + gap, top + 62 + (stacked ? 88 : 0), planW, 'Codex', usage.codex, colorOf('codex-sol'), at, usage.codexReadAt) : ''
+  const plans = families.map(([name, plan, color, readAt], i) =>
+    planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, name === 'Codex' ? at : 0, readAt)).join('')
   return svg(
     W,
     headerHeight(title, W, usage),
@@ -1145,8 +1146,14 @@ ${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, `Codex ${
   )
 }
 
-const headerHeight = (title: string, W: number, usage: UsageReadings): number =>
-  (title ? 88 : 60) + (hasPlans(usage) ? 88 * (W < 360 ? 2 : 1) : 0)
+const planFamilies = (usage: UsageReadings): [string, PlanUsage | undefined, string, number | undefined][] =>
+  ([['Claude', usage.claude, CLAY, undefined], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt]] as [string, PlanUsage | undefined, string, number | undefined][])
+    .filter(([, plan]) => hasPlan(plan))
+
+const headerHeight = (title: string, W: number, usage: UsageReadings): number => {
+  const rows = planFamilies(usage).length
+  return (title ? 88 : 60) + (rows === 0 ? 0 : 88 * (W < 360 ? rows : 1))
+}
 
 // The task's own progress when the worker reports steps; a finished run is full.
 // A worker's own count as its row reads it: the steps it left undone stand beside

@@ -53,7 +53,7 @@ the mod needs.
 - **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`) and follows `session.measure`. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
-  is omitted. A wide line shows each 5-hour/7-day percentage and its reset's local time (`↻02:00`). A narrow line
+  is omitted, and a family read alone (Claude without Codex) takes the whole row. A wide line shows each 5-hour/7-day percentage and its reset's local time (`↻02:00`). A narrow line
   uses `Claude 5h 41% · 7d 94% ↻02:00` (the reset at the end is the weekly one, or 5-hour if there is no weekly
   reading), then removes spaces to fit both families; at 40 columns it keeps both families' percentages and omits
   reset times. The line uses truncation rather than wrapping at still smaller widths.

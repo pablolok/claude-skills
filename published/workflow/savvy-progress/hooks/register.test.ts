@@ -1912,8 +1912,8 @@ test('a plan meter turns red at ninety percent', async ($, on) => {
   await start($)
   state.seed('usage', { statuses: {}, claude: { fiveHour: { percentUsed: 89 }, week: { percentUsed: 90 } } })
   const { source } = await headerOf($)
-  expect(source).toContain('width="191.35" height="4" rx="2" fill="#D97757"')
-  expect(source).toContain('width="193.5" height="4" rx="2" fill="#D0453F"')
+  expect(source).toContain('width="404.06" height="4" rx="2" fill="#D97757"')
+  expect(source).toContain('width="408.6" height="4" rx="2" fill="#D0453F"')
 })
 
 test('below 360 pixels plan tiles stack at full width', async ($, on) => {
@@ -1933,14 +1933,26 @@ test('at 360 pixels plan tiles share one row', async ($, on) => {
   expect(planBoxes((await headerOf($, 46)).source)).toEqual([{ x: 0, y: 62, width: 177 }, { x: 183, y: 62, width: 177 }])
 })
 
-test('an unread family gets a dash and no plan meter', async ($, on) => {
+test('without Codex the Claude plan tile spans the whole row', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { statuses: {}, claude: READINGS.claude })
+  state.seed(FLOW, flowOf())
+  const header = await headerOf($)
+  expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 472 }])
+  expect(header.source).toContain('Claude · plan</text>')
+  expect(header.source).not.toContain('Codex · plan')
+  expect(header.height).toBe(176)
+})
+
+test('an unread family gets no tile and the read one spans the row', async ($, on) => {
   const { state } = engine(on, { infos: [] })
   await start($)
   state.seed('usage', { statuses: {}, codex: READINGS.codex })
-  const { source } = await headerOf($)
-  const claudeTile = source.slice(source.indexOf('Claude · plan'), source.indexOf('Codex · plan'))
-  expect(claudeTile).toContain('>—</text>')
-  expect(claudeTile).not.toContain('height="4"')
+  const header = await headerOf($, 45)
+  expect(planBoxes(header.source)).toEqual([{ x: 0, y: 62, width: 352 }])
+  expect(header.source).not.toContain('Claude · plan')
+  expect(header.height).toBe(148)
 })
 
 test('no plan readings leave the header at its original height', async ($, on) => {
