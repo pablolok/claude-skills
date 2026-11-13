@@ -94,6 +94,9 @@ unverified, not a fresh green. One reviewer per diff is the default unless the p
 - To learn whether a failing gate predates the change, run it on a separate checkout (a worktree, or the gate
   pointed at the base commit) — never by stashing the working tree: a plain stash and pop drops what was staged,
   and the next commit silently leaves files out (reading the staged diff before the commit is `diff-self-review`'s).
+- A red called **"expected"** (a published copy not yet regenerated, a known flaky test) is read before it is
+  dismissed: its assertion names what it checks. A test that asserts content the change rewrote is a real failure
+  hiding among the expected ones.
 - A red that is a **timeout in a file the change does not touch** is re-run alone and with a longer timeout, the
   machine's load noted: passing that way, it is load and is reported as such — never called pre-existing, nor caused
   by the change, without that run.

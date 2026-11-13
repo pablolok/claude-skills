@@ -69,6 +69,9 @@ observation contradicts.
   "stop and report on anything unexpected" line in every Codex brief.
 - 2026-11: a relay passed a brief whose first lines addressed the relay; Codex read them as its own orders (it tried to
   start Codex). Write a Codex brief with the worker's task in its own section, and the relay passes only that section.
+- 2026-11: a project whose hooks require Skill calls before a code edit blocks the lean tiers (Light, Medium have no
+  Skill tool): a Medium worker stopped without editing. Code in such a project goes to Careful or above, or to Codex
+  (its edits are not Claude Code tool calls); the lean tiers keep running checks and reading.
 - 2026-11: Codex's Windows sandbox (`unelevated`) cannot start programs outside the workspace (an editor, test worker
   processes: Node's test runner needs `--experimental-test-isolation=none`) nor read system information through CIM
   (memory, process command lines). The relay or the orchestrator does those, or an MCP server outside the sandbox

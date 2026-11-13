@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.3] - 2026-11-13
+- A red called expected is read before it is dismissed: a test asserting content the change rewrote is a real failure among the expected ones
+
+
 ## [1.1.2] - 2026-11-07
 - A runner that cannot load the project's config is not a result: install the dependencies first.
 

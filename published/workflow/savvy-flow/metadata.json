@@ -1,5 +1,5 @@
 {
   "name": "savvy-flow",
-  "version": "1.15.1",
+  "version": "1.15.2",
   "description": "Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>."
 }

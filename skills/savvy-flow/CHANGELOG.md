@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.15.2] - 2026-11-13
+- Routing: lean tiers cannot edit code where project hooks require Skill calls - such code goes to Careful or above, or Codex
+
+
 ## [1.15.1] - 2026-11-13
 - codex-status.mjs --snapshot refreshes the Codex plan reading from the newest session log without running Codex
 
