@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.16.1] - 2026-11-15
+- Codex briefs: its sandbox cannot write .git, so Codex leaves the message and the relay commits; a brief names the expected baseline (an editor's start-up notices, a bridge diagnostic) and says a call of its own refused by validation is fixed and sent again, not a stop; suites that create temporary folders in the tree and the agent CLI run outside the sandbox; findings for a document go to an existing file the brief names or come back as text, since the host refuses a subagent's Write of a new report file
+
+
 ## [1.16.0] - 2026-11-15
 - the budget rules follow the gate: the estimates line in the ask, the user's yes recorded with decide or /savvy-budget <family> once; a week projected past its limit takes legwork one tier down, asks before every Fable or Codex Astra task and offers the Codex tier as relief with the user's yes; a worker stopped by a rate limit is resumed at the reset, not redone; the orchestrator delegates what reads much to return little (visual reviews with a text report, scripted read-only audits at Medium); clearFinished clears the panel's finished list when the user asks
 

@@ -43,8 +43,8 @@ The review uses both, and the eye decides.
 - **Value and colour:** L* percentiles (p10, p50, p90, p99), dark share, share of very light pixels, a* b* or
   C* h.
 - **Hair look:** strand contrast (fine detail) against clump contrast (coarse), and their ratio; the halo's width and
-  coverage outside the outline; the length of a strand the eye can follow; the wave's wavelength and amplitude as
-  rendered; lock width.
+  coverage outside the outline; the length of a strand the eye can follow; the wave as the direction's power along
+  traced strands, as rendered; lock width.
 - **Flow:** dominant direction, coherence and spread per zone and view, gated by a noise floor read from the
   reference against itself.
 
@@ -52,8 +52,10 @@ Rules for the rows:
 
 - **Read the reference against itself first** (left vs mirrored right, boxes moved a few px, the orientation scale
   halved and doubled). Its worst case is the noise floor; a gate tighter than about twice the floor judges noise.
-- **Validate a new measure on the reference before it gates anything.** A row that reads the reference poorly
-  (one "cover by depth" row read 0.5-0.6 deep inside the reference's own beard) will also pass a visible wall.
+- **Validate a new measure on the reference and on a known-wrong case before it gates anything.** A row that reads
+  the reference poorly (one "cover by depth" row read 0.5-0.6 deep inside the reference's own beard) will also pass a
+  visible wall; a row that cannot separate the reference from a build the eye rejected (or that build with the effect
+  set to zero) measures another property.
 - **Know what each row is blind to.** Aliasing reads as strand contrast; a median over the mask reads the backdrop
   where hair is missing (read value only on pixels with hair in both); the wave tracer has a floor of about a pixel
   of amplitude; the followed-strand length moves with the matte it is read through (use the fixed reference
@@ -86,6 +88,9 @@ change at a time before fixing anything.
 ## 5. The loop
 
 1. Fix the checks of the next piece before building it: the rows, their limits, the views, and the by-eye question.
+   A sweep that picks a value by rule ranks by the trait the art owner named first, and an arm that leaves that trait
+   worse than the baseline is not eligible; the chosen arm goes on the sheet beside the reference, and the eye can
+   veto it (a loss led by value and hue picked an arm that flattened the named strand contrast).
 2. Build one piece; read the gauge; make the sheets; write the differences seen.
 3. Met: the piece is done; state what it cost elsewhere (a row that got worse).
 4. Missed: diagnose from evidence (the defects list, a probe without a build). **Two failed attempts on the same

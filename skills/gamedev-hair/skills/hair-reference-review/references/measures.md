@@ -35,7 +35,7 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 | strand / clump ratio | the two above | the row that best separated real hair (light filaments over a darker mass, ratio ~1.4-1.5 in one reference) from cards (flakes parted by dark wedges, ~1.0) |
 | halo | width over which coverage falls from 0.9 to 0.1 across the outline; coverage 3, 6 and 10 mm outside it | a soft edge, not only flyaways |
 | followed strand | length a ridge tracer can follow on the strands, mm | depends on the matte it is read through: read the reference in its own mask and keep that number fixed |
-| wave | wavelength and amplitude along traced strands on crops | the tracer's own floor is about one pixel of amplitude: below it, judge by eye |
+| wave | the direction along each traced strand in windows of about two wavelengths (its overall turn removed), its power summed over the wave's band, per zone and view; gated within the reference's own spread (boxes moved a few px) plus a margin set so the same build with the wave at zero and a crimped build both fall outside | wavelength and amplitude rows passed a tight crimp: the tracer's floor is about one pixel of amplitude. Crossing strands in the reference also add direction change, so a groom of parallel waved strands cannot reach it by more wave |
 | lock width | p50 width of locks on crops | |
 | skin features to keep visible | share of a feature (a scar, a tattoo) left visible | when the reference shows it |
 

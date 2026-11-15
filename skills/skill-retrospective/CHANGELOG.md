@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.1] - 2026-11-15
+- a project skill made a layer over a shared one keeps every rule the shared text does not state as strictly (each rule found in the shared skill before it is deleted) and says at its top that it wins where the two differ
+
+
 ## [2.2.0] - 2026-10-25
 - Modular instructions, project cadence and evidence-based verification
 

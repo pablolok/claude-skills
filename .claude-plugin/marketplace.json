@@ -107,7 +107,7 @@
       "name": "gamedev-hair",
       "source": "./published/gamedev/gamedev-hair",
       "description": "Hair and beard strand grooms, shaping and grooming review for game development.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "gamedev",
       "strict": false,
       "skills": [
@@ -175,7 +175,7 @@
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
       "description": "Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.16.0",
+      "version": "1.16.1",
       "category": "workflow",
       "strict": false,
       "skills": [
@@ -194,7 +194,7 @@
       "name": "skill-retrospective",
       "source": "./published/workflow/skill-retrospective",
       "description": "Use at the close of tracked work or an accepted/rejected deliverable, or after a user correction of the method. Start with a brief evidence check; investigate and revise only skills implicated by an observed problem. No automatic rewrite or publication.",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "category": "workflow",
       "strict": false,
       "skills": [

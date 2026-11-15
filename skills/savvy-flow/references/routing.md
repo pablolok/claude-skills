@@ -66,16 +66,21 @@ observation contradicts.
   breaches of the named code standards (logic in static classes, the same order kept in three places by position).
   Name the standards' `SKILL.md` in the brief, list the most likely breaches in it, and plan one return round.
 - 2026-11: Codex stopped and reported when the brief contradicted the project's documentation, as told. Keep the
-  "stop and report on anything unexpected" line in every Codex brief.
+  "stop and report on anything unexpected" line in every Codex brief, and name in it what is expected: Codex also
+  stopped on an editor's start-up console notices and on a tool-bridge diagnostic seen on every start, and on a call of
+  its own that validation refused (a required argument left out). The brief lists the known baseline entries and says
+  that a call of its own refused by validation is fixed and sent again, not a stop.
 - 2026-11: a relay passed a brief whose first lines addressed the relay; Codex read them as its own orders (it tried to
   start Codex). Write a Codex brief with the worker's task in its own section, and the relay passes only that section.
 - 2026-11: a project whose hooks require Skill calls before a code edit blocks the lean tiers (Light, Medium have no
   Skill tool): a Medium worker stopped without editing. Code in such a project goes to Careful or above, or to Codex
   (its edits are not Claude Code tool calls); the lean tiers keep running checks and reading.
-- 2026-11: Codex's Windows sandbox (`unelevated`) cannot start programs outside the workspace (an editor, test worker
-  processes: Node's test runner needs `--experimental-test-isolation=none`) nor read system information through CIM
-  (memory, process command lines). The relay or the orchestrator does those, or an MCP server outside the sandbox
-  offers them as narrow tools.
+- 2026-11: Codex's Windows sandbox (`unelevated`) cannot start programs outside the workspace (an editor, the agent
+  CLI, test worker processes: Node's test runner needs `--experimental-test-isolation=none`) nor read system
+  information through CIM (memory, process command lines). Its `.git` is read-only: a `git add` fails on the index
+  lock, so a brief that asks Codex to commit loses the commit. A suite that creates temporary folders in the tree can
+  stall there on a folder it may not read. The relay or the orchestrator runs the suites and commits, or an MCP
+  server outside the sandbox offers the rest as narrow tools.
 
 ## Sources
 

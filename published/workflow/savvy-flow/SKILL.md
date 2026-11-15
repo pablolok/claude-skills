@@ -172,7 +172,7 @@ asked for it or set it as their default, never on your own.
 - A Codex task is marked as such in the plan you present before it is delegated, with its intensity.
 - The relay (`savvy-codex-<intensity>`) runs `codex exec` and returns what Codex did, checked:
   - a second opinion runs read-only (`-s read-only`, or `codex exec review` on the diff);
-  - an implementation runs in a tree no other worker is writing (alone, or in its own worktree), with Codex told not to commit;
+  - an implementation runs in a tree no other worker is writing (alone, or in its own worktree), with Codex told not to commit (its sandbox cannot write `.git`): it leaves the message, the relay commits after its checks;
   - a follow-up on the same topic resumes the Codex session (`codex exec resume <session id>`) instead of starting cold: keep its session id in the registry row.
 - **Codex does not load Claude Code's skills or `CLAUDE.md`.** It reads `AGENTS.md` and the skills in the project's
   `.agents/skills` (and its own user folder) by itself; a skill from `.claude/skills`, a user folder or a plugin
@@ -213,6 +213,8 @@ asked for it or set it as their default, never on your own.
   section 2); a read-only audit driven by a script or a checklist (search for patterns, run checkers, compare files)
   fits Medium. Keep your own reading to the diffs and the verdicts.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
+- Findings meant for a document go to an existing file the brief names (an edit goes through), or come back as text
+  that you save: the host refuses a subagent's Write of a new report, analysis or summary file.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded
   skill stays in the worker's context for the rest of its life.

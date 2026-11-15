@@ -32,6 +32,10 @@ Open the whole file only when the scope cannot be resolved from those sections. 
   The reason in one line, in general terms; no story of the rounds, no dated quote.
 - **Delete** what proved wrong, obsolete or unused: a superseded method, a retired tool's steps, a rule repeated in
   three places. Moving the reasoning into a commit message is fine; keeping it in the skill is not.
+- **A project skill made a layer over a shared one** keeps every rule the shared text does not state as strictly: find
+  each rule in the shared skill before deleting it (the same rule, the same number), and keep it in the layer
+  otherwise. The layer says, at its top, that it wins where the two differ. A slimming that skipped both dropped
+  project rules a review had to restore and left the precedence unstated.
 - **Merge and order**: one place per rule; the procedure in the order it is done; the best method first, the
   fallback after (or gone).
 - **No "Lessons", "History", "Changelog" or "Notes" sections.** If a list of traps is genuinely needed, it is a short
