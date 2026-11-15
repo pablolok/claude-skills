@@ -58,6 +58,8 @@ Part of `concept-to-asset` §4.
   - **face seams**: the map turning along a whole low face's border, because neighbouring faces' rays met different
     layers (strands over skin). No per-texel test sees these.
   - Fit a cage where rays miss, grown per vertex toward the high and capped. Keep the run with the fewest real faults.
+    Grow it again only where texels still miss, never where they tilt: a cage also grown at the tilts swelled to
+    twice its median offset and raised the tilt faults, since a longer reach finds more wrong surfaces.
   - Fill the real faults and margins by pull-push. A 60–90° tilt is often true relief; leave it.
 - **Grazing hits**: steep texels beside flat ones inside one island, where the low bridges a hollow of the high (under
   a jaw). A plain rebake repeats them. Give that band its own pass with its tilt clamped.

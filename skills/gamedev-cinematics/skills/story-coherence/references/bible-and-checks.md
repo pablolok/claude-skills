@@ -6,7 +6,7 @@ Use the host project's storage conventions. Start with the smallest structure th
 
 | Section | Store |
 |---|---|
-| Governing decisions | Stable fact ID, accepted statement, scope, revision, rationale, authority role |
+| Governing decisions | Stable fact ID, accepted statement, date taken, scope, revision, rationale, authority role |
 | World constraints | What can happen, limitations, costs, and explicit unknowns |
 | Viewpoint and arc | Immediate desires, long-term changes, perspective, intended audience experience |
 | Beat/branch map | Event IDs, prerequisites, causes, consequences, entry/exit states, branch conditions |

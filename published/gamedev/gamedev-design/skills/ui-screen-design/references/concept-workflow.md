@@ -68,6 +68,8 @@ Compare the kit element with the concept crop before wiring it into the screen.
 Inspect final displayed size and enlarged crops for jagged edges, blur, halos, and unstable fine detail.
 Choose texture resolution, filtering, mipmaps, vector/SDF treatment, or slicing according to the asset and UI path.
 Do not enable a blanket import setting on every UI asset; verify the resulting downsampling and edges.
+A UI sprite drawn below about half its pixel size gets mipmaps, or a texture sized for its use: minified without
+them, the sampler skips texels and the edges stair-step. Check a ×3 zoom of the capture for stepped edges.
 Keep alpha edges clean and test against bright and dark backgrounds.
 
 Unity: verify UI Toolkit or the existing canvas system's scale, layout, text rendering, and draw order.

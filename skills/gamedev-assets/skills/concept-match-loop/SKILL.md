@@ -83,6 +83,10 @@ The sheet hides what a reviewer sees first. For each part:
   that only its normal map carries.
 - Trust an automated defect check (wrong-layer texels, holes, crossings) only once it flags the defect a close-up
   shows. A check with a fixed absolute tolerance can read 0 on a part covered in visible shards.
+- **A check measured from the mesh's vertices or its own low passes a flap**: the flap's vertices sit on the source,
+  and only its face spans the slit (between two fingers, across a notch). Sample the shipped surface per texel and
+  read each point's distance off the source along the source's normal (out: a flap bridging a gap; in: a ledge or a
+  crack), with each limit set where it flags a known defect and reads 0 on a clean area.
 
 ## 5. The independent judge
 

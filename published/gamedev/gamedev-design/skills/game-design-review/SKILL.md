@@ -26,7 +26,10 @@ Use only the needed lenses. For a whole slice, start with walkthrough/playabilit
 ## Frame and gather evidence
 
 State the intended experience, scope/build, player profile, starting knowledge, input device, and test conditions.
-If intent is unspecified, draft a bounded working target from the brief and mark the assumption.
+**No target, no review**: a one-sentence intended experience ("tense but fair: every failure is my fault and I
+see it coming"), the player profile, and for a playtest a testable hypothesis. When none is given, ask whoever owns
+the design rather than drafting one: a target the reviewer writes and then finds met proves nothing. With no one to
+ask, draft a bounded working target from the brief, mark it as an assumption, and call the review provisional.
 Separate observed behavior, measured timing, tester report, simulated perspective, and code-only inference.
 Never present a role-played persona as an actual playtester.
 
@@ -48,9 +51,23 @@ Use timings as calibrated targets, not laws. For action-heavy play, an input ack
 several synchronized impact channels, and quick retry can be useful probes. Genre, hardware, accessibility,
 and intended commitment can require different targets.
 
-Check this: a challenge that appears difficult along its intended path may have an easy bypass.
-Try direct movement, alternate routes, timing variations, resource extremes, and adversarial play.
-Distinguish an unwanted exploit from a legitimate shortcut or mastery strategy; do not force one route by default.
+**Difficulty is measured against the best player, not the intended route**: a challenge that is hard along its
+intended path may have an easy bypass, and then its difficulty was never measured. Before judging it, run five tests
+(the numbers are starting targets; set them from the design):
+1. **Forced**: close each gate the design means as mandatory, in turn, and search for a way round. There is none.
+2. **No dash**: a straight run through at full speed, never stopping, started at any moment, fails (near 0 %).
+3. **Must read every threat**: crossing each gate at a random moment succeeds at most about half the time per gate,
+   a few percent end to end (measured end to end: patrol phases couple the gates).
+4. **Never no-win**: every gate opens a window of at least about a second each cycle (a reaction plus the move).
+5. **No fixed perfect line**: search the best path in space and time with the threats started at random points of
+   their patterns. Started alike every run, one memorised line can thread every window; keep that only when
+   mastering a line is the design's goal.
+
+An action challenge (a chase, a hail of projectiles) is played with bots: one holding forward, one holding forward
+and sprint, an average player (late reactions, never dodges) and a sharp one. The holders must fail and the average
+player mostly survive. The search methods: [stealth and AI](references/stealth-and-ai.md), unwanted bypasses.
+**A challenge with no measured bypass test is not reviewed for difficulty.** Distinguish an unwanted exploit from a
+legitimate shortcut or mastery strategy; do not force one route where the design allows several.
 
 ## Report
 

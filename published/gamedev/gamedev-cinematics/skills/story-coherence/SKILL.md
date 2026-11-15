@@ -50,6 +50,8 @@ Search both old and replacement terminology, then exercise the affected branches
 When defining a new story, settle foundations before dependent beats: world rules, viewpoint,
 desire, conflict, theme, then the ordered events and possible outcomes.
 Present consequential options with their narrative implications rather than assuming one is canon.
+Put each decision as a question with a recommended option and its reason. Record it in the bible, with its date,
+the moment it is taken, not at the end of the session: a long session's context can be compacted or lost first.
 
 ## Completion
 

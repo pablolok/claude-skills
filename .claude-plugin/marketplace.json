@@ -68,7 +68,7 @@
       "name": "gamedev-assets",
       "source": "./published/gamedev/gamedev-assets",
       "description": "3D assets from concept art and the iteration loop that matches assets to their concepts.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "gamedev",
       "strict": false,
       "skills": [
@@ -81,7 +81,7 @@
       "name": "gamedev-cinematics",
       "source": "./published/gamedev/gamedev-cinematics",
       "description": "Scene scripts, in-engine cutscene direction and story coherence for game development.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "gamedev",
       "strict": false,
       "skills": [
@@ -94,7 +94,7 @@
       "name": "gamedev-design",
       "source": "./published/gamedev/gamedev-design",
       "description": "Visual and audio quality, game-feel and design review, and UI screen design for games.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "gamedev",
       "strict": false,
       "skills": [

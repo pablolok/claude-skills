@@ -41,6 +41,9 @@ Apply relevant checks at the final game camera and delivery scale. Record intent
 - Check this: a single curve applied to all facial controls can make expression changes feel rigid.
   Test staggered feature timing, asymmetry, gaze, and breath where the performance calls for them.
 - Use blink and facial timing appropriate to the anatomy and style; fixed human measurements are not universal.
+  For a human face: the upper lid does almost all of a blink's travel, the lower lid moves about 2 mm at most; the
+  lid closes in about 100 ms and opens more slowly, in about 150–200 ms. A blink with both lids travelling alike, or
+  closing and opening at one speed, reads mechanical.
 - Check interacting bodies through the final camera, including differences in target size and pose.
 
 ## Effects

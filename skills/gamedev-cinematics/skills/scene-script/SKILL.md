@@ -48,6 +48,9 @@ Score 12 dimensions from 0 to 2 using the reference rubric: turn, economy, geogr
 composition, rhythm, lighting, acting, sound, dialogue, gameplay transition, and story coherence.
 Require **at least 20/24, no zero, and passing structural/timing checks** for a review candidate.
 A score does not override an unresolved contradiction or an unreadable essential action.
+Read it adversarially: imagine a director who has never seen the scene reading only the cards. Would they know
+what to shoot, from where, and why? A card they could not shoot fails coverage or geography, whatever its total;
+the writer's memory fills gaps a builder will not. "Good", "clear" and "cinematic" are not scores.
 
 Use `draft -> review -> locked`. Present the script, timing sheet, rubric, and remaining build tasks
 to the designated reviewer. Lock only the revision they accept; existing explicit acceptance counts.
