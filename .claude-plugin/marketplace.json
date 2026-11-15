@@ -52,6 +52,71 @@
       ]
     },
     {
+      "name": "gamedev-animation",
+      "source": "./published/gamedev/gamedev-animation",
+      "description": "Character animation, rigging, and armour and gear fitting for game development.",
+      "version": "0.1.0",
+      "category": "gamedev",
+      "strict": false,
+      "skills": [
+        "./skills/armor-rigging",
+        "./skills/character-animation",
+        "./skills/gear-fitting"
+      ]
+    },
+    {
+      "name": "gamedev-assets",
+      "source": "./published/gamedev/gamedev-assets",
+      "description": "3D assets from concept art and the iteration loop that matches assets to their concepts.",
+      "version": "0.1.0",
+      "category": "gamedev",
+      "strict": false,
+      "skills": [
+        "./skills/anatomy-study",
+        "./skills/concept-match-loop",
+        "./skills/concept-to-asset"
+      ]
+    },
+    {
+      "name": "gamedev-cinematics",
+      "source": "./published/gamedev/gamedev-cinematics",
+      "description": "Scene scripts, in-engine cutscene direction and story coherence for game development.",
+      "version": "0.1.0",
+      "category": "gamedev",
+      "strict": false,
+      "skills": [
+        "./skills/cutscene-direction",
+        "./skills/scene-script",
+        "./skills/story-coherence"
+      ]
+    },
+    {
+      "name": "gamedev-design",
+      "source": "./published/gamedev/gamedev-design",
+      "description": "Visual and audio quality, game-feel and design review, and UI screen design for games.",
+      "version": "0.1.0",
+      "category": "gamedev",
+      "strict": false,
+      "skills": [
+        "./skills/game-design-review",
+        "./skills/quality-bar",
+        "./skills/ui-screen-design"
+      ]
+    },
+    {
+      "name": "gamedev-hair",
+      "source": "./published/gamedev/gamedev-hair",
+      "description": "Hair and beard strand grooms, shaping and grooming review for game development.",
+      "version": "0.1.0",
+      "category": "gamedev",
+      "strict": false,
+      "skills": [
+        "./skills/hair-reference-review",
+        "./skills/strand-groom",
+        "./skills/strand-rendering"
+      ]
+    },
+    {
       "name": "jira-workflow",
       "source": "./published/workflow/jira-workflow",
       "description": "Use when work is tracked in Jira, before code or tracker changes. Applies the project’s declared cadence, fields, estimates, worklogs, releases and dependencies; continuous updates remain the default when no project policy is declared.",

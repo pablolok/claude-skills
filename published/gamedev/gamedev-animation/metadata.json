@@ -1,0 +1,6 @@
+{
+  "name": "gamedev-animation",
+  "version": "0.1.0",
+  "description": "Character animation, rigging, and armour and gear fitting for game development.",
+  "kind": "bundle"
+}

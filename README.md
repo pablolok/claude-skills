@@ -28,18 +28,18 @@ Claude Code alone — no clone, no Python. A shared or cloud project keeps manag
 
 ## Game development
 
-These five plugins bundle several related skills per area. They are currently **unpublished skeletons** with empty
-skill lists; each enters the marketplace only after it contains at least one skill.
+These five plugins bundle several related skills per area, with one version per plugin. A bundle enters the
+marketplace only once it contains at least one skill.
 
-| Plugin | Scope |
-| :--- | :--- |
-| [gamedev-hair](./skills/gamedev-hair/) | Hair and beard strand grooms. |
-| [gamedev-assets](./skills/gamedev-assets/) | 3D assets from concept art and the iteration loop that matches them to it. |
-| [gamedev-animation](./skills/gamedev-animation/) | Character animation, rigging, armour and gear fitting. |
-| [gamedev-cinematics](./skills/gamedev-cinematics/) | Scene scripts and in-engine cutscene direction. |
-| [gamedev-design](./skills/gamedev-design/) | Visual and audio quality, game-feel and design review, UI screen design. |
+| Plugin | Scope | Skills |
+| :--- | :--- | :--- |
+| [gamedev-hair](./skills/gamedev-hair/) | Hair and beard strand grooms. | strand-groom, strand-rendering, hair-reference-review |
+| [gamedev-assets](./skills/gamedev-assets/) | 3D assets from concept art and the iteration loop that matches them to it. | concept-to-asset, concept-match-loop, anatomy-study |
+| [gamedev-animation](./skills/gamedev-animation/) | Character animation, rigging, armour and gear fitting. | character-animation, armor-rigging, gear-fitting (its two Blender scripts are untested) |
+| [gamedev-cinematics](./skills/gamedev-cinematics/) | Scene scripts, in-engine cutscene direction and story coherence. | scene-script, cutscene-direction, story-coherence |
+| [gamedev-design](./skills/gamedev-design/) | Visual and audio quality, game-feel and design review, UI screen design. | quality-bar, game-design-review, ui-screen-design |
 
-After publication, install these plugins from your game project's folder:
+Install these plugins from your game project's folder:
 
 ```bash
 claude plugin marketplace add pablolok/claude-skills

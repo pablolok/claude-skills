@@ -79,6 +79,17 @@ class TestSkillsAreGeneric(unittest.TestCase):
         self.assertIn("SKILL.md", names)
         self.assertGreater(sum(1 for _ in _skill_files()), 50)
 
+    def test_the_scan_sees_each_bundles_nested_skills(self) -> None:
+        # Control: a bundle keeps its skills one level deeper (skills/<plugin>/skills/<skill>/SKILL.md).
+        config = json.loads(INSTALL_CONFIG.read_text(encoding="utf-8"))["skills"]
+        bundles = [name for name, entry in config.items() if entry.get("kind") == "bundle"
+                   and build_marketplace.bundle_skills(ROOT / "skills" / name, allow_empty=True)]
+        nested = [path.relative_to(ROOT).parts for path in _skill_files() if path.name == "SKILL.md"]
+        scanned = {parts[1] for parts in nested if len(parts) == 5 and parts[0] == "skills" and parts[2] == "skills"}
+        for name in bundles:
+            with self.subTest(bundle=name):
+                self.assertIn(name, scanned)
+
     def test_the_check_catches_a_name_but_not_the_repository(self) -> None:
         self.assertEqual(_forbidden_in("As Pablo wants it, for this user, in Deepborn"), ["pablo", "deepborn", "this user"])
         self.assertEqual(_forbidden_in("claude plugin install x@pablolok-skills from pablolok/claude-skills"), [])
