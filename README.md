@@ -1,8 +1,9 @@
 # Claude Code Skills
 
-pablolok's skills for Claude Code. The repository is a Claude Code plugin marketplace, `pablolok-skills`: every
-skill is a plugin of its own, so a person installs any of them with Claude Code alone — no clone, no Python. A shared
-or cloud project keeps managed copies instead (see below).
+pablolok's skills for Claude Code. The repository is a Claude Code plugin marketplace, `pablolok-skills`: workflow
+skills are individual plugins, while game development plugins bundle related skills by area. Install plugins with
+Claude Code alone — no clone, no Python. A shared or cloud project keeps managed copies of individual skills instead
+(see below).
 
 ## Skills
 
@@ -24,6 +25,43 @@ or cloud project keeps managed copies instead (see below).
 | **[Mermaid Diagrams](./skills/mermaid-diagrams/)** | Mermaid diagrams that really render in the VS Code preview and on GitHub: when to pre-render to SVG, a validator and a renderer behind one stable project command (`node scripts/mermaid.mjs check` / `render`), the dead ends. |
 | **[Savvy Flow](./skills/savvy-flow/)** | An orchestrated delivery flow (`/savvy-flow:savvy-flow <task>`): the session model plans, owns the design and reviews adversarially; five tiered worker agents (`savvy-flow:savvy-light` … `savvy-fable`) implement. Imported from johnnyvizz/claude-kit (MIT). |
 | **[Savvy Progress](./skills/savvy-progress/)** | A mod with no skill: a progress bar above the prompt and a live agents panel (`/agents-info`), fed by its two tools `progress` and `step` — savvy-flow drives them. Imported from johnnyvizz/claude-kit (MIT). |
+
+## Game development
+
+These five plugins bundle several related skills per area. They are currently **unpublished skeletons** with empty
+skill lists; each enters the marketplace only after it contains at least one skill.
+
+| Plugin | Scope |
+| :--- | :--- |
+| [gamedev-hair](./skills/gamedev-hair/) | Hair and beard strand grooms. |
+| [gamedev-assets](./skills/gamedev-assets/) | 3D assets from concept art and the iteration loop that matches them to it. |
+| [gamedev-animation](./skills/gamedev-animation/) | Character animation, rigging, armour and gear fitting. |
+| [gamedev-cinematics](./skills/gamedev-cinematics/) | Scene scripts and in-engine cutscene direction. |
+| [gamedev-design](./skills/gamedev-design/) | Visual and audio quality, game-feel and design review, UI screen design. |
+
+After publication, install these plugins from your game project's folder:
+
+```bash
+claude plugin marketplace add pablolok/claude-skills
+claude plugin install gamedev-hair@pablolok-skills --scope project
+claude plugin install gamedev-assets@pablolok-skills --scope project
+claude plugin install gamedev-animation@pablolok-skills --scope project
+claude plugin install gamedev-cinematics@pablolok-skills --scope project
+claude plugin install gamedev-design@pablolok-skills --scope project
+```
+
+Inside a session, each skill is named `<plugin>:<skill>`. All skills are engine-agnostic, with Unity and Unreal notes
+where their workflows differ.
+
+### Contributing
+
+Create a branch and edit `skills/<plugin>/skills/<skill>/` in this repository, including that skill's `SKILL.md`,
+`references/` and `scripts/` as needed. Keep skills generic: no project names, paths or people; make the instructions
+engine-agnostic, with engine notes where needed. List added skills in the plugin's README. Run
+`python -m unittest discover -s tests -p "test_*.py"` and open a PR. Publishing then follows
+[skill-publisher](./skills/skill-publisher/SKILL.md), once per bundle. Use
+[skill-retrospective](./skills/skill-retrospective/SKILL.md) to turn lessons from a game project into source skill
+edits here.
 
 ## Two ways to use the skills
 
@@ -89,8 +127,9 @@ nothing from it):
 
 ## Publish
 
-`skills/<skill>/` is the source; `published/<category>/<skill>/` is what each plugin installs, written only by the
-publish flow; `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/`.
+`skills/<plugin>/` is the source; `published/<category>/<plugin>/` is what each plugin installs, written only by the
+publish flow; `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/`. A bundle
+keeps its several skills under `skills/` inside that plugin and has one version and changelog for the whole bundle.
 
 ```bash
 python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|major>

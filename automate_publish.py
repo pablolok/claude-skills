@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
-import os
 import pathlib
 import shutil
 import sys
@@ -93,8 +92,9 @@ def publish_skill(
     bump: str = "patch",
     skills_dir: str = "skills",
     published_dir: str = "published",
+    bundle: typing.Optional[bool] = None,
 ) -> None:
-    """Sync a skill from development to published directory."""
+    """Bump and copy a single skill or bundle from development to the published directory."""
     source_path = pathlib.Path(skills_dir) / skill_name
     dest_path = pathlib.Path(published_dir) / category / skill_name
     
@@ -107,8 +107,17 @@ def publish_skill(
         print(f"Error: metadata.json not found in {source_path}")
         sys.exit(1)
         
-    # 1. Bump version in source
+    # Validate bundles before bumping, changing the changelog, or replacing a previous release.
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    is_bundle = metadata.get("kind") == "bundle"
+    if bundle is not None and is_bundle != bundle:
+        raise build_marketplace.MarketplaceError(
+            f"{skill_name}: kind must agree in install.config.json and metadata.json"
+        )
+    if is_bundle:
+        build_marketplace.bundle_skills(source_path)
+
+    # 1. Bump version in source
     old_version = metadata.get("version", "1.0.0")
     new_version = bump_version(old_version, bump)
     update_json_file(metadata_path, {"version": new_version})
@@ -130,13 +139,19 @@ def publish_skill(
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("skill_name", help="Name of the skill directory in skills/")
-    parser.add_argument("category", help="Destination category in published/ (audit, utility, workflow)")
+    parser.add_argument("skill_name", help="Name of the skill or bundle directory in skills/")
+    parser.add_argument("category", help="Destination category in published/ (e.g. workflow, gamedev)")
     parser.add_argument("summary", help="Summary of changes for the changelog")
     parser.add_argument("--bump", choices=["major", "minor", "patch"], default="patch")
     
     args = parser.parse_args()
-    publish_skill(args.skill_name, args.category, args.summary, args.bump)
+    try:
+        config = build_marketplace._read_json(pathlib.Path(build_marketplace.INSTALL_CONFIG)).get("skills", {})
+        bundle = config.get(args.skill_name, {}).get("kind") == "bundle"
+        publish_skill(args.skill_name, args.category, args.summary, args.bump, bundle=bundle)
+    except build_marketplace.MarketplaceError as exc:
+        print(f"publish: {exc}", file=sys.stderr)
+        sys.exit(2)
     # The plugin marketplace is derived from published/: every publish refreshes it.
     sys.exit(build_marketplace.main([]))
 

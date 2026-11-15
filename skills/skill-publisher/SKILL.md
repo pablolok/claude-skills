@@ -5,8 +5,8 @@ description: Use in the claude-skills repository to add, change, publish, tag an
 
 # Skill Publisher
 
-Every skill here is a plugin of the marketplace `pablolok-skills`. Its source is `skills/<skill>/`; what users
-install is `published/<category>/<skill>/` and `.claude-plugin/marketplace.json`, both written only by the scripts
+Each individual skill or bundle here is a plugin of the marketplace `pablolok-skills`. Its source is
+`skills/<plugin>/`; what users install is `published/<category>/<plugin>/` and `.claude-plugin/marketplace.json`, both written only by the scripts
 below. A change is done when the plugin users get has it — not when the source file is saved.
 
 ## 1. Edit the source
@@ -21,7 +21,8 @@ below. A change is done when the plugin users get has it — not when the source
   `SKILL.md` frontmatter and in `metadata.json`. No colon followed by a space inside it: strict YAML reads `: ` in
   an unquoted value as a nested key and rejects the frontmatter, and the tests' `frontmatter()` helper does not
   notice — write a dash (` — `) instead.
-- **No link to another skill's folder** (`../other/SKILL.md`): a plugin holds one skill alone, so name the skill.
+- **No link to another plugin's skill folder** (`../other/SKILL.md`): installed plugins have separate roots, so name
+  the skill. Links within the same bundle must resolve inside that bundle.
 - **Hooks or commands** a skill needs as a plugin are declared in its own `plugin-entry.json` (paths through
   `${CLAUDE_PLUGIN_ROOT}`); a hook finds the project through `CLAUDE_PROJECT_DIR`, never through its own folder.
 - **A mod** (a plugin with a hooks module that draws panes or adds commands) keeps its `.claude-plugin/plugin.json`
@@ -51,6 +52,20 @@ below. A change is done when the plugin users get has it — not when the source
 3. Add `tests/test_<skill>_skill.py` (the shared checks live in `tests/published_skill_checks.py`).
 4. Publish with `--bump major`: 0.9.0 becomes 1.0.0.
 
+**Bundles** group related skills in one plugin. Create `skills/<plugin>/` with README, CHANGELOG and metadata
+(name, version, description ≤ 500 characters, `"kind": "bundle"`), and register
+`{"category": "gamedev", "kind": "bundle"}` in `install.config.json`. Each skill lives in
+`skills/<plugin>/skills/<skill>/SKILL.md`, with its own references/scripts. List the skills in the bundle README.
+Bundled frontmatter uses flat, one-line YAML scalar fields: `name` matches the skill folder, and `description` is a
+nonempty string ≤ 500 characters; plain strings, YAML single quotes and JSON double quotes are supported, with no
+nested mappings, collections or block scalars. Unlike an individual plugin, the bundle metadata describes its area,
+not one skill's trigger. Keep game development skills engine-agnostic, with Unity and Unreal notes where they differ.
+Empty skeletons start at `0.1.0` with `skills/.gitkeep`: publishing fails before any bump until at least one skill
+exists; marketplace generation skips unpublished empty skeletons with a message. Validation also runs on every
+bundled skill when building the marketplace. Publish once per bundle, with one version/changelog and a
+`<plugin>@<version>` tag; the copied `skills/` exposes `<plugin>:<skill>` names. Existing workflow plugins keep their
+root `SKILL.md` layout.
+
 A plugin imported from elsewhere keeps its upstream version (seed `metadata.json` one bump below it, e.g. `1.1.0` and
 `--bump minor` for `1.2.0`) and its licence's terms: the upstream `LICENSE` in its folder and the attribution in its
 README, never in `SKILL.md`.
@@ -58,7 +73,7 @@ README, never in `SKILL.md`.
 ## 3. Publish
 
 ```bash
-python automate_publish.py <skill> workflow "<summary>" --bump <patch|minor|major>
+python automate_publish.py <plugin> <category> "<summary>" --bump <patch|minor|major>
 python -m unittest discover -s tests -p "test_*.py"
 python build_marketplace.py --check
 claude plugin validate .
@@ -66,7 +81,7 @@ claude plugin validate .
 
 - **Bump**: patch for a fix or a lesson in an existing step, minor for a new step or a removed section, major for a
   change that breaks how projects use it (a launcher's command, a hook's contract).
-- `automate_publish.py` bumps `metadata.json`, adds the summary to `CHANGELOG.md`, copies the skill to `published/`
+- `automate_publish.py` bumps `metadata.json`, adds the summary to `CHANGELOG.md`, copies the plugin to `published/`
   and regenerates the marketplace. Several skills: run it once per skill, then the checks once. With several new
   skills registered at once, every run but the last exits 2 (`no published skill at …` for one not copied yet):
   that is expected, so separate the runs with `;`, not `&&`, and judge the last run and the checks.

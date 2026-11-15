@@ -129,12 +129,16 @@ class TestCommittedMarketplace(unittest.TestCase):
         self.assertEqual(build_marketplace.main(["--check"]), 0, "run `python build_marketplace.py`")
 
     def test_every_plugin_source_is_a_published_skill(self) -> None:
-        # ... or a mod with no skill: then the entry names no skills and the folder carries its own manifest.
+        # Skills may be at the root or nested in a bundle; a mod with no skill has its own manifest.
         marketplace = json.loads((REPO / build_marketplace.MARKETPLACE).read_text(encoding="utf-8"))
         self.assertGreater(len(marketplace["plugins"]), 0)
         for plugin in marketplace["plugins"]:
-            carries = "SKILL.md" if "skills" in plugin else build_marketplace.MOD_MANIFEST
-            self.assertTrue((REPO / plugin["source"] / carries).is_file(), plugin["name"])
+            folder = REPO / plugin["source"]
+            if "skills" in plugin:
+                for skill in plugin["skills"]:
+                    self.assertTrue((folder / skill / "SKILL.md").is_file(), plugin["name"])
+            else:
+                self.assertTrue((folder / build_marketplace.MOD_MANIFEST).is_file(), plugin["name"])
 
     def test_a_published_manifest_that_declares_a_version_declares_the_published_one(self) -> None:
         # Claude Code takes the manifest's version over the marketplace entry's: a stale one hides every update.

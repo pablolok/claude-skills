@@ -1,6 +1,6 @@
 """Build the Claude Code plugin marketplace (.claude-plugin/marketplace.json) from the published skills.
 
-Every published skill becomes one plugin, so a project installs any of them with Claude Code alone — no clone, no
+Each published single skill or bundle becomes one plugin, installed with Claude Code alone — no clone, no
 Python, in a cloud session too:
 
     claude plugin marketplace add pablolok/claude-skills
@@ -11,6 +11,8 @@ published skill's metadata.json (version, description). A skill that needs more 
 (hooks, slash commands) declares it in its own ``plugin-entry.json``; a skill that makes no sense as a plugin says
 ``"plugin": false`` in install.config.json; a mod that carries no skill (its own manifest and hooks module alone) says
 ``"skill": false`` there. This file names no skill.
+Bundles declare ``"kind": "bundle"`` in both config and metadata, and expose their nested ``skills/<skill>/``
+directories. Unpublished empty skeletons are skipped; populated or already published bundles must validate.
 
     python build_marketplace.py          # write the marketplace
     python build_marketplace.py --check  # exit 1 when the committed marketplace differs from the published skills
@@ -21,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 import typing
 
@@ -56,21 +59,108 @@ def _read_json(path: pathlib.Path) -> typing.Any:
         raise MarketplaceError(f"{path}: {exc}") from exc
 
 
+def skill_frontmatter(path: pathlib.Path) -> typing.Dict[str, str]:
+    """Validate the repository's flat, one-line YAML frontmatter without a YAML dependency.
+
+    Plain strings, YAML single quotes and JSON double quotes are supported. Collections, block scalars,
+    anchors and nested mappings are deliberately rejected; optional scalar fields may accompany name/description.
+    """
+    def fail(reason: str) -> typing.NoReturn:
+        raise MarketplaceError(f"{path.as_posix()}: invalid frontmatter: {reason}")
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as exc:
+        fail(str(exc))
+    if not lines or lines[0] != "---" or "---" not in lines[1:]:
+        fail("expected opening and closing --- fences")
+    fields = {}
+    for line in lines[1:lines.index("---", 1)]:
+        if not line.strip() or line.startswith("#"):
+            continue
+        match = re.fullmatch(r"([A-Za-z][A-Za-z0-9_-]*):(?:[ \t]+(.*))?", line)
+        if match is None:
+            fail("use one key: value per line, without nesting")
+        key, value = match.group(1), (match.group(2) or "").strip()
+        if key in fields:
+            fail(f"duplicate {key}")
+        quoted = value.startswith(("'", '"'))
+        if value.startswith('"'):
+            try:
+                decoded, end = json.JSONDecoder().raw_decode(value)
+            except ValueError:
+                fail(f"{key} has invalid double quotes (use JSON string escaping)")
+            tail = value[end:].strip()
+            if tail and not tail.startswith("#"):
+                fail(f"unexpected text after {key}")
+            value = decoded
+        elif value.startswith("'"):
+            single = re.fullmatch(r"'((?:[^']|'')*)'\s*(?:#.*)?", value)
+            if single is None:
+                fail(f"{key} has invalid single quotes")
+            value = single.group(1).replace("''", "'")
+        else:
+            value = re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
+            if (value.startswith(tuple("[]{}!&*|>%@`#")) or re.search(r":(?:\s|$)", value)
+                    or re.match(r"[-?](?:\s|$)", value)):
+                fail(f"{key} must be a one-line scalar; quote punctuation where needed")
+        if key in ("name", "description"):
+            if not value.strip() or any(ord(char) < 32 for char in value):
+                fail(f"{key} must be a nonempty one-line string")
+            if not quoted and (value.lower() in ("null", "~", "true", "false", "yes", "no", "on", "off",
+                                                 ".nan", ".inf", "+.inf", "-.inf")
+                               or re.fullmatch(r"[-+]?\d[\d.eExXa-fA-F_+-]*", value)):
+                fail(f"{key} must be a string, not a YAML boolean, null or number")
+        fields[key] = value
+    if fields.get("name") != path.parent.name or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", fields.get("name", "")):
+        fail("name must match the skill directory (lowercase letters, digits and hyphens)")
+    description = fields.get("description", "")
+    if not description or len(description) > MAX_DESCRIPTION:
+        fail(f"description must contain 1 to {MAX_DESCRIPTION} characters")
+    return fields
+
+
+def bundle_skills(folder: pathlib.Path, allow_empty: bool = False) -> typing.List[pathlib.Path]:
+    """Validate a bundle and return its skill directories in stable order, before publishing or listing it."""
+    metadata = _read_json(folder / "metadata.json")
+    if metadata.get("kind") != "bundle":
+        raise MarketplaceError(f"{folder.name}: metadata.json must declare kind: bundle, matching install.config.json")
+    if metadata.get("name") != folder.name:
+        raise MarketplaceError(f"{folder.name}: metadata name must match the bundle directory")
+    description = metadata.get("description")
+    if not isinstance(description, str) or not description.strip() or len(description) > MAX_DESCRIPTION:
+        raise MarketplaceError(f"{folder.name}: bundle description must contain 1 to {MAX_DESCRIPTION} characters")
+    if not isinstance(metadata.get("version"), str) or not re.fullmatch(r"\d+\.\d+\.\d+", metadata["version"]):
+        raise MarketplaceError(f"{folder.name}: bundle version must be major.minor.patch")
+    skills_folder = folder / "skills"
+    skills = sorted(path for path in skills_folder.iterdir() if path.is_dir()) if skills_folder.is_dir() else []
+    for skill in skills:
+        if not (skill / "SKILL.md").is_file():
+            raise MarketplaceError(f"{skill.as_posix()}: bundled skill is missing SKILL.md")
+        skill_frontmatter(skill / "SKILL.md")
+    if not skills and not allow_empty:
+        raise MarketplaceError(f"{folder.name}: bundle needs at least one skill in skills/<skill>/SKILL.md before publishing")
+    return skills
+
+
 def plugin_entry(
-    repo: pathlib.Path, name: str, category: str, has_skill: bool = True
+    repo: pathlib.Path, name: str, category: str, has_skill: bool = True, bundle: bool = False
 ) -> typing.Dict[str, typing.Any]:
-    """The marketplace entry of one published skill: the skill's folder is the plugin, its root is the skill.
+    """One plugin entry: an individual skill at the root, or several skills nested inside a bundle.
 
     A mod with no skill (``has_skill`` false) is its folder alone: its own manifest, no ``skills``, and ``strict``
     declared so Claude Code reads that manifest.
     """
     folder = repo / PUBLISHED / category / name
     where = folder.relative_to(repo).as_posix()
-    if has_skill and not (folder / "SKILL.md").is_file():
+    bundled = bundle_skills(folder) if bundle else []
+    if has_skill and not bundle and not (folder / "SKILL.md").is_file():
         raise MarketplaceError(f"{name}: no published skill at {where}")
     if not has_skill and not (folder / MOD_MANIFEST).is_file():
         raise MarketplaceError(f"{name}: a plugin with no skill is a mod, and {where} has no {MOD_MANIFEST.as_posix()}")
     metadata = _read_json(folder / "metadata.json")
+    if (metadata.get("kind") == "bundle") != bundle:
+        raise MarketplaceError(f"{name}: kind must agree in install.config.json and metadata.json")
     if len(metadata["description"]) > MAX_DESCRIPTION:
         raise MarketplaceError(
             f"{name}: description is {len(metadata['description'])} characters, the limit is {MAX_DESCRIPTION}"
@@ -83,7 +173,11 @@ def plugin_entry(
         "category": category,
         "strict": False,
     }
-    if has_skill:
+    if bundle:
+        if not has_skill:
+            raise MarketplaceError(f"{name}: a bundle cannot declare skill: false")
+        entry["skills"] = ["./" + skill.relative_to(folder).as_posix() for skill in bundled]
+    elif has_skill:
         entry["skills"] = ["./"]
     declared_path = folder / PLUGIN_ENTRY
     if declared_path.is_file():
@@ -102,11 +196,17 @@ def plugin_entry(
 def build(repo: pathlib.Path = REPO) -> typing.Dict[str, typing.Any]:
     """The whole marketplace, plugins in name order so the file only changes when a skill does."""
     skills = _read_json(repo / INSTALL_CONFIG).get("skills", {})
-    plugins = [
-        plugin_entry(repo, name, config["category"], config.get("skill", True))
-        for name, config in sorted(skills.items())
-        if config.get("plugin", True)
-    ]
+    plugins = []
+    for name, config in sorted(skills.items()):
+        if not config.get("plugin", True):
+            continue
+        bundle = config.get("kind") == "bundle"
+        if bundle and not (repo / PUBLISHED / config["category"] / name).exists():
+            if not bundle_skills(repo / "skills" / name, allow_empty=True):
+                print(f"Skipping {name}: bundle needs at least one skill before publishing", file=sys.stderr)
+                continue
+            raise MarketplaceError(f"{name}: no published bundle at {PUBLISHED}/{config['category']}/{name}")
+        plugins.append(plugin_entry(repo, name, config["category"], config.get("skill", True), bundle))
     return {
         "name": MARKETPLACE_NAME,
         "owner": OWNER,

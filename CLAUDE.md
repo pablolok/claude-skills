@@ -1,15 +1,18 @@
 # CLAUDE.md
 
 This repository is the source of a set of Claude Code skills and the plugin marketplace `pablolok-skills`
-that ships them: every published skill is a plugin of its own.
+that ships them: individual workflow skills and bundles of related game development skills are plugins.
 
 ## Layout
 
 - `skills/<skill>/` is the source of each skill: `SKILL.md`, `README.md`, `metadata.json` (name, version,
   description), `CHANGELOG.md`, and whatever the skill runs (scripts, hooks). Edit skills here.
-- `published/<category>/<skill>/` is the published copy, the folder each plugin installs. It is written only by the
+- `skills/<plugin>/` with `"kind": "bundle"` in metadata holds a README, metadata, CHANGELOG and
+  `skills/<skill>/SKILL.md` plus each skill's references/scripts; bundles have one version for all their skills.
+- `published/<category>/<plugin>/` is the published copy, the folder each plugin installs. It is written only by the
   publish flow, never by hand.
-- `install.config.json` lists the published skills and their category (`workflow` for all of them today).
+- `install.config.json` lists plugins in `workflow` or `gamedev`; bundles also declare `"kind": "bundle"` there.
+  Empty bundle skeletons are not published or listed in the marketplace.
 - `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by
   `build_marketplace.py` — never edited by hand. A skill that needs hooks or commands as a plugin declares them in its
   own `plugin-entry.json` (a mod, which ships its own `.claude-plugin/plugin.json`, declares `"strict": true` there);

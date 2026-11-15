@@ -1,0 +1,6 @@
+{
+  "name": "gamedev-cinematics",
+  "version": "0.1.0",
+  "description": "Scene scripts and in-engine cutscene direction for game development.",
+  "kind": "bundle"
+}

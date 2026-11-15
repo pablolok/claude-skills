@@ -49,6 +49,26 @@
     },
     "jira-workflow": {
       "category": "workflow"
+    },
+    "gamedev-hair": {
+      "category": "gamedev",
+      "kind": "bundle"
+    },
+    "gamedev-assets": {
+      "category": "gamedev",
+      "kind": "bundle"
+    },
+    "gamedev-animation": {
+      "category": "gamedev",
+      "kind": "bundle"
+    },
+    "gamedev-cinematics": {
+      "category": "gamedev",
+      "kind": "bundle"
+    },
+    "gamedev-design": {
+      "category": "gamedev",
+      "kind": "bundle"
     }
   }
 }

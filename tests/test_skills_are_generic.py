@@ -16,7 +16,9 @@ import typing
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+import build_marketplace  # noqa: E402  pylint: disable=wrong-import-position
 from published_skill_checks import frontmatter  # noqa: E402  pylint: disable=wrong-import-position
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -103,7 +105,11 @@ class TestSkillsAreGeneric(unittest.TestCase):
             with self.subTest(skill=name):
                 folder = ROOT / "skills" / name
                 metadata = json.loads((folder / "metadata.json").read_text(encoding="utf-8"))
-                if config.get("skill", True):
+                if config.get("kind") == "bundle":
+                    # The plugin's metadata describes the area; each nested skill has its own trigger.
+                    build_marketplace.bundle_skills(folder, allow_empty=True)
+                    description = metadata["description"]
+                elif config.get("skill", True):
                     description = frontmatter((folder / "SKILL.md").read_text(encoding="utf-8")).get("description", "")
                     self.assertEqual(metadata["description"], description, "metadata.json repeats the frontmatter")
                     self.assertFalse(_breaks_plain_yaml(description), "no ': ' in the frontmatter: write ' — ' instead")
