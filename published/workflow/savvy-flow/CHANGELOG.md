@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.15.4] - 2026-11-15
+- the costly tiers are paced from the progress tool's budget summary: an ask verdict means asking the user before long work on that family (with the projection and the reset), or moving the work to the other family or a cheaper tier; under full only the short window is paced; the policy is the user's, set with /savvy-budget
+
+
 ## [1.15.3] - 2026-11-15
 - Tiering: the top tier takes the hard part (cause, method, decision) and returns briefs for the repeatable execution, which goes to Careful, Medium or the Codex tier; the costly tiers are paced against the plan's rolling usage windows, one per family when the short window is high; long repetitive execution moves to Codex only when the user asked for it or set it as default
 

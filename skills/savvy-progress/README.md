@@ -57,8 +57,23 @@ the mod needs.
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
   is omitted, and a family read alone takes the whole row. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
   weekly uses a short weekday and time (`↻ Thu 02:00`). Resets more than six days away use a short date instead (`↻ 20 Nov 02:00`),
-  avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows only
-  percentages, for example `Claude 41/94%  Codex 2/9%`, and truncates at smaller widths.
+  avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows
+  percentages, for example `Claude 41/94%  Codex 2/9%`, with one `!` after a family that is projected to exceed
+  either window under `within`, and truncates at smaller widths.
+- **Usage projection**: each family's 5-hour and weekly windows estimate whether the current pace fits before
+  reset. The start is the reset minus 300 or 10080 minutes. Average pace is used percentage divided by elapsed time;
+  recent pace uses the first-to-last observation slope within the last 30 minutes (5h) or six hours (7d), once
+  observations cover at least half that span. Otherwise it falls back to average pace. The usage atom keeps at most
+  one observation per minute, pruned to each span (at most 361 samples per window); Codex observations use the
+  status file's timestamp, so rereading an unchanged file adds nothing. A changed reset or a percentage drop clears
+  that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
+  projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
+  before the reset when space is tight.
+- **Budget policy**: `/savvy-budget <claude|codex> <within|full>` sets a family's policy; `/savvy-budget` lists both.
+  Each defaults to `within`: exhausting a window early needs the user's decision before long work. `full` means
+  the user accepts using a reset and running out early; the flow continues, pacing only the short window. Only set
+  it when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
+  title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
 - **Status snapshots**: savvy-flow ships the zero-dependency Node writer `scripts/codex-status.mjs`. Each relay picks
   a unique status name, declares it through `step` without changing its step count, and pipes `codex exec --json`
   through the writer. The writer atomically replaces a snapshot of at most 16 KiB about once a second, including a
@@ -132,7 +147,16 @@ the mod needs.
 - `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks. A planned
   task waits at its tier's model and effort, or at the `effort` and `model` the plan declares for it (what its Agent
   call will pass); an agent that is no savvy worker is planned with `tier: "other"` and `agent`, its type. A run
-  shows the effort its Agent call asked for, then the one the engine reports for each request.
+  shows the effort its Agent call asked for, then the one the engine reports for each request. Its result is now
+  `{ status, budget }`, retaining the acknowledgement in `status`. `budget` groups `claude` and `codex`, each with
+  observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
+  `pace` (`recent` or `average`), `policy`, and `verdict`: `ok` when it fits or has no projection yet, `over` when it
+  does not fit under `full`, `ask` when it does not fit under `within`. Missing estimates are `null`, unavailable
+  windows are omitted, and times are ISO timestamps. Expired readings report zero used with no projection.
+- `mcp__savvy-progress__budget`: returns `{ budget }` with the same summary, without changing the bar or state.
+  Both tools use the latest observations already taken by the panel. The flow reads this summary on progress
+  updates and before long work; an `ask` calls for the user's decision with the projection and reset, or moving
+  work to another family, a cheaper tier, or a slower pace. The tools never change the user's policy.
 - `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`), and `skipped` for the planned
   steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
   fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug),
@@ -209,7 +233,7 @@ payload and timing are unconfirmed, and that transition order is a tested race s
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
 | `.claude-plugin/icon.png` | The mod's icon: the crab over a progress bar, a 512 px square. |
 | `hooks/hooks.json` | Names the hooks module. |
-| `hooks/register.tsx` | The module: the two tools, `/agents-info`, `/savvy-theme`, the bar and the panel with its theme picker. |
+| `hooks/register.tsx` | The module: the three tools, `/agents-info`, `/savvy-theme`, `/savvy-budget`, usage projections, the bar and the panel with its theme picker. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
 | `hooks/themes.ts` | The calendar, the theme list and the seasons' and first holidays' costumes. |
 | `hooks/wardrobe.ts` | What every theme draws from: the palette, shared props, particles, header ornaments and weather. |

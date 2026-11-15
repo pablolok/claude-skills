@@ -83,6 +83,29 @@ export type ModelHints = {
 
 export type PlanWindow = { percentUsed: number; resetsAt?: string }
 export type PlanUsage = { fiveHour?: PlanWindow; week?: PlanWindow }
+export type PlanFamily = 'claude' | 'codex'
+export type PlanWindowKey = keyof PlanUsage
+export type BudgetPolicy = 'within' | 'full'
+export type UsageSample = { at: number; percentUsed: number }
+export type WindowHistory = { resetsAt?: string; samples: UsageSample[] }
+export type PlanHistory = Partial<Record<PlanWindowKey, WindowHistory>>
+export type PlanProjection = {
+  projectedAtReset: number
+  exhaustsAt?: string
+  pace: 'recent' | 'average'
+  fits: boolean
+}
+export type WindowBudget = {
+  used: number
+  resetsAt: string | null
+  projectedAtReset: number | null
+  exhaustsAt: string | null
+  pace: PlanProjection['pace'] | null
+  policy: BudgetPolicy
+  /** ok includes windows with no projection yet; consult the nullable fields. */
+  verdict: 'ok' | 'over' | 'ask'
+}
+export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
 export type CodexTokens = {
   input_tokens: number
   cached_input_tokens: number
@@ -100,6 +123,9 @@ export type CodexStatus = {
   updatedAt: number
 }
 export type UsageReadings = {
+  /** Bounded observations and user-owned policies persist with the usage atom. */
+  history?: Partial<Record<PlanFamily, PlanHistory>>
+  policies?: Partial<Record<PlanFamily, BudgetPolicy>>
   claude?: PlanUsage
   claudeReadAt?: number
   claudeCacheReadAt?: number

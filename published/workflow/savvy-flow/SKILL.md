@@ -184,10 +184,14 @@ asked for it or set it as their default, never on your own.
 
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - **Pace the costly tiers against the plan's rolling usage windows.** Before starting or resuming a long worker at
-  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows), read that family's plan usage when the host or
-  the last relay report offers it. With the short window high (say, past half), run one such worker per family at a
-  time and keep the cheaper tiers beside it: two together empty the short window, and the flow sits idle until it
-  resets.
+  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows), read the `budget` summary returned by the
+  progress tool; its read-only `budget` tool can refresh your view without changing the bar. For a family with any
+  `ask` verdict, ask the user before starting or resuming long work on it, giving the projection (percent at reset
+  or when it runs out) and the reset. Otherwise move the work to the other family or a cheaper tier, or pace it.
+  Under `full`, continue, pacing only the short window. The policy is the user's: set it with `/savvy-budget` when
+  they say a reset may be used, never on your own. With the short window high (say, past half), run one costly
+  worker per family at a time and keep the cheaper tiers beside it. If the summary is unavailable, use the host's
+  plan usage or the last relay report.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded

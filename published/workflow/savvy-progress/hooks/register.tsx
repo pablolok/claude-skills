@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
-import type { AgentInfo, EngineInterface, Register, SessionRateLimit } from 'claude-code'
+import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { AgentRun, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanUsage, UsageReadings } from '../types'
+import type { AgentRun, BudgetPolicy, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, UsageReadings, WindowHistory } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -25,6 +25,7 @@ const usageReadings = atom({ plugin: 'savvy-progress', key: 'usage' } as const, 
 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
+const BUDGET_TOOL = 'mcp__savvy-progress__budget'
 const PANE = 'savvy-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
@@ -636,6 +637,87 @@ export const codexCostOf = (model: string, u: CodexTokens): number | undefined =
 
 const nonnegative = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0
 
+// The providers' rolling window lengths determine the start from the reset.
+const PLAN_WINDOW_MINUTES: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 300, week: 10080 }
+const MINUTE_MS = 60_000
+// Recent slopes smooth the short window over 30 minutes and the week over six hours.
+const RECENT_SPAN_MS: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 30 * MINUTE_MS, week: 6 * 60 * MINUTE_MS }
+// Half a span is enough evidence; the first five minutes of a window are too noisy.
+const RECENT_MIN_COVERAGE = 0.5
+const PROJECTION_MIN_ELAPSED_MS = 5 * MINUTE_MS
+// One sample per minute bounds three-second Codex updates to at most 361 weekly samples.
+const HISTORY_BUCKET_MS = MINUTE_MS
+const HISTORY_MAX_SAMPLES = RECENT_SPAN_MS.week / HISTORY_BUCKET_MS + 1
+const PLAN_WINDOWS: readonly PlanWindowKey[] = ['fiveHour', 'week']
+const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex']
+const BUDGET_RED = '#D0453F'
+const BUDGET_AMBER = '#E0A526'
+const PLAN_TEXT_SIZE = 11
+// Same nine-pixel inset as the existing plan tiles, on both sides.
+const PLAN_TEXT_INSET = 9
+
+const budgetPolicy = (usage: UsageReadings, family: PlanFamily): BudgetPolicy => usage.policies?.[family] ?? 'within'
+
+const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, key: PlanWindowKey, at: number): WindowHistory => {
+  const last = previous?.samples.at(-1)
+  const reset = previous?.resetsAt !== value.resetsAt || Boolean(last && value.percentUsed < last.percentUsed)
+  const samples = (reset ? [] : previous?.samples ?? []).filter(sample => sample.at >= at - RECENT_SPAN_MS[key] && sample.at <= at)
+  const sample = { at, percentUsed: value.percentUsed }
+  const sameMinute = samples.length && Math.floor(samples[samples.length - 1]!.at / HISTORY_BUCKET_MS) === Math.floor(at / HISTORY_BUCKET_MS)
+  return { resetsAt: value.resetsAt, samples: [...(sameMinute ? samples.slice(0, -1) : samples), sample].slice(-HISTORY_MAX_SAMPLES) }
+}
+
+// Pure: all histories live in the existing usage atom, never module-level mutable state.
+export const recordPlanUsage = (usage: UsageReadings, family: PlanFamily, plan: PlanUsage, at: number): UsageReadings => {
+  const history: PlanHistory = {}
+  for (const key of PLAN_WINDOWS) {
+    const value = plan[key]
+    if (value) history[key] = recordWindow(usage.history?.[family]?.[key], value, key, at)
+  }
+  return { ...usage, [family]: plan, [family === 'claude' ? 'claudeReadAt' : 'codexReadAt']: at,
+    history: { ...usage.history, [family]: history } }
+}
+
+const recentPace = (history: WindowHistory | undefined, value: PlanWindow, key: PlanWindowKey, at: number): number | undefined => {
+  if (history?.resetsAt !== value.resetsAt) return undefined
+  const samples = history?.samples.filter(sample => sample.at >= at - RECENT_SPAN_MS[key] && sample.at <= at) ?? []
+  const first = samples[0], last = samples.at(-1)
+  if (!first || !last || last.at - first.at < RECENT_SPAN_MS[key] * RECENT_MIN_COVERAGE) return undefined
+  const slope = (last.percentUsed - first.percentUsed) / (last.at - first.at)
+  return nonnegative(slope) ? slope : undefined
+}
+
+export const projectPlanWindow = (value: PlanWindow | undefined, key: PlanWindowKey, at: number, history?: WindowHistory): PlanProjection | undefined => {
+  if (!value || !nonnegative(value.percentUsed) || value.percentUsed === 0 || !value.resetsAt) return undefined
+  const resetAt = Date.parse(value.resetsAt)
+  const elapsed = at - (resetAt - PLAN_WINDOW_MINUTES[key] * MINUTE_MS)
+  if (!Number.isFinite(resetAt) || !Number.isFinite(at) || resetAt <= at || elapsed < PROJECTION_MIN_ELAPSED_MS) return undefined
+  const recent = recentPace(history, value, key, at)
+  const rate = recent ?? value.percentUsed / elapsed
+  const projectedAtReset = value.percentUsed + rate * (resetAt - at)
+  const fits = projectedAtReset <= 100
+  // A window already exhausted reports now, including a recent plateau above 100%.
+  const exhaustAt = value.percentUsed >= 100 ? at : rate > 0 ? at + (100 - value.percentUsed) / rate : undefined
+  return { projectedAtReset, ...(exhaustAt !== undefined && exhaustAt < resetAt ? { exhaustsAt: new Date(exhaustAt).toISOString() } : {}),
+    pace: recent === undefined ? 'average' : 'recent', fits }
+}
+
+export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary => {
+  const summary: BudgetSummary = { claude: {}, codex: {} }
+  for (const family of PLAN_FAMILIES) {
+    const policy = budgetPolicy(usage, family)
+    for (const key of PLAN_WINDOWS) {
+      const value = usage[family]?.[key]
+      if (!value) continue
+      const projection = projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
+      summary[family][key] = { used: isReset(value, at) ? 0 : value.percentUsed, resetsAt: value.resetsAt ?? null,
+        projectedAtReset: projection?.projectedAtReset ?? null, exhaustsAt: projection?.exhaustsAt ?? null,
+        pace: projection?.pace ?? null, policy, verdict: projection?.fits === false ? policy === 'within' ? 'ask' : 'over' : 'ok' }
+    }
+  }
+  return summary
+}
+
 export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefined => {
   const window = (kind: string) => {
     const value = limits.find(l => l.kind === kind && nonnegative(l.percentUsed))
@@ -659,7 +741,7 @@ const codexLimitsFrom = (limits: { primary?: unknown; secondary?: unknown } | un
     return w?.window_minutes === minutes && nonnegative(w.used_percent) && nonnegative(w.resets_at) && Number.isFinite(new Date(w.resets_at * 1000).getTime())
       ? { percentUsed: w.used_percent, resetsAt: new Date(w.resets_at * 1000).toISOString() } : undefined
   }
-  const fiveHour = window(limits?.primary, 300), week = window(limits?.secondary, 10080)
+  const fiveHour = window(limits?.primary, PLAN_WINDOW_MINUTES.fiveHour), week = window(limits?.secondary, PLAN_WINDOW_MINUTES.week)
   return fiveHour || week ? { fiveHour, week } : undefined
 }
 
@@ -730,7 +812,7 @@ async function refreshClaudeUsage($: EngineInterface, force = false): Promise<vo
   if (!claimed) return
   try {
     const claude = claudePlanUsage((await $.session.usage()).rateLimits)
-    if (claude) await update($, usageReadings, prev => ({ ...prev, claude, claudeReadAt: at }))
+    if (claude) await update($, usageReadings, prev => recordPlanUsage(prev, 'claude', claude, at))
   } catch { /* Keep the last valid observation and its age. */ }
 }
 
@@ -773,25 +855,30 @@ async function refreshCodexUsage($: EngineInterface, force = false): Promise<voi
       }
     }
   } catch { /* Keep the panel's last plan reading across filesystem gaps. */ }
-  await update($, usageReadings, prev => ({ ...prev, statuses, statusMtimes,
-    ...(latest && (prev.codexUpdatedAt === undefined || latest.updatedAt > prev.codexUpdatedAt)
-      ? { codex: latest.rateLimits, codexReadAt: at, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : {}) }))
+  await update($, usageReadings, prev => {
+    const refreshed = { ...prev, statuses, statusMtimes }
+    return latest && (prev.codexUpdatedAt === undefined || latest.updatedAt > prev.codexUpdatedAt)
+      ? { ...recordPlanUsage(refreshed, 'codex', latest.rateLimits, latest.updatedAt),
+          codexReadAt: at, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : refreshed
+  })
   await syncCodexRuns($)
 }
 
 const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
 const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex'>): boolean => hasPlan(usage.claude) || hasPlan(usage.codex)
 
+// Keep the observed usage at the reset instant; it becomes expired strictly after it.
 const isReset = (value: PlanUsage['fiveHour'], at: number): boolean => Boolean(value?.resetsAt && at > Date.parse(value.resetsAt))
 const planAt = (plan: PlanUsage | undefined, at: number): PlanUsage | undefined => plan && Object.fromEntries(
   Object.entries(plan).map(([key, value]) => [key, isReset(value, at) ? { ...value, percentUsed: 0 } : value]))
 
-export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex'>, at = 0): string => {
+export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'policies' | 'history'>, at = 0): string => {
   if (!hasPlans(usage)) return ''
+  const budget = budgetSummary({ ...usage, statuses: {} }, at)
   // A family with no reading is left out, as its plan tile is.
-  const family = (name: string, plan?: PlanUsage) => hasPlan(plan)
-    ? `${name} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : ''
-  return [family('Claude', usage.claude), family('Codex', planAt(usage.codex, at))].filter(Boolean).join('  ')
+  const family = (name: string, key: PlanFamily, plan?: PlanUsage) => hasPlan(plan)
+    ? `${name}${Object.values(budget[key]).some(window => window.verdict === 'ask') ? '!' : ''} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : ''
+  return [family('Claude', 'claude', planAt(usage.claude, at)), family('Codex', 'codex', planAt(usage.codex, at))].filter(Boolean).join('  ')
 }
 
 const codexAccount = (a: AgentRun, usage: UsageReadings) => {
@@ -1113,41 +1200,65 @@ const tile = (x: number, y: number, width: number, height: number, label: string
   `<rect class="tile" x="${x}" y="${y}" width="${width}" height="${height}" rx="8"/>
 <text class="s" x="${x + 9}" y="${y + 16}" font-family="${FONT}" font-size="11">${xml(label)}</text>${body}`
 
-const tileValue = (x: number, y: number, width: number, value: string, bold = true, suffix = ''): string =>
-  `<text class="t" x="${x + 9}" y="${y}" font-family="${FONT}" font-size="11"${bold ? ' font-weight="600"' : ''} font-variant-numeric="tabular-nums">${xml(fitText(value, 11, width - 18 - textWidth(suffix, 11)))}${suffix ? `<tspan class="s" font-weight="400">${xml(suffix)}</tspan>` : ''}</text>`
+type PlanMarker = { text: string; color?: string }
+
+const tileValue = (x: number, y: number, width: number, value: string, bold = true, suffix = '', marker?: PlanMarker): string =>
+  `<text class="t" x="${x + PLAN_TEXT_INSET}" y="${y}" font-family="${FONT}" font-size="${PLAN_TEXT_SIZE}"${bold ? ' font-weight="600"' : ''} font-variant-numeric="tabular-nums">${xml(fitText(value, PLAN_TEXT_SIZE, width - PLAN_TEXT_INSET * 2 - textWidth((marker?.text ?? '') + suffix, PLAN_TEXT_SIZE)))}${marker ? `<tspan${marker.color ? ` fill="${marker.color}"` : ''}>${xml(marker.text)}</tspan>` : ''}${suffix ? `<tspan class="s" font-weight="400">${xml(suffix)}</tspan>` : ''}</text>`
 
 const readingAge = (readAt: number, at: number): string => {
   const minutes = Math.max(0, Math.floor((at - readAt) / 60_000))
   return minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`
 }
 
+type PlanFormat = { locale?: string; timeZone?: string }
+type PlanTileOptions = PlanFormat & { policy?: BudgetPolicy; history?: PlanHistory }
+
 // Six days avoids an ambiguous repeated weekday, including across DST changes.
-export const formatPlanReset = (value: PlanUsage['fiveHour'], weekly: boolean, at: number, options?: { locale?: string; timeZone?: string }): string => {
-  const reset = value?.resetsAt ? new Date(value.resetsAt) : undefined
-  if (isReset(value, at) || !reset || !Number.isFinite(reset.getTime())) return ''
+const PLAN_WEEKDAY_HORIZON_MS = 6 * 24 * 60 * MINUTE_MS
+const formatPlanTimestamp = (timestamp: string, weekly: boolean, at: number, options?: PlanFormat): string => {
+  const reset = new Date(timestamp)
+  if (!Number.isFinite(reset.getTime())) return ''
   const timeZone = options?.timeZone
   const time = reset.toLocaleTimeString(options?.locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone })
-  const day = weekly ? reset.toLocaleDateString(options?.locale, reset.getTime() - at > 6 * 86_400_000
+  const day = weekly ? reset.toLocaleDateString(options?.locale, reset.getTime() - at > PLAN_WEEKDAY_HORIZON_MS
     ? { day: 'numeric', month: 'short', timeZone } : { weekday: 'short', timeZone }) + ' ' : ''
-  return `↻ ${day}${time}`
+  return `${day}${time}`
 }
 
-export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: { locale?: string; timeZone?: string }): string => {
+export const formatPlanReset = (value: PlanUsage['fiveHour'], weekly: boolean, at: number, options?: PlanFormat): string => {
+  if (!value?.resetsAt || isReset(value, at)) return ''
+  const time = formatPlanTimestamp(value.resetsAt, weekly, at, options)
+  return time ? `↻ ${time}` : ''
+}
+
+const projectionMarker = (projection: PlanProjection | undefined, policy: BudgetPolicy, at: number, options?: PlanFormat): PlanMarker | undefined => {
+  if (!projection) return undefined
+  if (projection.fits) return { text: `  → ${Math.round(projection.projectedAtReset)}%` }
+  return projection.exhaustsAt ? { text: `  100% ↯ ${formatPlanTimestamp(projection.exhaustsAt, true, at, options)}`,
+    color: policy === 'full' ? BUDGET_AMBER : BUDGET_RED } : undefined
+}
+
+export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: PlanTileOptions): string => {
   const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at)}`
-  const window = (label: string, value: PlanUsage['fiveHour'], offset: number): string => {
+  const policy = options?.policy ?? 'within'
+  const window = (label: string, key: PlanWindowKey, value: PlanUsage['fiveHour'], offset: number): string => {
     const resetWindow = isReset(value, at)
     const percentUsed = resetWindow ? 0 : value?.percentUsed
     const percent = value ? `${label}  ${percentUsed}%${resetWindow ? ' reset' : ''}` : `${label}  —`
     const formattedReset = formatPlanReset(value, label === '7d', at, options)
     const time = formattedReset ? `  ${formattedReset}` : ''
     const suffix = value ? age : ''
-    const text = textWidth(percent + time + suffix, 11) <= width - 18 ? percent + time : percent
+    const available = width - PLAN_TEXT_INSET * 2
+    const candidate = projectionMarker(projectPlanWindow(value, key, at, options?.history?.[key]), policy, at, options)
+    // Drop the projection first; keep the existing reset and reading age whenever they fit.
+    const marker = candidate && textWidth(percent + time + candidate.text + suffix, PLAN_TEXT_SIZE) <= available ? candidate : undefined
+    const text = textWidth(percent + time + suffix, PLAN_TEXT_SIZE) <= available ? percent + time : percent
     const meterW = width - 18
-    return tileValue(x, y + offset, width, text, true, suffix) + (value
+    return tileValue(x, y + offset, width, text, true, suffix, marker) + (value
       ? `<rect class="k" x="${x + 9}" y="${y + offset + 6}" width="${meterW}" height="4" rx="2"/><rect x="${x + 9}" y="${y + offset + 6}" width="${meterW * Math.min(100, Math.max(0, percentUsed!)) / 100}" height="4" rx="2" fill="${percentUsed! >= 90 ? '#D0453F' : color}"/>` : '')
   }
-  return tile(x, y, width, 82, `${name} · plan`, hasPlan(plan)
-    ? window('5h', plan?.fiveHour, 33) + window('7d', plan?.week, 62)
+  return tile(x, y, width, 82, `${name} · plan · ${policy}`, hasPlan(plan)
+    ? window('5h', 'fiveHour', plan?.fiveHour, 33) + window('7d', 'week', plan?.week, 62)
     : tileValue(x, y + 33, width, '—'))
 }
 
@@ -1168,8 +1279,11 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
   const families = planFamilies(usage)
   const stacked = W < 360 || families.length < 2
   const planW = stacked ? W : (W - gap) / 2
-  const plans = families.map(([name, plan, color, readAt], i) =>
-    planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, at, readAt)).join('')
+  const plans = families.map(([name, plan, color, readAt], i) => {
+    const family: PlanFamily = name === 'Claude' ? 'claude' : 'codex'
+    return planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, at, readAt,
+      { policy: budgetPolicy(usage, family), history: usage.history?.[family] })
+  }).join('')
   return svg(
     W,
     headerHeight(title, W, usage),
@@ -1445,6 +1559,27 @@ async function reconcile($: EngineInterface, stoppingAgentId?: string): Promise<
   await syncRunning($)
 }
 
+const describeBudgetPolicies = (usage: UsageReadings): string =>
+  `Budget: Claude ${budgetPolicy(usage, 'claude')} · Codex ${budgetPolicy(usage, 'codex')}.`
+
+async function runBudgetCommand($: EngineInterface, e: CommandRunInput): Promise<{ text: string }> {
+  const args = e.args.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!args.length) return { text: describeBudgetPolicies(await read($, usageReadings)) }
+  const [family, policy] = args
+  if (args.length !== 2 || !PLAN_FAMILIES.some(value => value === family) || (policy !== 'within' && policy !== 'full')) {
+    return { text: 'Usage: /savvy-budget <claude|codex> <within|full>' }
+  }
+  // The command changes only user policy; observations and the other family survive.
+  await update($, usageReadings, prev => ({ ...prev, policies: { ...prev.policies, [family!]: policy } }))
+  await showPanel($, true)
+  $.ui.invalidate('ui.render')
+  return { text: describeBudgetPolicies(await read($, usageReadings)) }
+}
+
+async function readBudgetResult($: EngineInterface): Promise<{ result: { budget: BudgetSummary } }> {
+  return { result: { budget: budgetSummary(await read($, usageReadings), await $.clock.now()) } }
+}
+
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -1458,6 +1593,8 @@ export const register: Register = (on, options) => {
         'Report /savvy-flow progress to the progress bar above the prompt and the agents panel. ' +
         'Call it after presenting the plan (title, total, tasks, phase "delegate"), each time a task is accepted (done), ' +
         'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
+        'Returns status and a budget summary per family/window (used, resetsAt, projectedAtReset, exhaustsAt, pace, policy, verdict). ' +
+        'A verdict of ask needs the user\'s decision before long work; over is accepted by full policy. ' +
         'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
         type: 'object',
@@ -1500,6 +1637,13 @@ export const register: Register = (on, options) => {
       },
     })
     await $.tool.register({
+      name: 'budget',
+      description: 'Read the current budget summary per family (claude, codex) and window (fiveHour, week), without changing the progress bar. ' +
+        'Returns used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask). ' +
+        'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set only by /savvy-budget.',
+      inputSchema: { type: 'object', properties: {}, required: [] },
+    })
+    await $.tool.register({
       name: 'step',
       description:
         'For savvy-flow workers: report progress on your own task to the agents panel. ' +
@@ -1535,6 +1679,12 @@ export const register: Register = (on, options) => {
       argumentHint: '[theme|auto]',
       immediate: true,
     })
+    await $.command.register({
+      name: 'savvy-budget',
+      description: 'Set a family budget policy: within the rolling windows, or full when you accept using a reset; no arguments lists policies',
+      argumentHint: '[claude|codex] [within|full]',
+      immediate: true,
+    })
 
     // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
     await refreshCodexModels($)
@@ -1566,6 +1716,9 @@ export const register: Register = (on, options) => {
     })
     return started
   })
+
+  on('command.run', { command: 'savvy-budget' }, runBudgetCommand)
+  on('tool.call', { tool: BUDGET_TOOL }, readBudgetResult)
 
   on('command.run', { command: 'savvy-theme' }, async ($, e) => {
     const at = await $.clock.now()
@@ -1607,7 +1760,8 @@ export const register: Register = (on, options) => {
     await syncRunning($)
     const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
-    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}` }
+    return { result: { status: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}`,
+      budget: budgetSummary(await read($, usageReadings), await $.clock.now()) } }
   })
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
@@ -1652,7 +1806,7 @@ export const register: Register = (on, options) => {
     const claude = claudePlanUsage(e.rateLimits)
     if (claude) {
       const at = await $.clock.now()
-      await update($, usageReadings, prev => ({ ...prev, claude, claudeReadAt: at }))
+      await update($, usageReadings, prev => recordPlanUsage(prev, 'claude', claude, at))
     }
     return result
   })

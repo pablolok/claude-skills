@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.14.0] - 2026-11-15
+- the plan tiles project each 5-hour and weekly window to its reset (→ 72%, or 100% ↯ Thu 14:00 when it runs out first, amber under full, red under within) from a recent or average pace; a budget policy per family set with /savvy-budget <claude|codex> <within|full> and shown in the tile title; a ! on the compact line for a family that will not fit under within; the progress tool returns a budget summary per family and window, and a read-only budget tool returns it without touching the bar
+
+
 ## [1.13.4] - 2026-11-15
 - The reset icon stands apart from what follows it: a plan tile reads '↻ 18:20' and '↻ Thu 02:00', no longer a glyph glued to the time like a stray letter
 

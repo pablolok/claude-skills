@@ -1,8 +1,9 @@
-import type { AgentInfo, CommandRunInput, ConfigSetInput, EngineInterface, On, UiFocusInput } from 'claude-code'
+import type { AgentInfo, CommandRunInput, ConfigSetInput, EngineInterface, On, SessionRateLimit, UiFocusInput } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import type { AgentRun, Flow, UsageReadings } from '../types'
+import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
+import { budgetSummary, projectPlanWindow, recordPlanUsage } from './register'
 import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
@@ -837,7 +838,7 @@ test('the bar says an agent outside the plan is running, as the panel does, and 
   await spawn($, 'Review of the diff', 'code-reviewer')
   listed.infos = [info('Foundations', 'completed'), info('Review of the diff', 'running')]
   expect(await bar($)).toBe('About: Review 1/1 · 1 running, 99%')
-  expect((await progress({ phase: 'review' })).result).toBe('ok: Review 1/1 · 1 running')
+  expect((await progress({ phase: 'review' })).result).toMatchObject({ status: 'ok: Review 1/1 · 1 running' })
   // The faint layer still counts the plan's workers alone.
   expect(state.flow()?.running).toBe(0)
 
@@ -940,7 +941,7 @@ test('a subagent cannot report the flow: it changes nothing, nor wipes the finis
   expect(state.flow()).toMatchObject({ title: 'Fix bug', total: 2, done: 0, isFinished: false })
   expect(byId(state.agents(), 'old')).toMatchObject({ status: 'done' })
   // The main session still can.
-  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 1 })).result).toBe('ok: Tasks 1/2')
+  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 1 })).result).toMatchObject({ status: 'ok: Tasks 1/2' })
 })
 
 test('a step with no panel row for its agent says so, instead of ok', async ($, on) => {
@@ -1883,8 +1884,8 @@ test('plan usage occupies two equal tiles beneath the metric tiles', async ($, o
   state.seed(FLOW, flowOf())
   const header = await headerOf($)
   expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 233 }, { x: 239, y: 90, width: 233 }])
-  expect(header.source).toContain('Claude · plan</text>')
-  expect(header.source).toContain('Codex · plan</text>')
+  expect(header.source).toContain('Claude · plan · within</text>')
+  expect(header.source).toContain('Codex · plan · within</text>')
   expect(header.height).toBe(176)
 })
 
@@ -1979,7 +1980,7 @@ test('without Codex the Claude plan tile spans the whole row', async ($, on) => 
   state.seed(FLOW, flowOf())
   const header = await headerOf($)
   expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 472 }])
-  expect(header.source).toContain('Claude · plan</text>')
+  expect(header.source).toContain('Claude · plan · within</text>')
   expect(header.source).not.toContain('Codex · plan')
   expect(header.height).toBe(176)
 })
@@ -2644,4 +2645,251 @@ test('stale heartbeats stop holding an accepted flow below one hundred percent',
   await clock.advance(18_000)
   expect(byId(state.agents(), 'relay')?.status).toBe('done')
   expect(await bar($)).toContain('100%')
+})
+
+// Budget fixtures never consult the real session, Codex directory, clock or locale.
+const BUDGET_AT = Date.parse('2026-11-12T12:00:00Z')
+const MINUTE = 60_000
+const BUDGET_FORMAT = { locale: 'en-GB', timeZone: 'UTC' }
+const budgetWindow = (percentUsed = 60, key: keyof PlanUsage = 'fiveHour', elapsedMinutes = key === 'fiveHour' ? 150 : 5040) =>
+  ({ percentUsed, resetsAt: new Date(BUDGET_AT + ((key === 'fiveHour' ? 300 : 10080) - elapsedMinutes) * MINUTE).toISOString() })
+
+type BudgetFixtures = {
+  env?: Record<string, string>
+  rateLimits?: () => SessionRateLimit[]
+  status?: typeof STATUS_ONE
+}
+
+const budgetEngine = (on: On, fixtures: BudgetFixtures = {}) => {
+  const fixture = engine(on, { infos: [] }, BUDGET_AT, fixtures.env)
+  on('session.usage', () => ({ value: { startedAt: BUDGET_AT, context: { window: 1_000_000 }, rateLimits: fixtures.rateLimits?.() ?? [] } }))
+  // Select one filesystem mock; the harness rejects registering a replacement.
+  if (fixtures.status) return { ...fixture, files: statusFiles(on, fixtures.status) }
+  on('fs.list', () => ({ value: [] }))
+  return { ...fixture, files: undefined }
+}
+
+const budgetCommand = ($: Engine, args = '') => $.command.run({ ...typed(args), command: 'savvy-budget' })
+const readBudget = ($: Engine) => $.tool.call({ tool: 'mcp__savvy-progress__budget' })
+
+test('average budget pace uses each rolling window start and can exceed one hundred', () => {
+  expect(projectPlanWindow(budgetWindow(), 'fiveHour', BUDGET_AT)).toEqual({
+    projectedAtReset: 120, exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', fits: false,
+  })
+  expect(projectPlanWindow(budgetWindow(60, 'week'), 'week', BUDGET_AT)).toEqual({
+    projectedAtReset: 120, exhaustsAt: new Date(BUDGET_AT + 3360 * MINUTE).toISOString(), pace: 'average', fits: false,
+  })
+})
+
+test('a projection exactly at the limit fits and has no early exhaustion', () => {
+  expect(projectPlanWindow(budgetWindow(50), 'fiveHour', BUDGET_AT)).toEqual({ projectedAtReset: 100, pace: 'average', fits: true })
+})
+
+test('zero usage, too early, invalid and already reset windows have no projection', () => {
+  expect(projectPlanWindow(budgetWindow(0), 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow(budgetWindow(10, 'fiveHour', 4), 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow(budgetWindow(1, 'fiveHour', 5), 'fiveHour', BUDGET_AT)?.pace).toBe('average')
+  expect(projectPlanWindow(budgetWindow(60, 'fiveHour', 300), 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow(budgetWindow(60, 'fiveHour', 301), 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow({ percentUsed: 10 }, 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow({ percentUsed: 10, resetsAt: 'invalid' }, 'fiveHour', BUDGET_AT)).toBeUndefined()
+  expect(projectPlanWindow({ ...budgetWindow(), percentUsed: NaN }, 'fiveHour', BUDGET_AT)).toBeUndefined()
+})
+
+test('recent five-hour pace starts at fifteen minutes of coverage', () => {
+  const plan = { fiveHour: budgetWindow(40) }
+  const previous = recordPlanUsage({ statuses: {} }, 'claude', { fiveHour: budgetWindow(10) }, BUDGET_AT - 15 * MINUTE)
+  const usage = recordPlanUsage(previous, 'claude', plan, BUDGET_AT)
+  expect(projectPlanWindow(plan.fiveHour, 'fiveHour', BUDGET_AT, usage.history?.claude?.fiveHour)).toEqual({
+    projectedAtReset: 340, exhaustsAt: new Date(BUDGET_AT + 30 * MINUTE).toISOString(), pace: 'recent', fits: false,
+  })
+  const short = recordPlanUsage({ statuses: {} }, 'claude', { fiveHour: budgetWindow(10) }, BUDGET_AT - 15 * MINUTE + 1)
+  const notEnough = recordPlanUsage(short, 'claude', plan, BUDGET_AT)
+  expect(projectPlanWindow(plan.fiveHour, 'fiveHour', BUDGET_AT, notEnough.history?.claude?.fiveHour)?.pace).toBe('average')
+})
+
+test('weekly recent pace needs three hours and a plateau projects no further spending', () => {
+  const plan = { week: budgetWindow(40, 'week') }
+  const previous = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 180 * MINUTE)
+  const usage = recordPlanUsage(previous, 'codex', plan, BUDGET_AT)
+  expect(projectPlanWindow(plan.week, 'week', BUDGET_AT, usage.history?.codex?.week)).toEqual({
+    projectedAtReset: 40, pace: 'recent', fits: true,
+  })
+  const short = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 180 * MINUTE + 1)
+  expect(projectPlanWindow(plan.week, 'week', BUDGET_AT, recordPlanUsage(short, 'codex', plan, BUDGET_AT).history?.codex?.week)?.pace).toBe('average')
+})
+
+test('history is immutable, bounded by age and sampled once per minute even for frequent Codex files', () => {
+  const original: UsageReadings = { statuses: {} }
+  let usage = original
+  const plan = { fiveHour: budgetWindow(10), week: budgetWindow(10, 'week') }
+  for (let seconds = 0; seconds <= 7 * 60 * 60; seconds += 3) {
+    usage = recordPlanUsage(usage, 'codex', plan, BUDGET_AT - 7 * 60 * MINUTE + seconds * 1000)
+  }
+  expect(original).toEqual({ statuses: {} })
+  expect(usage.history?.codex?.fiveHour?.samples.length).toBeLessThanOrEqual(31)
+  expect(usage.history?.codex?.week?.samples.length).toBeLessThanOrEqual(361)
+  expect(usage.history?.codex?.fiveHour?.samples[0]?.at).toBeGreaterThanOrEqual(BUDGET_AT - 30 * MINUTE)
+  expect(usage.history?.codex?.week?.samples[0]?.at).toBeGreaterThanOrEqual(BUDGET_AT - 360 * MINUTE)
+})
+
+test('each window clears its own history on a changed reset or decreasing percentage', () => {
+  const plan = { fiveHour: budgetWindow(60), week: budgetWindow(60, 'week') }
+  const initial = recordPlanUsage(recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - MINUTE), 'claude', plan, BUDGET_AT - MINUTE)
+  const changed = recordPlanUsage(initial, 'claude', { ...plan, fiveHour: budgetWindow(61, 'fiveHour', 149) }, BUDGET_AT)
+  expect(changed.history?.claude?.fiveHour?.samples).toEqual([{ at: BUDGET_AT, percentUsed: 61 }])
+  expect(changed.history?.claude?.week?.samples).toHaveLength(2)
+  expect(changed.history?.codex).toEqual(initial.history?.codex)
+  const dropped = recordPlanUsage(initial, 'claude', { ...plan, week: budgetWindow(59, 'week') }, BUDGET_AT)
+  expect(dropped.history?.claude?.week?.samples).toEqual([{ at: BUDGET_AT, percentUsed: 59 }])
+  expect(dropped.history?.claude?.fiveHour?.samples).toHaveLength(2)
+})
+
+test('stale recent history falls back to the average and wrong-window history is ignored', () => {
+  const plan = { fiveHour: budgetWindow(40) }
+  const old = recordPlanUsage(recordPlanUsage({ statuses: {} }, 'claude', plan, BUDGET_AT - 60 * MINUTE), 'claude', plan, BUDGET_AT - 40 * MINUTE)
+  expect(projectPlanWindow(plan.fiveHour, 'fiveHour', BUDGET_AT, old.history?.claude?.fiveHour)?.pace).toBe('average')
+  const recent = recordPlanUsage(recordPlanUsage({ statuses: {} }, 'claude', plan, BUDGET_AT - 20 * MINUTE), 'claude', plan, BUDGET_AT)
+  expect(projectPlanWindow(budgetWindow(40, 'fiveHour', 149), 'fiveHour', BUDGET_AT, recent.history?.claude?.fiveHour)?.pace).toBe('average')
+})
+
+test('the budget summary exposes per-window values and user policy verdicts', () => {
+  const usage: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') },
+    codex: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { codex: 'full' } }
+  expect(budgetSummary(usage, BUDGET_AT)).toEqual({
+    claude: {
+      fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
+        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'within', verdict: 'ask' },
+      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'within', verdict: 'ok' },
+    },
+    codex: {
+      fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
+        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over' },
+      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok' },
+    },
+  })
+})
+
+test('budget summary leaves absent windows out and unknown projections null', () => {
+  expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {} })
+  expect(budgetSummary({ statuses: {}, claude: { fiveHour: { percentUsed: 12 } }, codex: { week: budgetWindow(90, 'week', 10081) } }, BUDGET_AT)).toEqual({
+    claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'within', verdict: 'ok' } },
+    codex: { week: { used: 0, resetsAt: budgetWindow(90, 'week', 10081).resetsAt, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'within', verdict: 'ok' } },
+  })
+})
+
+test('budget windows retain observed usage at the reset instant and clear it strictly after', () => {
+  for (const family of ['claude', 'codex'] as const) {
+    const plan = { fiveHour: budgetWindow(65, 'fiveHour', 300), week: budgetWindow(65, 'week', 10080) }
+    const usage: UsageReadings = { statuses: {}, [family]: plan }
+    expect(budgetSummary(usage, BUDGET_AT)[family]).toMatchObject({ fiveHour: { used: 65 }, week: { used: 65 } })
+    expect(budgetSummary(usage, BUDGET_AT + 1)[family]).toMatchObject({ fiveHour: { used: 0 }, week: { used: 0 } })
+    const tile = planTile(0, 0, 600, family, plan, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
+    expect(tile).toContain('5h  65%')
+    expect(tile).toContain('7d  65%')
+    expect(tile).not.toContain('0% reset')
+  }
+})
+
+test('budget command lists defaults and persists only the chosen family through reload', async ($, on) => {
+  const { state, registered } = budgetEngine(on)
+  await start($)
+  expect(registered.some(tool => tool.name === 'budget')).toBe(true)
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude within · Codex within.' })
+  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude within · Codex full.' })
+  expect(state.usage().policies).toEqual({ codex: 'full' })
+  await start($)
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude within · Codex full.' })
+  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude within · Codex within.' })
+})
+
+test('budget command rejects missing, extra or invalid arguments without changing policies', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  for (const args of ['claude', 'both full', 'claude unlimited', 'claude full extra']) {
+    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full>' })
+  }
+  expect(state.usage().policies).toBeUndefined()
+})
+
+test('progress returns the budget and the read-only tool leaves the bar and agents untouched', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() } })
+  const expected = budgetSummary(state.usage(), BUDGET_AT)
+  expect((await report($)).result).toMatchObject({ status: 'ok: Tasks 0/2', budget: expected })
+  state.seed(AGENTS, [run('kept', { status: 'done' })])
+  const before = { flow: state.flow(), agents: state.agents() }
+  const writes = state.written.length
+  expect((await readBudget($)).result).toEqual({ budget: expected })
+  expect({ flow: state.flow(), agents: state.agents() }).toEqual(before)
+  expect(state.written.slice(writes)).toEqual([])
+})
+
+test('Claude polls and measure events add history without changing family policies', async ($, on) => {
+  let used = 10
+  const { clock, state } = budgetEngine(on, { rateLimits: () => [{ kind: 'five_hour', ...budgetWindow(used) }] })
+  on('session.measure', (_, e) => ({ changed: e.changed }))
+  await start($)
+  await budgetCommand($, 'claude full')
+  used = 12
+  await clock.advance(MINUTE)
+  expect(state.usage().history?.claude?.fiveHour?.samples).toEqual([{ at: BUDGET_AT, percentUsed: 10 }, { at: BUDGET_AT + MINUTE, percentUsed: 12 }])
+  await $.session.measure({ context: { window: 1_000_000 }, rateLimits: [{ kind: 'five_hour', ...budgetWindow(2) }], changed: ['rateLimits'] })
+  expect(state.usage().history?.claude?.fiveHour?.samples).toEqual([{ at: BUDGET_AT + MINUTE, percentUsed: 2 }])
+  expect(state.usage().policies).toEqual({ claude: 'full' })
+})
+
+test('Codex history uses snapshot timestamps and never invents samples for unchanged files', async ($, on) => {
+  const limits = { primary: { used_percent: 10, window_minutes: 300, resets_at: Date.parse(budgetWindow().resetsAt) / 1000 } }
+  const { clock, state, files } = budgetEngine(on, { env: { HOME: '/home/budget-test' },
+    status: { ...STATUS_ONE, rateLimits: { ...CODEX_LIMITS, ...limits }, updatedAt: BUDGET_AT - MINUTE } })
+  await start($)
+  await clock.advance(3000)
+  expect(state.usage().history?.codex?.fiveHour?.samples).toEqual([{ at: BUDGET_AT - MINUTE, percentUsed: 10 }])
+  files!.files['run-one'] = { text: JSON.stringify({ ...STATUS_ONE, rateLimits: { ...CODEX_LIMITS, primary: { ...limits.primary, used_percent: 20 } }, updatedAt: BUDGET_AT }), mtimeMs: BUDGET_AT }
+  await clock.advance(3000)
+  expect(state.usage().history?.codex?.fiveHour?.samples).toEqual([{ at: BUDGET_AT - MINUTE, percentUsed: 10 }, { at: BUDGET_AT, percentUsed: 20 }])
+})
+
+test('plan tiles show projected percent or exhaustion with policy colour and title', () => {
+  const fitting = planTile(0, 0, 600, 'Claude', { fiveHour: budgetWindow(36) }, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
+  expect(fitting).toContain('→ 72%')
+  expect(fitting).toContain('Claude · plan · within')
+  const over = planTile(0, 0, 600, 'Codex', { fiveHour: budgetWindow() }, '#000', BUDGET_AT, BUDGET_AT, { ...BUDGET_FORMAT, policy: 'full' })
+  expect(over).toContain('100% ↯ Thu 13:40')
+  expect(over).toContain('fill="#E0A526"')
+  expect(over).toContain('Codex · plan · full')
+  const within = planTile(0, 0, 600, 'Claude', { fiveHour: budgetWindow() }, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
+  expect(within).toContain('fill="#D0453F"')
+})
+
+test('tiles drop projections before reset text at 360, 420, 480 and 600 pixels', () => {
+  for (const width of [360, 420, 480, 600]) {
+    const tileWidth = (width - 6) / 2
+    const source = planTile(0, 0, tileWidth, 'Claude', { fiveHour: budgetWindow(36) }, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
+    expect(source).toContain('↻ 14:30')
+    const fitsMarker = textWidth('5h  36%  ↻ 14:30  → 72% · 0m ago', 11) <= tileWidth - 18
+    expect(source.includes('→ 72%')).toBe(fitsMarker)
+    for (const match of source.matchAll(/<text[^>]*>(.*?)<\/text>/g)) {
+      expect(textWidth(match[1]!.replace(/<[^>]*>/g, ''), 11)).toBeLessThanOrEqual(tileWidth - 18)
+    }
+  }
+})
+
+test('tiles and compact text share recent projections and each family gets only one warning', () => {
+  const plan = { fiveHour: budgetWindow(40), week: budgetWindow(60, 'week') }
+  const usage = recordPlanUsage(recordPlanUsage({ statuses: {}, codex: plan }, 'claude', { ...plan, fiveHour: budgetWindow(10) }, BUDGET_AT - 15 * MINUTE), 'claude', plan, BUDGET_AT)
+  expect(budgetSummary(usage, BUDGET_AT).claude.fiveHour).toMatchObject({ projectedAtReset: 340, pace: 'recent', verdict: 'ask' })
+  expect(planUsageText(usage, BUDGET_AT)).toBe('Claude! 40/60%  Codex! 40/60%')
+  expect(planUsageText({ ...usage, policies: { claude: 'full' } }, BUDGET_AT)).toBe('Claude 40/60%  Codex! 40/60%')
+  expect(planTile(0, 0, 600, 'Claude', plan, '#000', BUDGET_AT, BUDGET_AT, { ...BUDGET_FORMAT, history: usage.history?.claude })).toContain('100% ↯ Thu 12:30')
+  expect(planUsageText({ statuses: {}, claude: { fiveHour: budgetWindow(60, 'fiveHour', 301) } }, BUDGET_AT)).toBe('Claude 0/—%')
+})
+
+test('the panel passes stored family policy to its plan tiles', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() }, policies: { claude: 'full' } })
+  expect((await headerOf($)).source).toContain('Claude · plan · full')
 })
