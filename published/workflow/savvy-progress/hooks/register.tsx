@@ -1129,7 +1129,7 @@ export const formatPlanReset = (value: PlanUsage['fiveHour'], weekly: boolean, a
   const time = reset.toLocaleTimeString(options?.locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone })
   const day = weekly ? reset.toLocaleDateString(options?.locale, reset.getTime() - at > 6 * 86_400_000
     ? { day: 'numeric', month: 'short', timeZone } : { weekday: 'short', timeZone }) + ' ' : ''
-  return `↻${day}${time}`
+  return `↻ ${day}${time}`
 }
 
 export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: { locale?: string; timeZone?: string }): string => {

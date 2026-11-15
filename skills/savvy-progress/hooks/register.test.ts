@@ -1891,11 +1891,11 @@ test('plan usage occupies two equal tiles beneath the metric tiles', async ($, o
 test('reset formatting uses the fixed locale and timezone', () => {
   const at = Date.parse('2026-11-12T00:00:00Z')
   const locale = { locale: 'en-GB', timeZone: 'UTC' }
-  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-12T02:00:00Z' }, true, at, locale)).toBe('↻Thu 02:00')
-  expect(formatPlanReset({ percentUsed: 41, resetsAt: '2026-11-12T02:00:00Z' }, false, at, locale)).toBe('↻02:00')
-  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-20T02:00:00Z' }, true, at, locale)).toBe('↻20 Nov 02:00')
-  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:00:00Z' }, true, at, locale)).toBe('↻Wed 00:00')
-  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:01:00Z' }, true, at, locale)).toBe('↻18 Nov 00:01')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-12T02:00:00Z' }, true, at, locale)).toBe('↻ Thu 02:00')
+  expect(formatPlanReset({ percentUsed: 41, resetsAt: '2026-11-12T02:00:00Z' }, false, at, locale)).toBe('↻ 02:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-20T02:00:00Z' }, true, at, locale)).toBe('↻ 20 Nov 02:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:00:00Z' }, true, at, locale)).toBe('↻ Wed 00:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:01:00Z' }, true, at, locale)).toBe('↻ 18 Nov 00:01')
   expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-11T02:00:00Z' }, true, at, locale)).toBe('')
 })
 
@@ -1905,8 +1905,8 @@ test('plan tiles format both families with a fixed clock, locale and timezone', 
   const plan = { fiveHour: { percentUsed: 41, resetsAt: '2026-11-12T02:00:00Z' }, week: { percentUsed: 94, resetsAt: '2026-11-13T02:00:00Z' } }
   for (const name of ['Claude', 'Codex']) {
     const tile = planTile(0, 0, 300, name, plan, '#000', at, at, options)
-    expect(tile).toContain('5h  41%  ↻02:00')
-    expect(tile).toContain('7d  94%  ↻Fri 02:00')
+    expect(tile).toContain('5h  41%  ↻ 02:00')
+    expect(tile).toContain('7d  94%  ↻ Fri 02:00')
     expect(tile).toContain(' · 0m ago')
     const expired = planTile(0, 0, 300, name, plan, '#000', at + 2 * 86_400_000, at, options)
     expect(expired).not.toContain('↻')
@@ -1915,16 +1915,16 @@ test('plan tiles format both families with a fixed clock, locale and timezone', 
 })
 
 test('weekly reset and age fit the normal side-by-side tile', () => {
-  const weekday = textWidth('7d  94%  ↻Thu 02:00 · 0m ago', 11)
-  const date = textWidth('7d  94%  ↻20 Nov 02:00 · 0m ago', 11)
+  const weekday = textWidth('7d  94%  ↻ Thu 02:00 · 0m ago', 11)
+  const date = textWidth('7d  94%  ↻ 20 Nov 02:00 · 0m ago', 11)
   expect([360, 420, 480, 600].map(w => weekday <= (w - 6) / 2 - 18)).toEqual([true, true, true, true])
   expect([360, 420, 480, 600].map(w => date <= (w - 6) / 2 - 18)).toEqual([false, true, true, true])
   const at = Date.parse('2026-11-12T00:00:00Z')
   const options = { locale: 'en-GB', timeZone: 'UTC' }
   const weekly = (resetsAt: string) => ({ week: { percentUsed: 94, resetsAt } })
-  expect(planTile(0, 0, 177, 'Claude', weekly('2026-11-12T02:00:00Z'), '#000', at, at, options)).toContain('↻Thu 02:00')
+  expect(planTile(0, 0, 177, 'Claude', weekly('2026-11-12T02:00:00Z'), '#000', at, at, options)).toContain('↻ Thu 02:00')
   expect(planTile(0, 0, 177, 'Claude', weekly('2026-11-20T02:00:00Z'), '#000', at, at, options)).not.toContain('↻')
-  expect(planTile(0, 0, 207, 'Codex', weekly('2026-11-20T02:00:00Z'), '#000', at, at, options)).toContain('↻20 Nov 02:00')
+  expect(planTile(0, 0, 207, 'Codex', weekly('2026-11-20T02:00:00Z'), '#000', at, at, options)).toContain('↻ 20 Nov 02:00')
 })
 
 test('each plan window displays its percentage and reset time on one line', async ($, on) => {
@@ -1932,8 +1932,8 @@ test('each plan window displays its percentage and reset time on one line', asyn
   await start($)
   state.seed('usage', READINGS)
   const { source } = await headerOf($, 120)
-  expect(source).toContain('5h  41%  ↻')
-  expect(source).toContain('7d  94%  ↻')
+  expect(source).toContain('5h  41%  ↻ ')
+  expect(source).toContain('7d  94%  ↻ ')
   expect(source.split('↻')).toHaveLength(5)
 })
 

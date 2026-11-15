@@ -55,8 +55,8 @@ the mod needs.
   at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;
   the age is time since the panel last read the figures. Failed reads retain the last reading and its age. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
-  is omitted, and a family read alone takes the whole row. Wide tiles show local reset times: 5-hour uses `↻02:00`,
-  weekly uses a short weekday and time (`↻Thu 02:00`). Resets more than six days away use a short date instead,
+  is omitted, and a family read alone takes the whole row. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
+  weekly uses a short weekday and time (`↻ Thu 02:00`). Resets more than six days away use a short date instead (`↻ 20 Nov 02:00`),
   avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows only
   percentages, for example `Claude 41/94%  Codex 2/9%`, and truncates at smaller widths.
 - **Status snapshots**: savvy-flow ships the zero-dependency Node writer `scripts/codex-status.mjs`. Each relay picks

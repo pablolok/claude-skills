@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.4] - 2026-11-15
+- The reset icon stands apart from what follows it: a plan tile reads '↻ 18:20' and '↻ Thu 02:00', no longer a glyph glued to the time like a stray letter
+
+
 ## [1.13.3] - 2026-11-15
 - The weekly plan reset names its day: a wide tile shows the 7-day reset as a short weekday and time (a short date when it is more than six days away), the 5-hour reset keeps the time alone; the Claude plan reading is polled at most once a minute on the panel's existing tick and on worker events, keeps its last figures and age when a read fails, and its windows now go to 'reset' when their reset time passes; the README describes the compact line as it is (percentages only)
 
