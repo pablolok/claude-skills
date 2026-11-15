@@ -145,6 +145,12 @@ simulator, the web or a skill goes to Careful or above, or its brief states the 
 Heuristics:
 - Uncertain between two tiers → take the higher one. Exception: Fable and Codex Astra are never picked alone (section "Models"): ask, and Heavy (or Sol) runs unless the user says yes.
 - Heavy vs Careful is about the kind of difficulty, not the amount: insight needed → Heavy; thoroughness needed → Careful. A task that needs both is two tasks: Heavy investigates and produces a precise brief, Careful implements it.
+- The same split holds for the top tier (Fable, Codex Astra), once the user has said yes to it: its task is the hard
+  part alone (the cause, the method, the decision), and its brief asks it to return the briefs for the rest (the
+  method, the parameters, the checks and their targets). The repeatable execution (rounds of change, run, measure,
+  adjust toward known targets, in code, data or assets) goes to Careful or Medium, or to the Codex tier where it is
+  in use (below). On such rounds most of a top-tier worker's tokens go to mechanical steps. A top-tier worker resumed
+  for another round is briefed the same way.
 - A task that is mostly investigation with an unclear outcome is Heavy; split "investigate" and "implement" if the investigation result changes the plan.
 - Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows: to `savvy-fable`, on the user's explicit request.
 - The tier sets the difficulty; **the capability the task depends on picks the family** when two could take it
@@ -156,6 +162,8 @@ Heuristics:
 
 Code and context go to a second vendor, OpenAI, under the user's own Codex sign-in. Use it for a second opinion, for a
 self-contained task the user wants done on OpenAI models, or to move work off the Claude limits when the user asks.
+Long repetitive execution (many rounds toward known targets) gains the most from that move: make it when the user has
+asked for it or set it as their default, never on your own.
 - **Pick the intensity like a Claude tier**, the cheapest that gets it right: Luna for mechanical work, Terra for
   standard work, Sol for delicate or unfamiliar work and for second opinions, Astra only with the user's yes. The
   relay picks the newest model of its family from Codex's own model list and sets the effort; a brief names a model
@@ -175,6 +183,11 @@ self-contained task the user wants done on OpenAI models, or to move work off th
 ## 4. Delegate
 
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
+- **Pace the costly tiers against the plan's rolling usage windows.** Before starting or resuming a long worker at
+  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows), read that family's plan usage when the host or
+  the last relay report offers it. With the short window high (say, past half), run one such worker per family at a
+  time and keep the cheaper tiers beside it: two together empty the short window, and the flow sits idle until it
+  resets.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded
