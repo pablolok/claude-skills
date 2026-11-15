@@ -315,8 +315,8 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const { cacheReadAt: _, statusMtimes: __, ...usage } = await read($, usageReadings)
-  const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlan(usage.codex) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
+  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, ...usage } = await read($, usageReadings)
+  const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlans(usage) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
 }
@@ -429,7 +429,7 @@ const clip = (s: string, max: number): string => (s.length > max ? s.slice(0, Ma
 const charEm = (ch: string): number =>
   /[\s.,:;'|!il1()[\]]/.test(ch) ? 0.3 : /[A-ZА-ЯЁmwшщжюМШЩЖЮ@%]/.test(ch) ? 0.72 : 0.56
 
-const textWidth = (s: string, size: number): number => [...s].reduce((w, ch) => w + charEm(ch) * size, 0)
+export const textWidth = (s: string, size: number): number => [...s].reduce((w, ch) => w + charEm(ch) * size, 0)
 
 // Cuts `s` to fit `maxW` pixels, with an ellipsis when it had to cut.
 const fitText = (s: string, size: number, maxW: number): string => {
@@ -647,6 +647,8 @@ export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefin
 
 const STATUS_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/
 const STATUS_MAX_BYTES = 16 * 1024
+// Bound session usage reads even during busy worker events.
+const CLAUDE_USAGE_POLL_MS = 60_000
 const STATUS_POLL_MS = 3000
 const STATUS_STALE_MS = 15_000
 
@@ -714,6 +716,22 @@ async function syncCodexRuns($: EngineInterface): Promise<void> {
   const at = await $.clock.now()
   await update($, agents, list => list.map(a => codexRun(a, usage, at)))
   await syncRunning($)
+}
+
+async function refreshClaudeUsage($: EngineInterface, force = false): Promise<void> {
+  const at = await $.clock.now()
+  const previous = await read($, usageReadings)
+  if (!force && previous.claudeCacheReadAt !== undefined && at - previous.claudeCacheReadAt < CLAUDE_USAGE_POLL_MS) return
+  let claimed = false
+  await update($, usageReadings, prev => {
+    claimed = force || prev.claudeCacheReadAt === undefined || at - prev.claudeCacheReadAt >= CLAUDE_USAGE_POLL_MS
+    return claimed ? { ...prev, claudeCacheReadAt: at } : prev
+  })
+  if (!claimed) return
+  try {
+    const claude = claudePlanUsage((await $.session.usage()).rateLimits)
+    if (claude) await update($, usageReadings, prev => ({ ...prev, claude, claudeReadAt: at }))
+  } catch { /* Keep the last valid observation and its age. */ }
 }
 
 async function refreshCodexUsage($: EngineInterface, force = false): Promise<void> {
@@ -1103,15 +1121,25 @@ const readingAge = (readAt: number, at: number): string => {
   return minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`
 }
 
-const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number): string => {
+// Six days avoids an ambiguous repeated weekday, including across DST changes.
+export const formatPlanReset = (value: PlanUsage['fiveHour'], weekly: boolean, at: number, options?: { locale?: string; timeZone?: string }): string => {
+  const reset = value?.resetsAt ? new Date(value.resetsAt) : undefined
+  if (isReset(value, at) || !reset || !Number.isFinite(reset.getTime())) return ''
+  const timeZone = options?.timeZone
+  const time = reset.toLocaleTimeString(options?.locale, { hour: '2-digit', minute: '2-digit', hour12: false, timeZone })
+  const day = weekly ? reset.toLocaleDateString(options?.locale, reset.getTime() - at > 6 * 86_400_000
+    ? { day: 'numeric', month: 'short', timeZone } : { weekday: 'short', timeZone }) + ' ' : ''
+  return `↻${day}${time}`
+}
+
+export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: { locale?: string; timeZone?: string }): string => {
   const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at)}`
   const window = (label: string, value: PlanUsage['fiveHour'], offset: number): string => {
     const resetWindow = isReset(value, at)
     const percentUsed = resetWindow ? 0 : value?.percentUsed
     const percent = value ? `${label}  ${percentUsed}%${resetWindow ? ' reset' : ''}` : `${label}  —`
-    const reset = value?.resetsAt ? new Date(value.resetsAt) : undefined
-    const time = !resetWindow && reset && Number.isFinite(reset.getTime())
-      ? `  ↻${reset.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}` : ''
+    const formattedReset = formatPlanReset(value, label === '7d', at, options)
+    const time = formattedReset ? `  ${formattedReset}` : ''
     const suffix = value ? age : ''
     const text = textWidth(percent + time + suffix, 11) <= width - 18 ? percent + time : percent
     const meterW = width - 18
@@ -1141,7 +1169,7 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
   const stacked = W < 360 || families.length < 2
   const planW = stacked ? W : (W - gap) / 2
   const plans = families.map(([name, plan, color, readAt], i) =>
-    planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, name === 'Codex' ? at : 0, readAt)).join('')
+    planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, at, readAt)).join('')
   return svg(
     W,
     headerHeight(title, W, usage),
@@ -1152,7 +1180,7 @@ ${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, codexCost
 }
 
 const planFamilies = (usage: UsageReadings): [string, PlanUsage | undefined, string, number | undefined][] =>
-  ([['Claude', usage.claude, CLAY, undefined], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt]] as [string, PlanUsage | undefined, string, number | undefined][])
+  ([['Claude', usage.claude, CLAY, usage.claudeReadAt], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt]] as [string, PlanUsage | undefined, string, number | undefined][])
     .filter(([, plan]) => hasPlan(plan))
 
 const headerHeight = (title: string, W: number, usage: UsageReadings): number => {
@@ -1510,13 +1538,7 @@ export const register: Register = (on, options) => {
 
     // A flow that closed before this (re)load leaves no bar; its runs stay in the panel.
     await refreshCodexModels($)
-    try {
-      const claude = claudePlanUsage((await $.session.usage()).rateLimits)
-      await update($, usageReadings, prev => ({ ...prev, claude }))
-    } catch {
-      // A host without usage readings supplies no Claude line, including after a reload.
-      await update($, usageReadings, prev => ({ ...prev, claude: undefined }))
-    }
+    await refreshClaudeUsage($, true)
     await refreshCodexUsage($, true)
     await rememberClaudeModels($, (await read($, agents)).map(a => a.model))
     await update($, flow, f => (f?.isFinished ? null : f))
@@ -1531,6 +1553,7 @@ export const register: Register = (on, options) => {
     $.clock.every(1000, () => {
       void (async () => {
         await refreshCodexModels($)
+        await refreshClaudeUsage($)
         await refreshCodexUsage($)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
@@ -1626,7 +1649,11 @@ export const register: Register = (on, options) => {
 
   on('session.measure', async ($, e, next) => {
     const result = await next(e)
-    await update($, usageReadings, prev => ({ ...prev, claude: claudePlanUsage(e.rateLimits) }))
+    const claude = claudePlanUsage(e.rateLimits)
+    if (claude) {
+      const at = await $.clock.now()
+      await update($, usageReadings, prev => ({ ...prev, claude, claudeReadAt: at }))
+    }
     return result
   })
 
@@ -1681,6 +1708,7 @@ export const register: Register = (on, options) => {
   })
 
   on('agent.spawn', async ($, e, next) => {
+    await refreshClaudeUsage($)
     await debugResume($, 'agent.spawn', e)
     const started = await next(e)
     await debugResume($, 'agent.spawn:result', started)
@@ -1727,6 +1755,7 @@ export const register: Register = (on, options) => {
 
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
+    if (e.agentId) await refreshClaudeUsage($)
     if (e.agentId) {
       const row = (await read($, agents)).find(a => a.agentId === e.agentId)
       if (e.index === 0 || row?.nextTitle) await debugResume($, 'turn.step', e,

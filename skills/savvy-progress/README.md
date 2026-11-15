@@ -51,12 +51,14 @@ the mod needs.
   This also works when SendMessage reuses an existing loop without `agent.spawn`: the queued title takes effect
   before that agent's next model turn, without renaming steps of its current turn.
 - **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
-  engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`) and follows `session.measure`. Codex comes only
+  engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`), follows `session.measure`, and is polled
+  at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;
+  the age is time since the panel last read the figures. Failed reads retain the last reading and its age. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
-  is omitted, and a family read alone (Claude without Codex) takes the whole row. A wide line shows each 5-hour/7-day percentage and its reset's local time (`↻02:00`). A narrow line
-  uses `Claude 5h 41% · 7d 94% ↻02:00` (the reset at the end is the weekly one, or 5-hour if there is no weekly
-  reading), then removes spaces to fit both families; at 40 columns it keeps both families' percentages and omits
-  reset times. The line uses truncation rather than wrapping at still smaller widths.
+  is omitted, and a family read alone takes the whole row. Wide tiles show local reset times: 5-hour uses `↻02:00`,
+  weekly uses a short weekday and time (`↻Thu 02:00`). Resets more than six days away use a short date instead,
+  avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows only
+  percentages, for example `Claude 41/94%  Codex 2/9%`, and truncates at smaller widths.
 - **Status snapshots**: savvy-flow ships the zero-dependency Node writer `scripts/codex-status.mjs`. Each relay picks
   a unique status name, declares it through `step` without changing its step count, and pipes `codex exec --json`
   through the writer. The writer atomically replaces a snapshot of at most 16 KiB about once a second, including a

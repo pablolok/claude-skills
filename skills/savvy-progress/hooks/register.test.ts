@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, UsageReadings } from '../types'
-import { claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
+import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
@@ -1888,11 +1888,50 @@ test('plan usage occupies two equal tiles beneath the metric tiles', async ($, o
   expect(header.height).toBe(176)
 })
 
+test('reset formatting uses the fixed locale and timezone', () => {
+  const at = Date.parse('2026-11-12T00:00:00Z')
+  const locale = { locale: 'en-GB', timeZone: 'UTC' }
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-12T02:00:00Z' }, true, at, locale)).toBe('↻Thu 02:00')
+  expect(formatPlanReset({ percentUsed: 41, resetsAt: '2026-11-12T02:00:00Z' }, false, at, locale)).toBe('↻02:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-20T02:00:00Z' }, true, at, locale)).toBe('↻20 Nov 02:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:00:00Z' }, true, at, locale)).toBe('↻Wed 00:00')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-18T00:01:00Z' }, true, at, locale)).toBe('↻18 Nov 00:01')
+  expect(formatPlanReset({ percentUsed: 94, resetsAt: '2026-11-11T02:00:00Z' }, true, at, locale)).toBe('')
+})
+
+test('plan tiles format both families with a fixed clock, locale and timezone', () => {
+  const at = Date.parse('2026-11-12T00:00:00Z')
+  const options = { locale: 'en-GB', timeZone: 'UTC' }
+  const plan = { fiveHour: { percentUsed: 41, resetsAt: '2026-11-12T02:00:00Z' }, week: { percentUsed: 94, resetsAt: '2026-11-13T02:00:00Z' } }
+  for (const name of ['Claude', 'Codex']) {
+    const tile = planTile(0, 0, 300, name, plan, '#000', at, at, options)
+    expect(tile).toContain('5h  41%  ↻02:00')
+    expect(tile).toContain('7d  94%  ↻Fri 02:00')
+    expect(tile).toContain(' · 0m ago')
+    const expired = planTile(0, 0, 300, name, plan, '#000', at + 2 * 86_400_000, at, options)
+    expect(expired).not.toContain('↻')
+    expect(expired).toContain('7d  0% reset')
+  }
+})
+
+test('weekly reset and age fit the normal side-by-side tile', () => {
+  const weekday = textWidth('7d  94%  ↻Thu 02:00 · 0m ago', 11)
+  const date = textWidth('7d  94%  ↻20 Nov 02:00 · 0m ago', 11)
+  expect([360, 420, 480, 600].map(w => weekday <= (w - 6) / 2 - 18)).toEqual([true, true, true, true])
+  expect([360, 420, 480, 600].map(w => date <= (w - 6) / 2 - 18)).toEqual([false, true, true, true])
+  const at = Date.parse('2026-11-12T00:00:00Z')
+  const options = { locale: 'en-GB', timeZone: 'UTC' }
+  const weekly = (resetsAt: string) => ({ week: { percentUsed: 94, resetsAt } })
+  expect(planTile(0, 0, 177, 'Claude', weekly('2026-11-12T02:00:00Z'), '#000', at, at, options)).toContain('↻Thu 02:00')
+  expect(planTile(0, 0, 177, 'Claude', weekly('2026-11-20T02:00:00Z'), '#000', at, at, options)).not.toContain('↻')
+  expect(planTile(0, 0, 207, 'Codex', weekly('2026-11-20T02:00:00Z'), '#000', at, at, options)).toContain('↻20 Nov 02:00')
+})
+
 test('each plan window displays its percentage and reset time on one line', async ($, on) => {
   const { state } = engine(on, { infos: [] })
   await start($)
   state.seed('usage', READINGS)
-  const { source } = await headerOf($)
+  const { source } = await headerOf($, 120)
   expect(source).toContain('5h  41%  ↻')
   expect(source).toContain('7d  94%  ↻')
   expect(source.split('↻')).toHaveLength(5)
@@ -2095,6 +2134,30 @@ test('Claude plan usage comes from the engine session usage API', async ($, on) 
   await start($)
   expect((await panelOf($)).header).toContain('5h  41%')
 })
+test('Claude usage polls after a minute and retains the last reading on failure', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0)
+  let reads = 0
+  on('session.usage', () => {
+    reads++
+    if (reads === 4) throw new Error('unavailable')
+    return { value: { startedAt: 0, context: { window: 1_000_000 }, rateLimits: reads === 1 ? CLAUDE_LIMITS : [{ ...CLAUDE_LIMITS[0]!, percentUsed: 55 }] } }
+  })
+  await start($)
+  await clock.advance(59_000)
+  expect(reads).toBe(1)
+  await clock.advance(1_000)
+  expect(reads).toBe(2)
+  expect(state.usage().claude?.fiveHour?.percentUsed).toBe(55)
+  await clock.advance(60_000)
+  expect(reads).toBe(3)
+  expect(state.usage().claudeReadAt).toBe(120_000)
+  await clock.advance(60_000)
+  expect(reads).toBe(4)
+  expect(state.usage().claude?.fiveHour?.percentUsed).toBe(55)
+  expect(state.usage().claudeReadAt).toBe(120_000)
+  expect((await panelOf($)).header).toContain(' · 1m ago')
+})
+
 test('Claude session.measure refreshes the plan windows', async ($, on) => {
   engine(on, { infos: [] })
   on('session.measure', ($, e) => ({ changed: e.changed }))

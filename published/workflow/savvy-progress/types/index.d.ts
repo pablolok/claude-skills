@@ -101,6 +101,8 @@ export type CodexStatus = {
 }
 export type UsageReadings = {
   claude?: PlanUsage
+  claudeReadAt?: number
+  claudeCacheReadAt?: number
   codex?: PlanUsage
   /** Last valid Codex plan observation, retained when status files disappear. */
   codexReadAt?: number
