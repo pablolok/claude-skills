@@ -838,7 +838,7 @@ test('the bar says an agent outside the plan is running, as the panel does, and 
   await spawn($, 'Review of the diff', 'code-reviewer')
   listed.infos = [info('Foundations', 'completed'), info('Review of the diff', 'running')]
   expect(await bar($)).toBe('About: Review 1/1 · 1 running, 99%')
-  expect((await progress({ phase: 'review' })).result).toMatchObject({ status: 'ok: Review 1/1 · 1 running' })
+  expect((await progress({ phase: 'review' })).result).toMatch(/^ok: Review 1\/1 · 1 running\nbudget: /)
   // The faint layer still counts the plan's workers alone.
   expect(state.flow()?.running).toBe(0)
 
@@ -941,7 +941,7 @@ test('a subagent cannot report the flow: it changes nothing, nor wipes the finis
   expect(state.flow()).toMatchObject({ title: 'Fix bug', total: 2, done: 0, isFinished: false })
   expect(byId(state.agents(), 'old')).toMatchObject({ status: 'done' })
   // The main session still can.
-  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 1 })).result).toMatchObject({ status: 'ok: Tasks 1/2' })
+  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 1 })).result).toMatch(/^ok: Tasks 1\/2\nbudget: /)
 })
 
 test('a step with no panel row for its agent says so, instead of ok', async ($, on) => {
@@ -2817,13 +2817,40 @@ test('progress returns the budget and the read-only tool leaves the bar and agen
   await start($)
   state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() } })
   const expected = budgetSummary(state.usage(), BUDGET_AT)
-  expect((await report($)).result).toMatchObject({ status: 'ok: Tasks 0/2', budget: expected })
+  expect((await report($)).result).toBe(`ok: Tasks 0/2\nbudget: ${JSON.stringify(expected)}`)
   state.seed(AGENTS, [run('kept', { status: 'done' })])
   const before = { flow: state.flow(), agents: state.agents() }
   const writes = state.written.length
-  expect((await readBudget($)).result).toEqual({ budget: expected })
+  expect((await readBudget($)).result).toBe(`budget: ${JSON.stringify(expected)}`)
   expect({ flow: state.flow(), agents: state.agents() }).toEqual(before)
   expect(state.written.slice(writes)).toEqual([])
+})
+
+test('progress result is a string with the acknowledgement first and a parseable budget line', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') },
+    codex: { fiveHour: budgetWindow() }, policies: { codex: 'full' } })
+  const expected = budgetSummary(state.usage(), BUDGET_AT)
+  const result = (await report($)).result
+  expect(typeof result).toBe('string')
+  const [acknowledgement, budgetLine, ...extra] = (result as string).split('\n')
+  expect(acknowledgement).toBe('ok: Tasks 0/2')
+  expect(budgetLine).toMatch(/^budget: /)
+  expect(JSON.parse(budgetLine!.slice('budget: '.length))).toEqual(expected)
+  expect(extra).toEqual([])
+})
+
+test('read-only budget result is a string whose compact JSON parses back to the summary', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() }, codex: { week: budgetWindow(20, 'week') } })
+  const expected = budgetSummary(state.usage(), BUDGET_AT)
+  const result = (await readBudget($)).result
+  expect(typeof result).toBe('string')
+  expect(result).toMatch(/^budget: /)
+  expect(JSON.parse((result as string).slice('budget: '.length))).toEqual(expected)
+  expect(result).toBe(`budget: ${JSON.stringify(expected)}`)
 })
 
 test('Claude polls and measure events add history without changing family policies', async ($, on) => {

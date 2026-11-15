@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.14.1] - 2026-11-15
+- the progress and budget tools return text, as the host requires: the progress acknowledgement first, then a budget: line with the summary as compact JSON (1.14.0 returned an object, which the host rejected)
+
+
 ## [1.14.0] - 2026-11-15
 - the plan tiles project each 5-hour and weekly window to its reset (→ 72%, or 100% ↯ Thu 14:00 when it runs out first, amber under full, red under within) from a recent or average pace; a budget policy per family set with /savvy-budget <claude|codex> <within|full> and shown in the tile title; a ! on the compact line for a family that will not fit under within; the progress tool returns a budget summary per family and window, and a read-only budget tool returns it without touching the bar
 

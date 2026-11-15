@@ -1576,8 +1576,11 @@ async function runBudgetCommand($: EngineInterface, e: CommandRunInput): Promise
   return { text: describeBudgetPolicies(await read($, usageReadings)) }
 }
 
-async function readBudgetResult($: EngineInterface): Promise<{ result: { budget: BudgetSummary } }> {
-  return { result: { budget: budgetSummary(await read($, usageReadings), await $.clock.now()) } }
+// The host accepts text results; both tools expose the same compact JSON line.
+const formatBudgetText = (budget: BudgetSummary): string => `budget: ${JSON.stringify(budget)}`
+
+async function readBudgetResult($: EngineInterface): Promise<{ result: string }> {
+  return { result: formatBudgetText(budgetSummary(await read($, usageReadings), await $.clock.now())) }
 }
 
 export const register: Register = (on, options) => {
@@ -1593,7 +1596,8 @@ export const register: Register = (on, options) => {
         'Report /savvy-flow progress to the progress bar above the prompt and the agents panel. ' +
         'Call it after presenting the plan (title, total, tasks, phase "delegate"), each time a task is accepted (done), ' +
         'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
-        'Returns status and a budget summary per family/window (used, resetsAt, projectedAtReset, exhaustsAt, pace, policy, verdict). ' +
+        'Returns a string: an ok: acknowledgement first, then a budget: line with compact JSON per family/window ' +
+        '(used, resetsAt, projectedAtReset, exhaustsAt, pace, policy, verdict). ' +
         'A verdict of ask needs the user\'s decision before long work; over is accepted by full policy. ' +
         'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
@@ -1639,7 +1643,7 @@ export const register: Register = (on, options) => {
     await $.tool.register({
       name: 'budget',
       description: 'Read the current budget summary per family (claude, codex) and window (fiveHour, week), without changing the progress bar. ' +
-        'Returns used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask). ' +
+        'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask). ' +
         'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set only by /savvy-budget.',
       inputSchema: { type: 'object', properties: {}, required: [] },
     })
@@ -1760,8 +1764,8 @@ export const register: Register = (on, options) => {
     await syncRunning($)
     const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
-    return { result: { status: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}`,
-      budget: budgetSummary(await read($, usageReadings), await $.clock.now()) } }
+    const budget = budgetSummary(await read($, usageReadings), await $.clock.now())
+    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}\n${formatBudgetText(budget)}` }
   })
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.

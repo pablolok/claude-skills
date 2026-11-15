@@ -147,13 +147,14 @@ the mod needs.
 - `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks. A planned
   task waits at its tier's model and effort, or at the `effort` and `model` the plan declares for it (what its Agent
   call will pass); an agent that is no savvy worker is planned with `tier: "other"` and `agent`, its type. A run
-  shows the effort its Agent call asked for, then the one the engine reports for each request. Its result is now
-  `{ status, budget }`, retaining the acknowledgement in `status`. `budget` groups `claude` and `codex`, each with
-  observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
+  shows the effort its Agent call asked for, then the one the engine reports for each request. Its result is a
+  string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude` and `codex`,
+  each with observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
   `pace` (`recent` or `average`), `policy`, and `verdict`: `ok` when it fits or has no projection yet, `over` when it
   does not fit under `full`, `ask` when it does not fit under `within`. Missing estimates are `null`, unavailable
   windows are omitted, and times are ISO timestamps. Expired readings report zero used with no projection.
-- `mcp__savvy-progress__budget`: returns `{ budget }` with the same summary, without changing the bar or state.
+- `mcp__savvy-progress__budget`: returns the string `budget: <compact JSON>` with the same summary, without changing
+  the bar or state.
   Both tools use the latest observations already taken by the panel. The flow reads this summary on progress
   updates and before long work; an `ask` calls for the user's decision with the projection and reset, or moving
   work to another family, a cheaper tier, or a slower pace. The tools never change the user's policy.
