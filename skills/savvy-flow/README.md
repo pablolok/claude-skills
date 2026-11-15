@@ -115,7 +115,10 @@ The theme is chosen when the flow starts, the first that applies:
 
 The skill and the agents run fine alone. With the savvy-progress plugin of the same marketplace installed, the
 orchestrator reports the plan and the accepted tasks to a progress bar above the prompt, and each worker reports its
-own steps to the agents panel. Without it those calls are skipped.
+own steps to the agents panel. Its budget summary paces the costly tiers against the plan's 5-hour and weekly
+windows: while a family's projection asks for the user's decision, its Agent calls at Fable, Heavy or Careful (Codex
+Sol or Astra) are refused until the user's yes is recorded (`decide`, or `/savvy-budget <family> once`), valid until
+the next reset. Without it those calls are skipped, and the pacing rules fall back to the host's plan usage.
 
 ## Tests
 

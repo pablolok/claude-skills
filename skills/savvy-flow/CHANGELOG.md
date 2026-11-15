@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.16.0] - 2026-11-15
+- the budget rules follow the gate: the estimates line in the ask, the user's yes recorded with decide or /savvy-budget <family> once; a week projected past its limit takes legwork one tier down, asks before every Fable or Codex Astra task and offers the Codex tier as relief with the user's yes; a worker stopped by a rate limit is resumed at the reset, not redone; the orchestrator delegates what reads much to return little (visual reviews with a text report, scripted read-only audits at Medium); clearFinished clears the panel's finished list when the user asks
+
+
 ## [1.15.4] - 2026-11-15
 - the costly tiers are paced from the progress tool's budget summary: an ask verdict means asking the user before long work on that family (with the projection and the reset), or moving the work to the other family or a cheaper tier; under full only the short window is paced; the policy is the user's, set with /savvy-budget
 

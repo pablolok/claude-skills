@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.15.0] - 2026-11-15
+- a budget gate on the Agent tool: while a family's verdict is ask, its costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) are refused with the projection, the reset and the way out, until the user's yes is recorded — /savvy-budget <family> once, or the new decide tool quoting their words — valid until the family's next reset (five hours at most); every model step adds to a Claude spend kept with each plan reading, and the budget and progress tools add an estimates line: a tier's mean finished run as a share of each window; Clear finished beside the panel's Finished list, and the progress tool's clearFinished, empty it while the totals keep counting those runs; Russian removed and Italian detected on auto: everything the plugin writes in words (bar, panel, plan tiles and dates, commands' answers and descriptions, its messages to the model) follows the language, the tools' JSON and descriptions stay English
+
+
 ## [1.14.1] - 2026-11-15
 - the progress and budget tools return text, as the host requires: the progress acknowledgement first, then a budget: line with the summary as compact JSON (1.14.0 returned an object, which the host rejected)
 

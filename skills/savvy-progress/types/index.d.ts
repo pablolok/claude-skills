@@ -35,6 +35,8 @@ export type AgentRun = {
   turnId?: string
   /** The engine's agent roster reports waiting on work owned by this worker. */
   isWaiting?: boolean
+  /** Hidden from the panel's Finished list by the user or the flow; still counted in the totals. */
+  isCleared?: boolean
   /** An answered turn still needs the roster to confirm that the worker finished. */
   pendingCompletion?: boolean
   type: string
@@ -86,7 +88,8 @@ export type PlanUsage = { fiveHour?: PlanWindow; week?: PlanWindow }
 export type PlanFamily = 'claude' | 'codex'
 export type PlanWindowKey = keyof PlanUsage
 export type BudgetPolicy = 'within' | 'full'
-export type UsageSample = { at: number; percentUsed: number }
+/** spentUsd: the family's estimated session spend when the reading was taken, when known. */
+export type UsageSample = { at: number; percentUsed: number; spentUsd?: number }
 export type WindowHistory = { resetsAt?: string; samples: UsageSample[] }
 export type PlanHistory = Partial<Record<PlanWindowKey, WindowHistory>>
 export type PlanProjection = {
@@ -106,6 +109,11 @@ export type WindowBudget = {
   verdict: 'ok' | 'over' | 'ask'
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
+/** The user's yes to costly work despite an ask verdict, until the family's soonest reset. */
+export type BudgetDecision = { until: string; at: number; by: 'user' | 'orchestrator'; words?: string }
+/** A tier's finished runs: their mean estimated cost, and that cost as a share of each window when observed. */
+export type TierEstimate = { runs: number; usd: number; fiveHour: number | null; week: number | null }
+export type TierEstimates = Record<string, TierEstimate>
 export type CodexTokens = {
   input_tokens: number
   cached_input_tokens: number
@@ -126,6 +134,9 @@ export type UsageReadings = {
   /** Bounded observations and user-owned policies persist with the usage atom. */
   history?: Partial<Record<PlanFamily, PlanHistory>>
   policies?: Partial<Record<PlanFamily, BudgetPolicy>>
+  decisions?: Partial<Record<PlanFamily, BudgetDecision>>
+  /** Cumulative estimated spend per family, every model step of the session included. */
+  spentUsd?: Partial<Record<PlanFamily, number>>
   claude?: PlanUsage
   claudeReadAt?: number
   claudeCacheReadAt?: number

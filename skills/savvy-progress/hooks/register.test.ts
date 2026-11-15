@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
-import { budgetSummary, projectPlanWindow, recordPlanUsage } from './register'
+import { budgetGate, budgetSummary, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates } from './register'
 import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
@@ -82,7 +82,11 @@ const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record
     registered.push(e)
     return { value: { tool: `mcp__savvy-progress__${e.name}` } }
   })
-  on('command.register', ($, e) => ({ value: { command: e.name } }))
+  const commands: { name: string; description: string; argumentHint?: string }[] = []
+  on('command.register', ($, e) => {
+    commands.push({ name: e.name, description: e.description, argumentHint: e.argumentHint })
+    return { value: { command: e.name } }
+  })
   let asks = 0
   on('agent.list', () => {
     asks++
@@ -104,7 +108,7 @@ const engine =(on: On, listed: { infos: AgentInfo[] }, now = 10_000, env: Record
     for (const block of e.message.content) if (block.type === 'text') told.push(String(block.text))
     return next(e)
   })
-  return { clock, state, asks: (): number => asks, saved, told, registered }
+  return { clock, state, asks: (): number => asks, saved, told, registered, commands }
 }
 
 // The person typing `/savvy-theme <args>`, and picking `value` for the theme in /config.
@@ -703,6 +707,8 @@ test("the panel's picker lists every theme and a pick redraws it at once", { opt
   expect(saved).toEqual([{ key: 'savvy-progress.theme', value: 'halloween' }])
   // A pick the model did not see is told to it, so the chat can follow.
   expect(told.join('')).toContain('the theme is now Halloween')
+  // The flow finds the theme's row by its id, so the note carries it.
+  expect(told.join('')).toContain('(`halloween`)')
   await ui.unmount()
 })
 
@@ -1439,35 +1445,46 @@ test('with the language option on it, the bar and the panel speak Italian', { op
   expect((await $.command.run(typed('nope'))).text).toBe('Nessun tema chiamato "nope". /savvy-theme senza nome li elenca.')
 })
 
-test('the language option on ru keeps what Russian always read', { options: { theme: 'classic', language: 'ru' } }, async ($, on) => {
-  engine(on, { infos: [] }, 0)
-  await start($)
-  await report($)
-  await spawn($, 'w1')
-  await stepped($, 'w1', { done: 2, total: 2, skipped: 1 })
-
-  expect(await bar($)).toBe('Fix bug: Задачи 0/2 · 1 в работе, 0%')
-  expect((await panelOf($)).rows.find(r => r.includes('>w1<'))).toContain('>2/2 · 1 пропущено<')
-  const listed = (await $.command.run(typed(''))).text ?? ''
-  expect(listed).toContain('Theme: ')
-  expect(listed).toContain('  carnival — Carnival — 12 days to Shrove Tuesday')
-})
-
-test('English is the default: on auto an Italian system stays English, and Italian is only ever chosen', { options: { theme: 'classic' } }, async ($, on) => {
+test('on auto an Italian system reads Italian', { options: { theme: 'classic' } }, async ($, on) => {
   engine(on, { infos: [] }, 0, { LANG: 'it_IT.UTF-8' })
   await start($)
   await report($)
   await spawn($, 'w1')
 
-  expect(await bar($)).toBe('Fix bug: Tasks 0/2 · 1 running, 0%')
+  expect(await bar($)).toBe('Fix bug: Compiti 0/2 · 1 in corso, 0%')
 })
 
-test('on auto a Russian system still reads Russian', { options: { theme: 'classic', language: 'auto' } }, async ($, on) => {
+test('on auto any other system, a Russian one included, reads English', { options: { theme: 'classic', language: 'auto' } }, async ($, on) => {
   engine(on, { infos: [] }, 0, { LANG: 'ru_RU.UTF-8' })
   await start($)
   await report($)
+  expect(await bar($)).toBe('Fix bug: Tasks 0/2, 0%')
+})
 
-  expect(await bar($)).toBe('Fix bug: Задачи 0/2, 0%')
+test('with the language on it, the plan tiles, the budget command, the gate and the command list speak Italian', { options: { theme: 'classic', language: 'it' } }, async ($, on) => {
+  const { state, registered, commands } = budgetEngine(on)
+  launching($, on)
+  await start($)
+  state.seed('usage', askUsage({ claudeReadAt: BUDGET_AT }))
+  const header = (await headerOf($)).source
+  expect(header).toContain('Claude · piano · entro')
+  expect(header).toContain('7g  20%')
+  expect(header).toContain('0 min fa')
+  expect(header).not.toContain(' plan ')
+  expect(header).not.toContain('ago')
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro.' })
+  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex> <entro|pieno|una-volta>' })
+  const refused = (await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny ?? ''
+  expect(refused).toContain('Blocco del budget')
+  expect(refused).toContain('/savvy-budget claude una-volta')
+  expect(refused).not.toContain('Ask the user')
+  expect((await budgetCommand($, 'codex pieno')).text).toBe('Budget: Claude entro · Codex pieno.')
+  expect((await budgetCommand($, 'claude una-volta')).text).toMatch(/^Budget: Claude entro · Codex pieno\. Claude: via libera fino a /)
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+  expect(commands.find(c => c.name === 'savvy-budget')?.description).toContain('Imposta il budget')
+  expect(commands.find(c => c.name === 'agents-info')?.description).toContain('Mostra o nasconde')
+  expect(commands.find(c => c.name === 'savvy-theme')?.argumentHint).toBe('[tema|auto]')
+  expect(registered.some(tool => tool.name === 'decide')).toBe(true)
 })
 
 test("the panel's language picker lists every language, and a pick redraws at once and is kept in the option", { options: { theme: 'classic' } }, async ($, on) => {
@@ -1483,7 +1500,6 @@ test("the panel's language picker lists every language, and a pick redraws at on
   expect((languages?.props.options as { value: string; label?: string }[]).map(o => [o.value, o.label])).toEqual([
     ['auto', 'Auto, by the settings'],
     ['en', 'English'],
-    ['ru', 'Русский'],
     ['it', 'Italiano'],
   ])
 
@@ -2807,7 +2823,7 @@ test('budget command rejects missing, extra or invalid arguments without changin
   const { state } = budgetEngine(on)
   await start($)
   for (const args of ['claude', 'both full', 'claude unlimited', 'claude full extra']) {
-    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full>' })
+    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full|once>' })
   }
   expect(state.usage().policies).toBeUndefined()
 })
@@ -2919,4 +2935,245 @@ test('the panel passes stored family policy to its plan tiles', async ($, on) =>
   await start($)
   state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() }, policies: { claude: 'full' } })
   expect((await headerOf($)).source).toContain('Claude · plan · full')
+})
+
+// ---------------------------------------------------------------------------
+// The budget gate, the user's one-shot decision and the cost of a tier's run.
+
+const askUsage = (over: Partial<UsageReadings> = {}): UsageReadings =>
+  ({ statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, ...over })
+
+// Two Claude readings half an hour apart, with what the session had spent at each.
+const spending = (fromPercent: number, toPercent: number, fromUsd: number, toUsd: number): UsageReadings => {
+  const before = recordPlanUsage({ statuses: {}, spentUsd: { claude: fromUsd } }, 'claude',
+    { fiveHour: budgetWindow(fromPercent), week: budgetWindow(20, 'week') }, BUDGET_AT - 30 * MINUTE)
+  return recordPlanUsage({ ...before, spentUsd: { claude: toUsd } }, 'claude',
+    { fiveHour: budgetWindow(toPercent), week: budgetWindow(21, 'week') }, BUDGET_AT)
+}
+
+test('history samples carry the family spend when it is known and nothing when it is not', () => {
+  const known = recordPlanUsage({ statuses: {}, spentUsd: { claude: 4.5 } }, 'claude', { fiveHour: budgetWindow(10) }, BUDGET_AT)
+  expect(known.history?.claude?.fiveHour?.samples).toEqual([{ at: BUDGET_AT, percentUsed: 10, spentUsd: 4.5 }])
+  const unknown = recordPlanUsage({ statuses: {} }, 'claude', { fiveHour: budgetWindow(10) }, BUDGET_AT)
+  expect(Object.keys(unknown.history?.claude?.fiveHour?.samples[0] ?? {})).toEqual(['at', 'percentUsed'])
+})
+
+test('a tier estimate averages its finished Claude runs and converts them with the observed percent per dollar', () => {
+  const usage = spending(40, 50, 10, 30)
+  const runs = [
+    run('h1', { type: 'savvy-flow:savvy-heavy', status: 'done', costUsd: 4 }),
+    run('h2', { type: 'savvy-heavy', status: 'done', costUsd: 6 }),
+    run('h3', { type: 'savvy-flow:savvy-heavy', status: 'running', costUsd: 50 }),
+    run('h4', { type: 'savvy-flow:savvy-heavy', status: 'failed', costUsd: 50 }),
+    run('m1', { type: 'savvy-flow:savvy-medium', status: 'done', costUsd: 1 }),
+    run('x1', { type: 'Explore', status: 'done', costUsd: 9 }),
+    run('c1', { type: 'savvy-flow:savvy-codex-sol', status: 'done', costUsd: 9 }),
+  ]
+  expect(tierEstimates(runs, usage, BUDGET_AT)).toEqual({
+    heavy: { runs: 2, usd: 5, fiveHour: 2.5, week: 0.3 },
+    medium: { runs: 1, usd: 1, fiveHour: 0.5, week: 0.1 },
+  })
+})
+
+test('a tier estimate leaves the window percent null on thin or stale evidence', () => {
+  const runs = [run('h1', { type: 'savvy-heavy', status: 'done', costUsd: 4 })]
+  const nullWindows = { heavy: { runs: 1, usd: 4, fiveHour: null, week: null } }
+  // Under half a dollar spent, no percent moved, or no spend recorded at all.
+  expect(tierEstimates(runs, spending(40, 50, 10, 10.4), BUDGET_AT)).toEqual(nullWindows)
+  expect(tierEstimates(runs, { ...spending(40, 40, 10, 30), claude: { fiveHour: budgetWindow(40) } }, BUDGET_AT).heavy?.fiveHour).toBeNull()
+  expect(tierEstimates(runs, askUsage(), BUDGET_AT)).toEqual(nullWindows)
+  // A window that has reset since its history was taken.
+  expect(tierEstimates(runs, { ...spending(40, 50, 10, 30), claude: { fiveHour: budgetWindow(50, 'fiveHour', 149) } }, BUDGET_AT).heavy?.fiveHour).toBeNull()
+  expect(tierEstimates([], spending(40, 50, 10, 30), BUDGET_AT)).toEqual({})
+})
+
+test('the gate refuses a costly tier of a family whose verdict is ask, and names the way out', () => {
+  const refusal = budgetGate('savvy-flow:savvy-heavy', askUsage(), [], BUDGET_AT)
+  expect(refusal).toContain('Claude')
+  expect(refusal).toContain('ask')
+  expect(refusal).toContain('savvy-heavy')
+  expect(refusal).toContain('5h 60% → 120%')
+  expect(refusal).toContain(budgetWindow().resetsAt)
+  expect(refusal).toContain('/savvy-budget claude once')
+  expect(refusal).toContain('decide')
+  for (const tier of ['savvy-fable', 'savvy-careful']) expect(budgetGate(tier, askUsage(), [], BUDGET_AT)).toBeDefined()
+})
+
+test('the gate passes cheap tiers, other agents, the other family and windows without an ask', () => {
+  for (const type of ['savvy-flow:savvy-medium', 'savvy-light', 'savvy-codex-luna', 'savvy-codex-terra', 'Explore', 'general-purpose']) {
+    expect(budgetGate(type, askUsage(), [], BUDGET_AT)).toBeUndefined()
+  }
+  // A Claude ask does not hold Codex back, and a Codex ask holds its costly relays alone.
+  expect(budgetGate('savvy-codex-sol', askUsage(), [], BUDGET_AT)).toBeUndefined()
+  const codexAsks: UsageReadings = { statuses: {}, codex: { fiveHour: budgetWindow() } }
+  expect(budgetGate('savvy-flow:savvy-codex-astra', codexAsks, [], BUDGET_AT)).toContain('/savvy-budget codex once')
+  expect(budgetGate('savvy-heavy', codexAsks, [], BUDGET_AT)).toBeUndefined()
+  // over (a full policy), no projection yet, and a fitting projection all pass.
+  expect(budgetGate('savvy-heavy', askUsage({ policies: { claude: 'full' } }), [], BUDGET_AT)).toBeUndefined()
+  expect(budgetGate('savvy-heavy', { statuses: {}, claude: { fiveHour: budgetWindow(10, 'fiveHour', 3) } }, [], BUDGET_AT)).toBeUndefined()
+  expect(budgetGate('savvy-heavy', { statuses: {}, claude: { fiveHour: budgetWindow(30) } }, [], BUDGET_AT)).toBeUndefined()
+})
+
+test("the gate's refusal gives the tier's estimated share of each window when there is one", () => {
+  const usage = { ...spending(40, 60, 10, 30), claude: { fiveHour: budgetWindow(), week: budgetWindow(21, 'week') } }
+  const refusal = budgetGate('savvy-heavy', usage, [run('h1', { type: 'savvy-heavy', status: 'done', costUsd: 5 })], BUDGET_AT)
+  expect(refusal).toContain('≈ 5% of 5h')
+  expect(refusal).not.toContain('≈ null')
+})
+
+test('a decision holds until the soonest reset of its family and then the gate asks again', () => {
+  const decided = decideBudget(askUsage(), 'claude', BUDGET_AT, 'user')
+  expect(decided.decisions?.claude).toEqual({ until: budgetWindow().resetsAt, at: BUDGET_AT, by: 'user' })
+  expect(budgetGate('savvy-heavy', decided, [], BUDGET_AT)).toBeUndefined()
+  // The week still asks once the five-hour window that bounded the decision has reset.
+  const weekAsks: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(30), week: budgetWindow(60, 'week') } }
+  const weekDecided = decideBudget(weekAsks, 'claude', BUDGET_AT, 'user')
+  expect(weekDecided.decisions?.claude?.until).toBe(budgetWindow().resetsAt)
+  expect(budgetGate('savvy-heavy', weekDecided, [], BUDGET_AT)).toBeUndefined()
+  expect(budgetGate('savvy-heavy', weekDecided, [], Date.parse(budgetWindow().resetsAt))).toContain('week')
+  // The other family's decision does not open this one.
+  expect(budgetGate('savvy-heavy', decideBudget(askUsage(), 'codex', BUDGET_AT, 'user'), [], BUDGET_AT)).toBeDefined()
+  // With the week's reset alone, a yes still lasts one five-hour window at most.
+  const weekOnly = decideBudget({ statuses: {}, claude: { week: budgetWindow(60, 'week') } }, 'claude', BUDGET_AT, 'user')
+  expect(weekOnly.decisions?.claude?.until).toBe(new Date(BUDGET_AT + 300 * MINUTE).toISOString())
+  const told = decideBudget(askUsage(), 'claude', BUDGET_AT, 'orchestrator', '  yes, go on  ')
+  expect(told.decisions?.claude).toEqual({ until: budgetWindow().resetsAt, at: BUDGET_AT, by: 'orchestrator', words: 'yes, go on' })
+})
+
+const gatedLaunch = ($: Engine, on: On, usage: UsageReadings) => {
+  const { state } = budgetEngine(on)
+  launching($, on)
+  return { state, seed: () => state.seed('usage', usage) }
+}
+
+test('an Agent call refused by the gate starts nothing and leaves the bar where it was', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  await plan($, [{ title: 'dig', tier: 'heavy' }])
+  await $.tool.call({ tool: 'mcp__savvy-progress__progress', phase: 'plan' })
+  const refused = await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })
+  expect(refused.deny).toContain('/savvy-budget claude once')
+  expect(state.agents()).toEqual([])
+  expect(state.flow()?.phase).toBe('plan')
+  // A cheaper tier is not held back.
+  expect((await launch($, 'tidy', { subagent_type: 'savvy-flow:savvy-medium' })).deny).toBeUndefined()
+})
+
+test('the user opens the gate with /savvy-budget <family> once until the next reset', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
+  const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
+  expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within. Claude: go until ${until}.` })
+  expect(state.usage().decisions?.claude).toMatchObject({ by: 'user', until: budgetWindow().resetsAt })
+  expect(state.usage().policies).toBeUndefined()
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+})
+
+test('the decide tool records the user answer from the main session only and wants their words', async ($, on) => {
+  const { state, seed, } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  const decide = (input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__decide', ...input })
+  expect((await decide({ family: 'claude', answer: 'yes', agentId: 'w1' })).result).toMatch(/^ignored/)
+  expect(state.usage().decisions).toBeUndefined()
+  expect((await decide({ family: 'claude', answer: '   ' })).deny).toBeDefined()
+  expect((await decide({ family: 'both', answer: 'yes' })).deny).toBeDefined()
+  expect((await decide({ family: 'claude', answer: 'yes, use it' })).result).toBe(`ok: Claude go until ${budgetWindow().resetsAt}`)
+  expect(state.usage().decisions?.claude).toEqual({ until: budgetWindow().resetsAt, at: BUDGET_AT, by: 'orchestrator', words: 'yes, use it' })
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+})
+
+test('every Claude model step, the main session and the workers alike, adds to the family spend', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  answering(on)
+  await start($)
+  await spawn($, 'w1')
+  await stepOf($, 'w1', 0)
+  const main = $.turn.step({ turnId: 'm1', index: 0, model: 'claude-opus-5-5', messageCount: 1 })
+  for await (const chunk of main) void chunk
+  expect(Math.abs((state.usage().spentUsd?.claude ?? 0) - 2 * costOf('claude-opus-5-5', USAGE))).toBeLessThan(1e-9)
+})
+
+test('progress and budget add an estimates line once a tier has finished runs, and none before', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  const usage = spending(40, 50, 10, 30)
+  await report($)
+  state.seed('usage', usage)
+  expect((await readBudget($)).result).toBe(`budget: ${JSON.stringify(budgetSummary(usage, BUDGET_AT))}`)
+  state.seed(AGENTS, [run('h1', { type: 'savvy-heavy', status: 'done', costUsd: 4 })])
+  const lines = ((await readBudget($)).result as string).split('\n')
+  expect(lines).toHaveLength(2)
+  expect(JSON.parse(lines[1]!.slice('estimates: '.length))).toEqual({ heavy: { runs: 1, usd: 4, fiveHour: 2, week: 0.2 } })
+  // A new flow keeps only the running rows, so the flow is already under way here.
+  const reported = ((await $.tool.call({ tool: 'mcp__savvy-progress__progress', done: 0 })).result as string).split('\n')
+  expect(reported[0]).toMatch(/^ok: /)
+  expect(reported[2]).toMatch(/^estimates: /)
+})
+
+// ---------------------------------------------------------------------------
+// Clearing the finished runs from the panel's view, the run's totals kept.
+
+test('clearing marks every finished run and leaves the running ones and the totals as they were', () => {
+  const list = [run('a', { status: 'done', costUsd: 2, tokens: 100 }), run('b', { status: 'failed', costUsd: 1, tokens: 50 }),
+    run('c', { status: 'running', costUsd: 3, tokens: 70 })]
+  const cleared = clearFinished(list)
+  expect(cleared.map(a => [a.id, a.isCleared ?? false])).toEqual([['a', true], ['b', true], ['c', false]])
+  expect(totals(cleared, 0)).toEqual(totals(list, 0))
+  expect(list.every(a => a.isCleared === undefined)).toBe(true)
+})
+
+test('progress with clearFinished empties Finished but keeps the totals, the running and the planned tasks', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await plan($, [{ title: 'kept', tier: 'careful' }, { title: 'later', tier: 'medium' }])
+  state.seed(AGENTS, [run('kept', { description: 'kept', status: 'done', costUsd: 2, tokens: 900 }), run('live', { description: 'live', costUsd: 1, tokens: 100 })])
+  const before = await panelOf($)
+  expect(before.rows.some(r => r.includes('>kept<'))).toBe(true)
+
+  const answer = await $.tool.call({ tool: 'mcp__savvy-progress__progress', clearFinished: true })
+  expect(String(answer.result)).toMatch(/^ok: /)
+  const after = await panelOf($)
+  expect(after.rows.some(r => r.includes('>kept<'))).toBe(false)
+  expect(after.rows.some(r => r.includes('>live<'))).toBe(true)
+  // The planned task whose run finished stays out of Planned; the other waits.
+  expect(after.rows.filter(r => r.includes('later'))).toHaveLength(1)
+  expect(after.terminal).not.toContain('"Finished')
+  expect(after.header).toBe(before.header)
+  expect(state.agents().map(a => [a.id, a.isCleared ?? false])).toEqual([['kept', true], ['live', false]])
+})
+
+test('a worker cannot clear the panel, and a cleared run that runs again comes back', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  answering(on)
+  await start($)
+  await report($)
+  await spawn($, 'w1')
+  state.seed(AGENTS, state.agents().map(a => ({ ...a, status: 'done' as const })))
+  expect((await $.tool.call({ tool: 'mcp__savvy-progress__progress', agentId: 'w1', clearFinished: true })).result).toMatch(/^ignored/)
+  expect(byId(state.agents(), 'w1')?.isCleared).toBeUndefined()
+  await $.tool.call({ tool: 'mcp__savvy-progress__progress', clearFinished: true })
+  expect(byId(state.agents(), 'w1')?.isCleared).toBe(true)
+  await stepOf($, 'w1', 1)
+  expect(byId(state.agents(), 'w1')).toMatchObject({ status: 'running' })
+  expect(byId(state.agents(), 'w1')?.isCleared).toBeUndefined()
+})
+
+test("the panel's clear button, beside Finished, empties it in the panel's language", { options: { theme: 'classic', language: 'it' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await report($)
+  state.seed(AGENTS, [run('old', { status: 'done', costUsd: 2 })])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [clear] = await ui.findAll({ type: 'Button', text: 'Svuota finiti' })
+  expect(clear).toBeDefined()
+  await ui.press({ key: 'clear-done' })
+  await ui.unmount()
+  expect(byId(state.agents(), 'old')?.isCleared).toBe(true)
+  const after = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await after.findAll({ type: 'Button', text: 'Svuota finiti' })).toHaveLength(0)
+  await after.unmount()
 })

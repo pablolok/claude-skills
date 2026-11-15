@@ -53,6 +53,7 @@ If the tool `mcp__savvy-progress__progress` is available, keep it current; skip 
 - each time a task is accepted in review: `done` (accepted so far); switch `phase` to `"review"` while reviewing;
 - in that same call, drop the accepted task from `tasks`, and pass `total` and `done` again in that call (a call with `tasks` alone resets `total` to the length of the list and the bar reads 1/1): the panel lists as "Planned" every task in `tasks` it cannot match to a visible run, and a finished run stops being visible, so an accepted task left in the list reads as work not started. `tasks` holds only the tasks still open, numbered again from 1, with `after` renumbered to match;
 - if re-planning changes the tasks: the new `tasks` and `total`;
+- when the user asks to clear the panel's finished list: `clearFinished: true` (the totals stay);
 - once at close: `finished: true`.
 
 When delegating, pass the task's `title` verbatim as the Agent tool's `description` (a return round reuses it too): the agents panel matches runs to planned tasks by it. A run whose name differs stays "Planned" in the panel after its task is committed, which the user reads as work not done. So:
@@ -185,13 +186,32 @@ asked for it or set it as their default, never on your own.
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - **Pace the costly tiers against the plan's rolling usage windows.** Before starting or resuming a long worker at
   Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows), read the `budget` summary returned by the
-  progress tool; its read-only `budget` tool can refresh your view without changing the bar. For a family with any
-  `ask` verdict, ask the user before starting or resuming long work on it, giving the projection (percent at reset
-  or when it runs out) and the reset. Otherwise move the work to the other family or a cheaper tier, or pace it.
-  Under `full`, continue, pacing only the short window. The policy is the user's: set it with `/savvy-budget` when
-  they say a reset may be used, never on your own. With the short window high (say, past half), run one costly
-  worker per family at a time and keep the cheaper tiers beside it. If the summary is unavailable, use the host's
-  plan usage or the last relay report.
+  progress tool; its read-only `budget` tool can refresh your view without changing the bar. Its `estimates` line,
+  once a tier has finished runs, gives what one run of that tier has cost as a share of each Claude window. For a
+  family with any `ask` verdict, ask the user before starting or resuming long work on it, giving the projection
+  (percent at reset or when it runs out), the reset and that estimate; the Agent tool refuses those tiers until the
+  answer is recorded. On a yes, record it with the `decide` tool, quoting their words (it holds until the family's
+  next reset; `/savvy-budget <family> once` is the user's own way); never record a yes they did not give. Otherwise
+  move the work to the other family or a cheaper tier, or pace it. Under `full`, continue, pacing only the short
+  window. The policy is the user's: set it with `/savvy-budget` when they say a reset may be used, never on your
+  own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper
+  tiers beside it. If the summary is unavailable, use the host's plan usage or the last relay report.
+- **A week projected past its limit is the scarcer budget**, even under `full`: a short window comes back in hours,
+  the week in days. While it lasts, take that family's legwork one tier down (Careful work to Medium with a precise
+  brief, Medium to Light), and ask before every Fable or Codex Astra task, whatever was said for the short window.
+  When the Claude week is the one running out and Codex is signed in with room in its own week, offer the Codex tier
+  for self-contained tasks (Terra or Sol at their usual sizes); it moves code to another vendor, so it runs only
+  with the user's yes (section 3).
+- **A worker stopped by a usage limit is resumed, not redone.** A `rate_limit` failure (HTTP 429) leaves the
+  worker's context intact: take the reset from the error or the `budget` summary and resume the same worker at that
+  time (SendMessage, same title, "continue from where you stopped"), through the host's wake-up or scheduling tool
+  when it has one; otherwise the turn summary names the worker and the reset it waits for. A fresh worker on the
+  same task spends the window again to rebuild what the stopped one already read.
+- **Your own turns spend the same windows**, at the session's model, usually the plan's most expensive. Delegate
+  what reads much to return little: a visual review goes to a worker that captures the screens and reports against
+  your checklist in text, and you open the images where the report leaves a doubt (the verdict stays yours,
+  section 2); a read-only audit driven by a script or a checklist (search for patterns, run checkers, compare files)
+  fits Medium. Keep your own reading to the diffs and the verdicts.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded

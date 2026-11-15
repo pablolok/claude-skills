@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { AgentRun, BudgetPolicy, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, UsageReadings, WindowHistory } from '../types'
+import type { AgentRun, BudgetPolicy, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -26,6 +26,7 @@ const usageReadings = atom({ plugin: 'savvy-progress', key: 'usage' } as const, 
 const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
 const BUDGET_TOOL = 'mcp__savvy-progress__budget'
+const DECIDE_TOOL = 'mcp__savvy-progress__decide'
 const PANE = 'savvy-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
@@ -41,17 +42,22 @@ type ProgressInput = {
   phase?: Phase
   finished?: boolean
   tasks?: { title?: string; tier?: string; after?: number[]; effort?: string; model?: string; agent?: string }[]
+  clearFinished?: boolean
 }
 
 // ---------------------------------------------------------------------------
 // Language: the `language` option (also picked in the panel), else Claude Code's
-// `language` setting, else the process locale; English when nothing says Russian.
-// Italian is only ever chosen: the default stays English on an Italian system too.
+// `language` setting, else the process locale; Italian when they say Italian, English
+// otherwise. Everything the plugin writes in words follows it: the bar, the panel, the
+// commands' answers and descriptions, dates, and its messages to the model. Only the
+// tools' JSON lines and descriptions stay English, as the contract the flow parses.
 
-const LANGS = ['en', 'ru', 'it'] as const
+const LANGS = ['en', 'it'] as const
 type Lang = (typeof LANGS)[number]
 // Each language under its own name, whatever the panel speaks.
-const LANG_NAME: Record<Lang, string> = { en: 'English', ru: 'Русский', it: 'Italiano' }
+const LANG_NAME: Record<Lang, string> = { en: 'English', it: 'Italiano' }
+// Dates and times written in the panel's language, whatever the system locale.
+const LOCALE: Record<Lang, string> = { en: 'en-GB', it: 'it-IT' }
 const LANG_OPTION = 'savvy-progress.language'
 
 const STRINGS = {
@@ -91,44 +97,37 @@ const STRINGS = {
     themeIs: 'Theme',
     noTheme: (name: string) => `No theme named "${name}". /savvy-theme with no name lists them.`,
     notKept: 'Not kept for the next sessions',
-  },
-  ru: {
-    pane: 'Агенты',
-    cost: 'Стоимость',
-    tokens: 'Токены',
-    time: 'Время',
-    collapse: 'Свернуть',
-    expand: 'Развернуть',
-    running: 'Работают',
-    finished: 'Завершены',
-    planned: 'Запланированы',
-    empty: 'Субагентов пока нет.',
-    round: 'раунд',
-    failed: 'ошибка',
-    after: 'после',
-    skippedOne: 'пропущено',
-    skipped: 'пропущено',
-    tokensWord: 'токенов',
-    agentsCount: 'агентов',
-    isRunning: 'работает',
-    isFinished: 'завершён',
-    isPlanned: 'запланирована',
-    opened: 'Панель агентов открыта.',
-    closed: 'Панель агентов закрыта.',
-    done: 'Готово',
-    plan: 'План',
-    design: 'Дизайн',
-    tasks: 'Задачи',
-    review: 'Ревью',
-    busy: 'в работе',
-    theme: 'Тема',
-    auto: 'Авто, по календарю',
-    // The command's answers stay as Russian always read them.
-    language: 'Язык',
-    langAuto: 'Авто, по настройкам',
-    themeIs: 'Theme',
-    noTheme: (name: string) => `No theme named "${name}". /savvy-theme with no name lists them.`,
-    notKept: 'Not kept for the next sessions',
+    ctx: 'ctx',
+    clearFinished: 'Clear finished',
+    planWord: 'plan',
+    policy: { within: 'within', full: 'full' } as Record<BudgetPolicy, string>,
+    fiveHour: '5h',
+    week: '7d',
+    windowReset: 'reset',
+    ago: (minutes: number) => minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`,
+    budget: 'Budget',
+    budgetUsage: 'Usage: /savvy-budget <claude|codex> <within|full|once>',
+    goUntil: (family: string, time: string) => `${family}: go until ${time}.`,
+    decided: (family: string, until: string) => `ok: ${family} go until ${until}`,
+    agentsInfo: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
+    savvyTheme: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
+    themeHint: '[theme|auto]',
+    savvyBudget: 'Set a family budget policy: within the rolling windows, full when you accept using a reset, once for costly work until the next reset; no arguments lists policies',
+    budgetHint: '[claude|codex] [within|full|once]',
+    themeNote: (theme: string, id: string) => `savvy-progress: the theme is now ${theme} (\`${id}\`); savvy-flow's chat follows it from the next message.`,
+    ignoredFlow: 'ignored: only the main session reports the flow',
+    ignoredSteps: 'ignored: only subagents report steps',
+    noRow: (agentId: string) => `ignored: no panel row for agent ${agentId}`,
+    ignoredDecision: "ignored: only the main session records the user's decision",
+    badFamily: 'family must be claude or codex',
+    badAnswer: "answer must quote the user's own words",
+    badModel: 'model and effort must be strings',
+    badStatus: 'codexStatus must be a safe filename stem',
+    gate: (g: GateText) =>
+      `Budget gate: ${g.family} verdict ask under the within policy — ${g.facts.map(f => `${f.window} ${f.used}% → ${f.projected}% at reset ${f.resetsAt}${f.exhaustsAt ? `, runs out ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
+      `Ask the user before starting savvy-${g.tier}${g.share.length ? ` (a ${g.tier} run so far ≈ ${g.share.map(x => `${x.percent}% of ${x.window === 'fiveHour' ? '5h' : 'week'}`).join(', ')})` : ''}. ` +
+      `On their yes, record it with the decide tool (family ${g.key}, their words), or they type /savvy-budget ${g.key} once; ` +
+      `it holds until the next reset. Otherwise take a cheaper tier or the other family, or wait for the reset.`,
   },
   it: {
     pane: 'Agenti',
@@ -166,8 +165,48 @@ const STRINGS = {
     themeIs: 'Tema',
     noTheme: (name: string) => `Nessun tema chiamato "${name}". /savvy-theme senza nome li elenca.`,
     notKept: 'Non salvato per le prossime sessioni',
+    ctx: 'cont',
+    clearFinished: 'Svuota finiti',
+    planWord: 'piano',
+    policy: { within: 'entro', full: 'pieno' } as Record<BudgetPolicy, string>,
+    fiveHour: '5h',
+    week: '7g',
+    windowReset: 'azzerata',
+    ago: (minutes: number) => minutes < 60 ? `${minutes} min fa` : minutes < 1440 ? `${Math.floor(minutes / 60)} h fa` : `${Math.floor(minutes / 1440)} g fa`,
+    budget: 'Budget',
+    budgetUsage: 'Uso: /savvy-budget <claude|codex> <entro|pieno|una-volta>',
+    goUntil: (family: string, time: string) => `${family}: via libera fino a ${time}.`,
+    decided: (family: string, until: string) => `ok: ${family} via libera fino a ${until}`,
+    agentsInfo: 'Mostra o nasconde il pannello dei sottoagenti: in corso, finiti e pianificati, con modello, contesto, costo e tempo',
+    savvyTheme: 'Sceglie il tema delle figure (una festa, un periodo, una stagione, classico) o auto per il calendario; senza nome li elenca',
+    themeHint: '[tema|auto]',
+    savvyBudget: 'Imposta il budget di una famiglia: entro le finestre, pieno se accetti di usare un azzeramento, una-volta per il lavoro costoso fino al prossimo azzeramento; senza argomenti li elenca',
+    budgetHint: '[claude|codex] [entro|pieno|una-volta]',
+    themeNote: (theme: string, id: string) => `savvy-progress: il tema ora è ${theme} (\`${id}\`); la chat di savvy-flow lo segue dal prossimo messaggio.`,
+    ignoredFlow: 'ignorato: solo la sessione principale riporta il flusso',
+    ignoredSteps: 'ignorato: solo i sottoagenti riportano i passi',
+    noRow: (agentId: string) => `ignorato: nessuna riga del pannello per l'agente ${agentId}`,
+    ignoredDecision: "ignorato: solo la sessione principale registra la decisione dell'utente",
+    badFamily: 'family deve essere claude o codex',
+    badAnswer: "answer deve riportare le parole dell'utente",
+    badModel: 'model ed effort devono essere stringhe',
+    badStatus: 'codexStatus deve essere un nome di file sicuro',
+    gate: (g: GateText) =>
+      `Blocco del budget: ${g.family} chiede una decisione con la politica entro — ${g.facts.map(f => `${f.window === '5h' ? '5h' : 'settimana'} ${f.used}% → ${f.projected}% all'azzeramento ${f.resetsAt}${f.exhaustsAt ? `, si esaurisce ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
+      `Chiedi all'utente prima di avviare savvy-${g.tier}${g.share.length ? ` (finora un'esecuzione ${g.tier} ≈ ${g.share.map(x => `${x.percent}% di ${x.window === 'fiveHour' ? '5h' : 'settimana'}`).join(', ')})` : ''}. ` +
+      `Se dice sì, registralo con lo strumento decide (famiglia ${g.key}, con le sue parole), oppure scrive /savvy-budget ${g.key} una-volta; ` +
+      `vale fino al prossimo azzeramento. Altrimenti usa un livello più economico o l'altra famiglia, o attendi l'azzeramento.`,
   },
 } as const
+
+// What the gate's refusal says, before it is put in words.
+type GateText = {
+  family: string
+  key: PlanFamily
+  tier: string
+  facts: { window: string; used: number; projected: number; resetsAt: string; exhaustsAt: string | null }[]
+  share: { window: PlanWindowKey; percent: number }[]
+}
 
 // Module scope is fine here: session.start sets it again on every (re)load.
 let lang: Lang = 'en'
@@ -177,18 +216,18 @@ let langOption = 'auto'
 
 const isLang = (v: unknown): v is Lang => LANGS.some(l => l === v)
 
-const isRussian = (v: unknown): boolean => typeof v === 'string' && /^(ru|russian|рус)/i.test(v.trim())
+const isItalian = (v: unknown): boolean => typeof v === 'string' && /^(it\b|it[_-]|italian|italiano)/i.test(v.trim())
 
 async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
   if (isLang(option)) return option
   try {
     const settings = (await $.settings.read()) as Record<string, unknown>
-    if (typeof settings.language === 'string' && settings.language.trim()) return isRussian(settings.language) ? 'ru' : 'en'
+    if (typeof settings.language === 'string' && settings.language.trim()) return isItalian(settings.language) ? 'it' : 'en'
   } catch {
     // No settings: fall through to the locale.
   }
   const locale = (await $.env.get('LC_ALL')) || (await $.env.get('LC_MESSAGES')) || (await $.env.get('LANG'))
-  return isRussian(locale) ? 'ru' : 'en'
+  return isItalian(locale) ? 'it' : 'en'
 }
 
 // ---------------------------------------------------------------------------
@@ -282,8 +321,8 @@ async function pickTheme($: EngineInterface, value: string, isSeen: boolean): Pr
   // calendar, so ask for both again rather than lean on what they read.
   $.ui.invalidate('ui.render')
   if (isSeen) return
-  // Told to the model, so in English whatever the panel speaks.
-  const text = `savvy-progress: the theme is now ${describeTheme(value, await $.clock.now(), t => THEME_LABEL[t])}; savvy-flow's chat follows it from the next message.`
+  // Told to the model in the panel's language, with the theme named as that language names it.
+  const text = tr().themeNote(describeTheme(value, await $.clock.now()), value)
   await $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }).catch(() => undefined)
 }
 
@@ -658,11 +697,11 @@ const PLAN_TEXT_INSET = 9
 
 const budgetPolicy = (usage: UsageReadings, family: PlanFamily): BudgetPolicy => usage.policies?.[family] ?? 'within'
 
-const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, key: PlanWindowKey, at: number): WindowHistory => {
+const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, key: PlanWindowKey, at: number, spentUsd?: number): WindowHistory => {
   const last = previous?.samples.at(-1)
   const reset = previous?.resetsAt !== value.resetsAt || Boolean(last && value.percentUsed < last.percentUsed)
   const samples = (reset ? [] : previous?.samples ?? []).filter(sample => sample.at >= at - RECENT_SPAN_MS[key] && sample.at <= at)
-  const sample = { at, percentUsed: value.percentUsed }
+  const sample = { at, percentUsed: value.percentUsed, ...(nonnegative(spentUsd) ? { spentUsd } : {}) }
   const sameMinute = samples.length && Math.floor(samples[samples.length - 1]!.at / HISTORY_BUCKET_MS) === Math.floor(at / HISTORY_BUCKET_MS)
   return { resetsAt: value.resetsAt, samples: [...(sameMinute ? samples.slice(0, -1) : samples), sample].slice(-HISTORY_MAX_SAMPLES) }
 }
@@ -672,7 +711,7 @@ export const recordPlanUsage = (usage: UsageReadings, family: PlanFamily, plan: 
   const history: PlanHistory = {}
   for (const key of PLAN_WINDOWS) {
     const value = plan[key]
-    if (value) history[key] = recordWindow(usage.history?.[family]?.[key], value, key, at)
+    if (value) history[key] = recordWindow(usage.history?.[family]?.[key], value, key, at, usage.spentUsd?.[family])
   }
   return { ...usage, [family]: plan, [family === 'claude' ? 'claudeReadAt' : 'codexReadAt']: at,
     history: { ...usage.history, [family]: history } }
@@ -716,6 +755,83 @@ export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary =
     }
   }
   return summary
+}
+
+// A tier's cost as a share of a window: the percent the window moved per dollar this session spent over the
+// window's recent history. Other sessions on the same plan move the window too, so the share errs high.
+const MIN_SPEND_USD = 0.5
+const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 'light']
+// The costly tiers each family's ask verdict holds back until the user decides.
+const GATED_TIERS: Readonly<Record<string, PlanFamily>> = {
+  fable: 'claude', heavy: 'claude', careful: 'claude', 'codex-sol': 'codex', 'codex-astra': 'codex',
+}
+const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex' }
+const WINDOW_NAME: Readonly<Record<PlanWindowKey, string>> = { fiveHour: '5h', week: 'week' }
+const roundTo = (n: number, digits: number): number => Math.round(n * 10 ** digits) / 10 ** digits
+
+const percentPerUsd = (usage: UsageReadings, family: PlanFamily, key: PlanWindowKey, at: number): number | undefined => {
+  const value = usage[family]?.[key]
+  const history = usage.history?.[family]?.[key]
+  if (!value || !history || isReset(value, at) || history.resetsAt !== value.resetsAt) return undefined
+  const priced = history.samples.filter(sample => nonnegative(sample.spentUsd))
+  const first = priced[0], last = priced.at(-1)
+  if (!first || !last) return undefined
+  const spent = last.spentUsd! - first.spentUsd!, moved = last.percentUsed - first.percentUsed
+  return spent >= MIN_SPEND_USD && moved > 0 ? moved / spent : undefined
+}
+
+// Finished Claude runs with a measured cost, per tier; null shares until the windows have moved with spend.
+export const tierEstimates = (runs: AgentRun[], usage: UsageReadings, at: number): TierEstimates => {
+  const rates = { fiveHour: percentPerUsd(usage, 'claude', 'fiveHour', at), week: percentPerUsd(usage, 'claude', 'week', at) }
+  const estimates: TierEstimates = {}
+  for (const tier of CLAUDE_TIERS) {
+    const done = runs.filter(r => r.status === 'done' && r.costUsd > 0 && isSavvy(r.type) && tierOf(r.type) === tier)
+    if (!done.length) continue
+    const usd = done.reduce((sum, r) => sum + r.costUsd, 0) / done.length
+    const share = (rate: number | undefined): number | null => rate === undefined ? null : roundTo(usd * rate, 1)
+    estimates[tier] = { runs: done.length, usd: roundTo(usd, 2), fiveHour: share(rates.fiveHour), week: share(rates.week) }
+  }
+  return estimates
+}
+
+const soonestReset = (usage: UsageReadings, family: PlanFamily, at: number): string => {
+  const resets = PLAN_WINDOWS.map(key => usage[family]?.[key]?.resetsAt)
+    .filter((reset): reset is string => Boolean(reset) && Date.parse(reset!) > at)
+    .sort((a, b) => Date.parse(a) - Date.parse(b))
+  // One yes covers one short window at most, even when only the week's reset is known.
+  const cap = at + PLAN_WINDOW_MINUTES.fiveHour * MINUTE_MS
+  return resets[0] && Date.parse(resets[0]) <= cap ? resets[0] : new Date(cap).toISOString()
+}
+
+// The user's yes to costly work on a family despite its ask verdict, until the family's soonest reset.
+export const decideBudget = (usage: UsageReadings, family: PlanFamily, at: number, by: 'user' | 'orchestrator', words?: string): UsageReadings => {
+  const said = words?.trim()
+  return { ...usage, decisions: { ...usage.decisions,
+    [family]: { until: soonestReset(usage, family, at), at, by, ...(said ? { words: said } : {}) } } }
+}
+
+const decisionHolds = (usage: UsageReadings, family: PlanFamily, at: number): boolean => {
+  const until = usage.decisions?.[family]?.until
+  return Boolean(until && Date.parse(until) > at)
+}
+
+// An Agent call of a costly tier, refused while its family asks and the user has not decided; open otherwise.
+export const budgetGate = (subagentType: string, usage: UsageReadings, runs: AgentRun[], at: number, language: Lang = 'en'): string | undefined => {
+  if (!isSavvy(subagentType)) return undefined
+  const tier = tierOf(subagentType)
+  const family = GATED_TIERS[tier]
+  if (!family || decisionHolds(usage, family, at)) return undefined
+  const windows = budgetSummary(usage, at)[family]
+  const asking = PLAN_WINDOWS.filter(key => windows[key]?.verdict === 'ask')
+  if (!asking.length) return undefined
+  const facts = asking.map(key => {
+    const w = windows[key]!
+    return { window: WINDOW_NAME[key], used: Math.round(w.used), projected: Math.round(w.projectedAtReset ?? w.used),
+      resetsAt: w.resetsAt ?? '', exhaustsAt: w.exhaustsAt }
+  })
+  const estimate = family === 'claude' ? tierEstimates(runs, usage, at)[tier] : undefined
+  const share = PLAN_WINDOWS.flatMap(window => estimate?.[window] == null ? [] : [{ window, percent: estimate[window]! }])
+  return STRINGS[language].gate({ family: FAMILY_NAME[family], key: family, tier, facts, share })
 }
 
 export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefined => {
@@ -898,7 +1014,7 @@ const accountText = (a: AgentRun, usage: UsageReadings): string => {
 }
 
 const rowStats = (a: AgentRun, usage: UsageReadings, at: number): string => {
-  const ctx = a.contextMax && (a.steps > 0 || a.contextTokens > 0) ? `ctx ${ctxOf(a)}%` : ''
+  const ctx = a.contextMax && (a.steps > 0 || a.contextTokens > 0) ? `${tr().ctx} ${ctxOf(a)}%` : ''
   return [[ctx, accountText(a, usage)].filter(Boolean).join(' · '), fmtTime(elapsed(a, at))].filter(Boolean).join(' ')
 }
 
@@ -1031,6 +1147,13 @@ const plannedOf = (f: Flow | null, list: AgentRun[]): Planned[] => {
   const started = new Set(list.map(a => norm(a.description)))
   return (f.tasks ?? []).map((t, i) => ({ ...t, n: i + 1 })).filter(t => !started.has(norm(t.title)))
 }
+
+// The finished runs leave the panel's Finished list; the rows stay, so the totals, the
+// estimates and the planned tasks' matching still count them. A run that runs again returns.
+export const clearFinished = (list: AgentRun[]): AgentRun[] =>
+  list.map(a => (a.status !== 'running' && !a.isCleared ? { ...a, isCleared: true } : a))
+
+const isShown = (a: AgentRun): boolean => a.status === 'running' || !a.isCleared
 
 export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPTY_USAGE) => {
   // Every engine request is Claude's, including the relay around Codex.
@@ -1205,12 +1328,10 @@ type PlanMarker = { text: string; color?: string }
 const tileValue = (x: number, y: number, width: number, value: string, bold = true, suffix = '', marker?: PlanMarker): string =>
   `<text class="t" x="${x + PLAN_TEXT_INSET}" y="${y}" font-family="${FONT}" font-size="${PLAN_TEXT_SIZE}"${bold ? ' font-weight="600"' : ''} font-variant-numeric="tabular-nums">${xml(fitText(value, PLAN_TEXT_SIZE, width - PLAN_TEXT_INSET * 2 - textWidth((marker?.text ?? '') + suffix, PLAN_TEXT_SIZE)))}${marker ? `<tspan${marker.color ? ` fill="${marker.color}"` : ''}>${xml(marker.text)}</tspan>` : ''}${suffix ? `<tspan class="s" font-weight="400">${xml(suffix)}</tspan>` : ''}</text>`
 
-const readingAge = (readAt: number, at: number): string => {
-  const minutes = Math.max(0, Math.floor((at - readAt) / 60_000))
-  return minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`
-}
+const readingAge = (readAt: number, at: number, language: Lang): string =>
+  STRINGS[language].ago(Math.max(0, Math.floor((at - readAt) / 60_000)))
 
-type PlanFormat = { locale?: string; timeZone?: string }
+type PlanFormat = { locale?: string; timeZone?: string; lang?: Lang }
 type PlanTileOptions = PlanFormat & { policy?: BudgetPolicy; history?: PlanHistory }
 
 // Six days avoids an ambiguous repeated weekday, including across DST changes.
@@ -1239,13 +1360,14 @@ const projectionMarker = (projection: PlanProjection | undefined, policy: Budget
 }
 
 export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: PlanTileOptions): string => {
-  const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at)}`
+  const s = STRINGS[options?.lang ?? 'en']
+  const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at, options?.lang ?? 'en')}`
   const policy = options?.policy ?? 'within'
   const window = (label: string, key: PlanWindowKey, value: PlanUsage['fiveHour'], offset: number): string => {
     const resetWindow = isReset(value, at)
     const percentUsed = resetWindow ? 0 : value?.percentUsed
-    const percent = value ? `${label}  ${percentUsed}%${resetWindow ? ' reset' : ''}` : `${label}  —`
-    const formattedReset = formatPlanReset(value, label === '7d', at, options)
+    const percent = value ? `${label}  ${percentUsed}%${resetWindow ? ` ${s.windowReset}` : ''}` : `${label}  —`
+    const formattedReset = formatPlanReset(value, key === 'week', at, options)
     const time = formattedReset ? `  ${formattedReset}` : ''
     const suffix = value ? age : ''
     const available = width - PLAN_TEXT_INSET * 2
@@ -1257,8 +1379,8 @@ export const planTile = (x: number, y: number, width: number, name: string, plan
     return tileValue(x, y + offset, width, text, true, suffix, marker) + (value
       ? `<rect class="k" x="${x + 9}" y="${y + offset + 6}" width="${meterW}" height="4" rx="2"/><rect x="${x + 9}" y="${y + offset + 6}" width="${meterW * Math.min(100, Math.max(0, percentUsed!)) / 100}" height="4" rx="2" fill="${percentUsed! >= 90 ? '#D0453F' : color}"/>` : '')
   }
-  return tile(x, y, width, 82, `${name} · plan · ${policy}`, hasPlan(plan)
-    ? window('5h', 'fiveHour', plan?.fiveHour, 33) + window('7d', 'week', plan?.week, 62)
+  return tile(x, y, width, 82, `${name} · ${s.planWord} · ${s.policy[policy]}`, hasPlan(plan)
+    ? window(s.fiveHour, 'fiveHour', plan?.fiveHour, 33) + window(s.week, 'week', plan?.week, 62)
     : tileValue(x, y + 33, width, '—'))
 }
 
@@ -1282,7 +1404,7 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
   const plans = families.map(([name, plan, color, readAt], i) => {
     const family: PlanFamily = name === 'Claude' ? 'claude' : 'codex'
     return planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, at, readAt,
-      { policy: budgetPolicy(usage, family), history: usage.history?.[family] })
+      { policy: budgetPolicy(usage, family), history: usage.history?.[family], lang, locale: LOCALE[lang] })
   }).join('')
   return svg(
     W,
@@ -1559,28 +1681,58 @@ async function reconcile($: EngineInterface, stoppingAgentId?: string): Promise<
   await syncRunning($)
 }
 
-const describeBudgetPolicies = (usage: UsageReadings): string =>
-  `Budget: Claude ${budgetPolicy(usage, 'claude')} · Codex ${budgetPolicy(usage, 'codex')}.`
+const describeBudgetPolicies = (usage: UsageReadings, at: number): string => {
+  const s = tr()
+  return [`${s.budget}: Claude ${s.policy[budgetPolicy(usage, 'claude')]} · Codex ${s.policy[budgetPolicy(usage, 'codex')]}.`,
+    ...PLAN_FAMILIES.filter(family => decisionHolds(usage, family, at)).map(family =>
+      s.goUntil(FAMILY_NAME[family], formatPlanTimestamp(usage.decisions![family]!.until, true, at, { locale: LOCALE[lang] })))].join(' ')
+}
+
+// The command takes each argument in either language.
+const BUDGET_ARGS: Readonly<Record<string, BudgetPolicy | 'once'>> = {
+  within: 'within', full: 'full', once: 'once', entro: 'within', pieno: 'full', 'una-volta': 'once', unavolta: 'once',
+}
 
 async function runBudgetCommand($: EngineInterface, e: CommandRunInput): Promise<{ text: string }> {
   const args = e.args.trim().toLowerCase().split(/\s+/).filter(Boolean)
-  if (!args.length) return { text: describeBudgetPolicies(await read($, usageReadings)) }
-  const [family, policy] = args
-  if (args.length !== 2 || !PLAN_FAMILIES.some(value => value === family) || (policy !== 'within' && policy !== 'full')) {
-    return { text: 'Usage: /savvy-budget <claude|codex> <within|full>' }
-  }
-  // The command changes only user policy; observations and the other family survive.
-  await update($, usageReadings, prev => ({ ...prev, policies: { ...prev.policies, [family!]: policy } }))
+  const at = await $.clock.now()
+  if (!args.length) return { text: describeBudgetPolicies(await read($, usageReadings), at) }
+  const [family, asked] = args
+  const known = PLAN_FAMILIES.find(value => value === family)
+  const policy = Object.hasOwn(BUDGET_ARGS, asked ?? '') ? BUDGET_ARGS[asked!] : undefined
+  if (args.length !== 2 || !known || !policy) return { text: tr().budgetUsage }
+  // once is the user's yes until the next reset; the policy stays. Observations and the other family survive.
+  await update($, usageReadings, prev => policy === 'once' ? decideBudget(prev, known, at, 'user')
+    : { ...prev, policies: { ...prev.policies, [known]: policy } })
   await showPanel($, true)
   $.ui.invalidate('ui.render')
-  return { text: describeBudgetPolicies(await read($, usageReadings)) }
+  return { text: describeBudgetPolicies(await read($, usageReadings), at) }
 }
 
-// The host accepts text results; both tools expose the same compact JSON line.
+// The host accepts text results; both tools expose the same compact JSON line, and the tiers'
+// estimates on a line of their own once a tier has a finished run.
 const formatBudgetText = (budget: BudgetSummary): string => `budget: ${JSON.stringify(budget)}`
 
+async function budgetLines($: EngineInterface): Promise<string> {
+  const usage = await read($, usageReadings), at = await $.clock.now()
+  const estimates = tierEstimates(await read($, agents), usage, at)
+  return [formatBudgetText(budgetSummary(usage, at)),
+    ...(Object.keys(estimates).length ? [`estimates: ${JSON.stringify(estimates)}`] : [])].join('\n')
+}
+
 async function readBudgetResult($: EngineInterface): Promise<{ result: string }> {
-  return { result: formatBudgetText(budgetSummary(await read($, usageReadings), await $.clock.now())) }
+  return { result: await budgetLines($) }
+}
+
+async function recordDecision($: EngineInterface, e: Record<string, unknown>): Promise<{ result: string } | { deny: string }> {
+  // A worker cannot open the gate it is held by: only the main session records the user's answer.
+  if (e.agentId) return { result: tr().ignoredDecision }
+  const family = PLAN_FAMILIES.find(value => value === e.family)
+  if (!family) return { deny: tr().badFamily }
+  if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
+  const at = await $.clock.now()
+  await update($, usageReadings, prev => decideBudget(prev, family, at, 'orchestrator', e.answer as string))
+  return { result: tr().decided(FAMILY_NAME[family], (await read($, usageReadings)).decisions![family]!.until) }
 }
 
 export const register: Register = (on, options) => {
@@ -1598,7 +1750,8 @@ export const register: Register = (on, options) => {
         'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
         'Returns a string: an ok: acknowledgement first, then a budget: line with compact JSON per family/window ' +
         '(used, resetsAt, projectedAtReset, exhaustsAt, pace, policy, verdict). ' +
-        'A verdict of ask needs the user\'s decision before long work; over is accepted by full policy. ' +
+        'A verdict of ask needs the user\'s decision before long work (the Agent tool refuses a costly tier of that family until it is recorded); over is accepted by full policy. ' +
+        'Once a tier has finished runs, a third line, estimates:, gives its mean cost and share of each window. ' +
         'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
         type: 'object',
@@ -1608,6 +1761,10 @@ export const register: Register = (on, options) => {
           done: { type: 'integer', minimum: 0, description: 'Number of tasks accepted after review.' },
           phase: { type: 'string', enum: [...PHASES] },
           finished: { type: 'boolean', description: 'True once the flow is closed.' },
+          clearFinished: {
+            type: 'boolean',
+            description: "True to clear the finished runs from the panel's Finished list (the user asked, or the list grew long); the totals, the running runs and the planned tasks stay as they are.",
+          },
           tasks: {
             type: 'array',
             description:
@@ -1644,8 +1801,23 @@ export const register: Register = (on, options) => {
       name: 'budget',
       description: 'Read the current budget summary per family (claude, codex) and window (fiveHour, week), without changing the progress bar. ' +
         'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask). ' +
-        'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set only by /savvy-budget.',
+        'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set only by /savvy-budget. ' +
+        'Once a tier has finished runs, a second line, estimates:, gives per tier the runs, their mean cost in USD and that cost as a percent of each Claude window (null until observed).',
       inputSchema: { type: 'object', properties: {}, required: [] },
+    })
+    await $.tool.register({
+      name: 'decide',
+      description: 'Record the user\'s yes to costly work on a family whose budget verdict is ask: it opens the budget gate on that family\'s ' +
+        'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) until the family\'s next reset. Call it only after the user said yes in chat, ' +
+        'quoting their words in answer; never on your own judgment. Main session only.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          family: { type: 'string', enum: [...PLAN_FAMILIES] },
+          answer: { type: 'string', description: "The user's own words that said yes." },
+        },
+        required: ['family', 'answer'],
+      },
     })
     await $.tool.register({
       name: 'step',
@@ -1675,18 +1847,18 @@ export const register: Register = (on, options) => {
     })
     await $.command.register({
       name: 'agents-info',
-      description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
+      description: tr().agentsInfo,
     })
     await $.command.register({
       name: 'savvy-theme',
-      description: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
-      argumentHint: '[theme|auto]',
+      description: tr().savvyTheme,
+      argumentHint: tr().themeHint,
       immediate: true,
     })
     await $.command.register({
       name: 'savvy-budget',
-      description: 'Set a family budget policy: within the rolling windows, or full when you accept using a reset; no arguments lists policies',
-      argumentHint: '[claude|codex] [within|full]',
+      description: tr().savvyBudget,
+      argumentHint: tr().budgetHint,
       immediate: true,
     })
 
@@ -1723,6 +1895,7 @@ export const register: Register = (on, options) => {
 
   on('command.run', { command: 'savvy-budget' }, runBudgetCommand)
   on('tool.call', { tool: BUDGET_TOOL }, readBudgetResult)
+  on('tool.call', { tool: DECIDE_TOOL }, async ($, e) => recordDecision($, e as unknown as Record<string, unknown>))
 
   on('command.run', { command: 'savvy-theme' }, async ($, e) => {
     const at = await $.clock.now()
@@ -1753,7 +1926,7 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: TOOL }, async ($, e) => {
     // The flow is the main session's: a call from a worker's loop carries its
     // agentId and changes nothing, or a worker could rename, finish or reset it.
-    if (e.agentId) return { result: 'ignored: only the main session reports the flow' }
+    if (e.agentId) return { result: tr().ignoredFlow }
     const input = e as unknown as ProgressInput
     const prev = await read($, flow)
     if (isNewFlow(prev, input) && input.title !== undefined) {
@@ -1761,22 +1934,22 @@ export const register: Register = (on, options) => {
       await update($, agents, list => list.filter(a => a.status === 'running'))
     }
     await update($, flow, p => merge(p, input))
+    if (input.clearFinished === true) await update($, agents, clearFinished)
     await syncRunning($)
     const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
-    const budget = budgetSummary(await read($, usageReadings), await $.clock.now())
-    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}\n${formatBudgetText(budget)}` }
+    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}\n${await budgetLines($)}` }
   })
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
     const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string; codexStatus?: string }
     if ((input.model !== undefined && typeof input.model !== 'string') || (input.effort !== undefined && typeof input.effort !== 'string')) {
-      return { deny: 'model and effort must be strings' }
+      return { deny: tr().badModel }
     }
-    if (input.codexStatus !== undefined && (typeof input.codexStatus !== 'string' || !STATUS_NAME.test(input.codexStatus))) return { deny: 'codexStatus must be a safe filename stem' }
+    if (input.codexStatus !== undefined && (typeof input.codexStatus !== 'string' || !STATUS_NAME.test(input.codexStatus))) return { deny: tr().badStatus }
     const agentId = e.agentId
-    if (!agentId) return { result: 'ignored: only subagents report steps' }
+    if (!agentId) return { result: tr().ignoredSteps }
     // Set on every run of the updater, which may run again on a conflict.
     let isMatched = false
     await update($, agents, list => {
@@ -1802,7 +1975,7 @@ export const register: Register = (on, options) => {
         }
       })
     })
-    return { result: isMatched ? 'ok' : `ignored: no panel row for agent ${agentId}` }
+    return { result: isMatched ? 'ok' : tr().noRow(agentId) }
   })
 
   on('session.measure', async ($, e, next) => {
@@ -1846,6 +2019,9 @@ export const register: Register = (on, options) => {
 
   // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
+    // The budget gate comes first: a refused call neither starts a worker nor moves the bar.
+    const refusal = budgetGate(String(e.subagent_type ?? ''), await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
+    if (refusal) return { deny: refusal }
     if (isSavvy(String(e.subagent_type ?? ''))) {
       // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
       await update($, flow, prev => {
@@ -1923,6 +2099,9 @@ export const register: Register = (on, options) => {
     const result = yield* next(e)
     const agentId = e.agentId
     const usage = result.usage
+    // Every model step, the main session's too, is Claude spend: the window moves with all of it.
+    const spent = usage ? costOf(usage.model || e.model, usage) : 0
+    if (spent > 0) await update($, usageReadings, prev => ({ ...prev, spentUsd: { ...prev.spentUsd, claude: (prev.spentUsd?.claude ?? 0) + spent } }))
     if (!agentId || !usage) return result
 
     const model = usage.model || e.model
@@ -1938,6 +2117,7 @@ export const register: Register = (on, options) => {
               model,
               effort: typeof e.effort === 'string' ? e.effort : a.effort,
               status: 'running',
+              isCleared: undefined,
               ...(a.codexStatus ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
               endedAt: undefined,
               contextTokens:
@@ -2084,7 +2264,7 @@ export const register: Register = (on, options) => {
     const at = Math.max(view.now, ...list.map(a => a.startedAt), 0)
 
     const running = list.filter(a => a.status === 'running').reverse()
-    const finished = list.filter(a => a.status !== 'running').reverse()
+    const finished = list.filter(a => a.status !== 'running' && isShown(a)).reverse()
     const planned = plannedOf(f, list)
     const t = totals(list, at, usage)
     // The pane's title says "Agents"; inside, only the flow's own name.
@@ -2106,7 +2286,24 @@ export const register: Register = (on, options) => {
         onPress={() => update($, panel, prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed }))}
       />
     )
-    const isEmpty = list.length === 0 && planned.length === 0
+    const clearDone = (
+      <Button
+        key="clear-done"
+        label={s.clearFinished}
+        plain
+        onPress={async () => {
+          await update($, agents, clearFinished)
+          await showPanel($, true)
+        }}
+      />
+    )
+    const doneHeader = (
+      <Box key="done-header" flexDirection="row" flexWrap="wrap" alignItems="center" gap={1}>
+        {toggleDone}
+        {clearDone}
+      </Box>
+    )
+    const isEmpty = list.filter(isShown).length === 0 && planned.length === 0
     const controls = (
       <Box flexDirection="row" flexWrap="wrap" alignItems="center" gap={1}>
         {toggleCompact}
@@ -2128,7 +2325,7 @@ export const register: Register = (on, options) => {
       if (p.isCompact) {
         return (
           <Box flexDirection="column" gap={1}>
-            <Svg source={compactSvg(W, list, planned, t, usage, at)} alt={`${list.length} ${s.agentsCount}, ${summary}`} width={W} height={compactHeight(usage)} />
+            <Svg source={compactSvg(W, list.filter(isShown), planned, t, usage, at)} alt={`${list.filter(isShown).length} ${s.agentsCount}, ${summary}`} width={W} height={compactHeight(usage)} />
             {controls}
           </Box>
         )
@@ -2142,7 +2339,7 @@ export const register: Register = (on, options) => {
           {running.map(a => (
             <Svg key={a.id} source={agentSvg(W, a, at, hints, usage)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isRunning}`} width={W} height={66} />
           ))}
-          {finished.length > 0 && toggleDone}
+          {finished.length > 0 && doneHeader}
           {!p.isDoneCollapsed &&
             finished.map(a => (
               <Svg key={a.id} source={agentSvg(W, a, at, hints, usage)} alt={`${a.description}: ${runModel(a, false, hints)}, ${s.isFinished}`} width={W} height={66} />
@@ -2222,7 +2419,7 @@ export const register: Register = (on, options) => {
             {isEmpty && <Text dimColor>{s.empty}</Text>}
             {running.length > 0 && <Text dimColor>{s.running} · {running.length}</Text>}
             {running.map(row)}
-            {finished.length > 0 && toggleDone}
+            {finished.length > 0 && doneHeader}
             {!p.isDoneCollapsed && finished.map(row)}
             {planned.length > 0 && <Text dimColor>{s.planned} · {planned.length}</Text>}
             {planned.map(pl => {
@@ -2254,7 +2451,7 @@ export const register: Register = (on, options) => {
     const { Box, Text, Button } = ui
     const list = await read($, agents)
     // The panel's rows: running, finished and planned.
-    const crew = list.length + plannedOf(f, list).length
+    const crew = list.filter(isShown).length + plannedOf(f, list).length
     const active = runningOf(list)
     const crewButton = (
       <Button key="savvy-agents" label={`×${crew}`} plain onPress={() => void togglePane($)} />

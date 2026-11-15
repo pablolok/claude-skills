@@ -27,7 +27,10 @@ the mod needs.
   past the fill stays the plan's own workers, handed a task and not yet accepted.
 - **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model and version, effort, task
   progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
-  them.
+  them. **Clear finished** (*Svuota finiti* in Italian), beside the Finished heading, empties that list; the
+  orchestrator can do the same with the progress tool's `clearFinished: true`. The cleared runs stay counted in the
+  header's cost, tokens and time and in the tier estimates, running runs and planned tasks are untouched, and a
+  cleared run that runs again comes back.
   Claude runs name the resolved model the engine reports (for example `Opus 5.5 · xhigh`); a planned alias learns
   its version from the newest resolved run of that family in the session (an alias resolves to the newest, so a run
   pinned to an older model never relabels it) and keeps the bare alias until then. The
@@ -69,11 +72,22 @@ the mod needs.
   that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
   before the reset when space is tight.
-- **Budget policy**: `/savvy-budget <claude|codex> <within|full>` sets a family's policy; `/savvy-budget` lists both.
+- **Budget policy**: `/savvy-budget <claude|codex> <within|full|once>` sets a family's policy; `/savvy-budget` lists both.
   Each defaults to `within`: exhausting a window early needs the user's decision before long work. `full` means
   the user accepts using a reset and running out early; the flow continues, pacing only the short window. Only set
   it when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
   title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
+- **Budget gate**: while a family's verdict is `ask`, the Agent tool refuses its costly tiers (`savvy-fable`,
+  `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex) with a message that
+  gives the projection, the reset and the way out. Cheaper tiers, other agents and the other family pass, and so
+  does a family with no projection yet. The user's yes opens it until the family's soonest reset: they type
+  `/savvy-budget <family> once`, or the orchestrator records their answer, quoted, with the `decide` tool (main
+  session only; the record is the orchestrator's word for it). The policy stays as it was.
+- **Tier estimates**: every model step of the session, the main session's included, adds its estimated price to a
+  running Claude spend, stored with each plan reading. Over a window's recent history, the percent it moved per
+  dollar spent turns a tier's mean finished run (savvy Claude tiers, runs with a measured cost) into a share of the
+  5-hour and weekly windows. Other sessions on the same plan move the windows too, so the share errs high; under
+  half a dollar of spend or no movement leaves it `null`.
 - **Status snapshots**: savvy-flow ships the zero-dependency Node writer `scripts/codex-status.mjs`. Each relay picks
   a unique status name, declares it through `step` without changing its step count, and pipes `codex exec --json`
   through the writer. The writer atomically replaces a snapshot of at most 16 KiB about once a second, including a
@@ -154,7 +168,11 @@ the mod needs.
   does not fit under `full`, `ask` when it does not fit under `within`. Missing estimates are `null`, unavailable
   windows are omitted, and times are ISO timestamps. Expired readings report zero used with no projection.
 - `mcp__savvy-progress__budget`: returns the string `budget: <compact JSON>` with the same summary, without changing
-  the bar or state.
+  the bar or state. Once a savvy Claude tier has a finished run, both tools add a last line,
+  `estimates: <compact JSON>`: per tier its `runs`, mean `usd`, and that cost as a percent of `fiveHour` and `week`
+  (`null` until observed).
+- `mcp__savvy-progress__decide`: records the user's yes (`family`, `answer` quoting their words) to costly work on a
+  family whose verdict is `ask`, opening the budget gate until that family's next reset. Ignored from a worker.
   Both tools use the latest observations already taken by the panel. The flow reads this summary on progress
   updates and before long work; an `ask` calls for the user's decision with the projection and reset, or moving
   work to another family, a cheaper tier, or a slower pace. The tools never change the user's policy.
@@ -176,10 +194,13 @@ work is covered by its subscription; the displayed API-equivalent estimate is no
 
 ## Settings
 
-- `language`: `auto` (default), `en`, `ru` or `it`. `auto` follows Claude Code's `language` setting, then the system
-  locale, and reads English unless they say Russian; Italian is only ever chosen, so the default stays English on an
-  Italian system too. The panel's language picker, beside the theme picker, sets it as well: the panel speaks the
-  language at once and the option keeps it.
+- `language`: `auto` (default), `en` or `it`. `auto` follows Claude Code's `language` setting, then the system
+  locale: Italian when they say Italian, English otherwise. Everything the plugin writes in words follows it — the
+  bar, the panel and its plan tiles (dates and times included), the commands' answers and descriptions, the budget
+  gate's refusal and the theme note told to the model — while the tools' JSON lines and descriptions stay English, as
+  the contract the flow parses. `/savvy-budget` takes its arguments in either language (`within`/`entro`,
+  `full`/`pieno`, `once`/`una-volta`). The panel's language picker, beside the theme picker, sets it as well: the
+  panel speaks the language at once and the option keeps it.
 - `theme`: `auto` (default), `classic`, or one theme pinned until `auto` is chosen again (every id `/savvy-theme`
   lists, from `new-year` to `winter`). `auto` follows the calendar above by the local date, and moves on when the date
   does; `classic` keeps the tiers' everyday costumes (astronaut, detective, engineer, chef, racer, pirate).
@@ -234,7 +255,7 @@ payload and timing are unconfirmed, and that transition order is a tested race s
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
 | `.claude-plugin/icon.png` | The mod's icon: the crab over a progress bar, a 512 px square. |
 | `hooks/hooks.json` | Names the hooks module. |
-| `hooks/register.tsx` | The module: the three tools, `/agents-info`, `/savvy-theme`, `/savvy-budget`, usage projections, the bar and the panel with its theme picker. |
+| `hooks/register.tsx` | The module: the four tools, the budget gate on Agent calls, `/agents-info`, `/savvy-theme`, `/savvy-budget`, usage projections, the bar and the panel with its theme picker. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
 | `hooks/themes.ts` | The calendar, the theme list and the seasons' and first holidays' costumes. |
 | `hooks/wardrobe.ts` | What every theme draws from: the palette, shared props, particles, header ornaments and weather. |
