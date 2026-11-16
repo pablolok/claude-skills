@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.2] - 2026-11-16
+- the budget is reported to the user in their local time, to the minute: one compact line per window of each family (percent used, the time it runs out at the current pace or the percent projected at reset, the reset, the day when not today, the time of the reading); the progress tool's timestamps are UTC and are converted from the machine's clock, never presented as local
+
+
 ## [1.17.1] - 2026-11-16
 - the top-tier rule says the gate also covers the model override and resumes
 

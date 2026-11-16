@@ -202,6 +202,13 @@ asked for it or set it as their default, never on your own.
   own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper
   tiers beside it. If the summary is unavailable, use the host's plan usage or the last relay report.
   Fable and Codex Astra have their own gate, whatever the verdict: see section "Models".
+- **Report the budget in the user's local time, to the minute.** Whenever you give the budget to the user (an `ask`,
+  a status, the close), write one compact line per window of each family you report (5-hour and weekly): the percent
+  used, the time it runs out at the current pace (when it does not before the reset, the percent projected at reset)
+  and the reset time, each to the minute in the user's local time, with the day when it is not today, and the time of
+  the reading. The progress tool's timestamps (`resetsAt`, `exhaustsAt`, the gate's refusal) are UTC (`...Z`): read
+  the machine's local time and offset first (the shell's date command), convert, and never present a UTC time as
+  local. For example: `Claude 5h: 62% at 14:05, runs out 16:40, resets 17:00`.
 - **A week projected past its limit is the scarcer budget**, even under `full`: a short window comes back in hours,
   the week in days. While it lasts, take that family's legwork one tier down (Careful work to Medium with a precise
   brief, Medium to Light), and ask before every Fable or Codex Astra task, whatever was said for the short window (those tiers are plans only in any case).

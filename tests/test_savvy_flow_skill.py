@@ -282,6 +282,14 @@ class TestHostTools(unittest.TestCase):
         self.assertIn("**A turn summary closes a turn, not the flow.**", self.text)
         self.assertIn("Section 6 runs once, after the last task is accepted.", self.text)
 
+    def test_the_budget_is_reported_in_local_time_to_the_minute_never_as_utc(self) -> None:
+        self.assertIn("**Report the budget in the user's local time, to the minute.**", self.text)
+        self.assertIn("one compact line per window of each family you report (5-hour and weekly)", self.text)
+        self.assertIn("with the day when it is not today, and the time of the reading", self.text)
+        self.assertIn("are UTC (`...Z`): read the machine's local time and offset first", self.text)
+        self.assertIn("never present a UTC time as local", self.text)
+        self.assertLess(self.text.index("## 4. Delegate"), self.text.index("**Report the budget in the user's local"))
+
 
 class TestThemes(unittest.TestCase):
     """The chat theme is the user's ask, else the agents panel's `theme` option, else the calendar: one setting for
