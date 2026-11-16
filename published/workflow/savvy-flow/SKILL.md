@@ -28,12 +28,18 @@ Task from the user: $ARGUMENTS
   screenshots, rendered images), small touch-ups. They go to Careful (every tool, vision included) or Medium (files and shell) and return
   findings; you keep the verdict. Work asked for after the plan is done is planned and tiered the same way, never
   sent to a generic agent because it is "not part of the plan".
-- **`savvy-fable` and `savvy-codex-astra` run only with the user's yes**, whatever model you are. When a task meets its criteria (section 3),
-  or a Heavy attempt failed on it, ask before delegating it: the task, why Fable rather than Heavy (what makes it hard,
-  what Heavy would risk), the cost of the choice, and your recommendation; Heavy is the alternative offered (Sol, for
-  Astra). The user's
-  answer settles that task only, unless they set Fable themselves for more (next rule); the rest of the plan goes on
-  while it is pending. A design feature for Fable (section 2) is asked the same way.
+- **`savvy-fable` and `savvy-codex-astra` are for plans only**: writing a plan or a design-decision document, never
+  building, capturing, debugging or reviewing. **Each launch, and each resume, runs on the user's explicit yes**,
+  whatever model you are and whatever the budget says. Ask first: the plan, why Fable rather than Heavy, the cost of
+  the choice, your recommendation. On their yes, record their words with the `decide` tool (`tier: "fable"` or
+  `"astra"`; it holds for one launch or resume, `uses: "session"` or a number only when the user's words set more).
+  The hook refuses the Agent call and the SendMessage resume of those workers until it is recorded, and says so. The
+  user's answer settles that task only, unless they set Fable themselves for more (next rule); the rest of the plan goes on while it is pending. Anything that is not a
+  plan (the hardest bugs, a design feature) goes to Heavy, or Sol for Codex, unless the user explicitly asks for Fable.
+- **Spend**: split every piece by kind of work: design and judgment on Careful or Sol, mechanical work (swap,
+  build, export, capture) on Medium or Light. One fresh worker per step, never one worker resumed for hours: a long
+  context is rebought on every turn. Check `budget` before every costly launch; when a family is projected past its
+  limit, cut a tier and ask the user (section 4).
 - **A model or an effort the user sets wins over the tier's.** A general instruction (every agent on one model, every
   review at one effort) covers every task it describes, a specific one the tasks it names, and it holds until they
   change it: never ask again task by task. Setting Fable this way is the yes its rule asks for. Pass it as `model` /
@@ -118,7 +124,7 @@ Design decisions are yours. Workers never invent UI, with one exception below.
 - **Small/contained UI** (a component, a state, a screen tweak): decide the design yourself and write it into the worker brief as concrete specs (structure, states, spacing/typography rules, which existing components to reuse).
 - **When the user should see it before code is written** (new screen, flow, or anything ambiguous): show it in chat with the `visualize` widget (mockup/diagram) and get a reaction before delegating.
 - **Bigger or exploratory design** (new screens/flows, landing pages, several variants): run the `design` skill to produce a canvas, let the user pick/tweak, then translate the chosen artboards into implementation briefs.
-- **Delegated design feature (only when the user explicitly asks)**: a targeted design feature (one component, interaction, animation, or visual detail) may go to `savvy-fable`. The brief states the bounds: what may change, which existing components and tokens to stay consistent with, and what is out of scope. You still review the visual result and own acceptance.
+- **Delegated design feature (only when the user explicitly asks)**: a targeted design feature (one component, interaction, animation, or visual detail) goes to Heavy; to `savvy-fable` only when the user explicitly asks for Fable, each launch on their yes. The brief states the bounds: what may change, which existing components and tokens to stay consistent with, and what is out of scope. You still review the visual result and own acceptance.
 - For frontend styling direction, consult the `frontend-design` skill. For any chart/graph, consult `dataviz` before specifying it.
 - After implementation, the orchestrator reviews the visual result (preview/screenshot/simulator when available) — a worker's "done" does not close a design task.
 
@@ -128,7 +134,7 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 
 | Tier | Agent | Model / effort | Use for |
 |------|-------|----------------|---------|
-| Fable | `savvy-fable` | Fable / high | Only with the user's yes (section "Models"). "Hardest problems": very complex logic (subtle algorithms, concurrency, many interacting states), hard bugs that resist ordinary debugging or survived a Heavy investigation; targeted design features, only when the user asks (section 2) |
+| Fable | `savvy-fable` | Fable / high | **Plans only** (writing a plan or a design-decision document), each launch on the user's explicit yes, recorded with `decide` (section "Models"). Hard bugs, very complex logic and design features go to Heavy unless the user explicitly asks for Fable |
 | Heavy | `savvy-heavy` | Opus / xhigh | "Understand and find": unfamiliar or messy code, unclear root cause, non-obvious architecture, large contexts, anything where a wrong first approach is expensive |
 | Careful | `savvy-careful` | Opus / high | "Do it right": the approach is clear but execution is delicate. Multi-file refactors, fixes that must preserve invariants, logic with many edge cases, concurrency |
 | Medium | `savvy-medium` | Sonnet / medium, lean tools | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
@@ -136,7 +142,7 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Codex Luna | `savvy-codex-luna` | OpenAI's Luna family through the Codex CLI, effort low; a Sonnet relay | Only when Codex is signed in (section 0), as below: Light-sized work |
 | Codex Terra | `savvy-codex-terra` | Terra family, effort medium | Medium-sized work |
 | Codex Sol | `savvy-codex-sol` | Sol family, effort high | Careful- or Heavy-sized work; the default for a **second opinion** from another model family (a review of a risky diff, a second diagnosis of a hard bug) |
-| Codex Astra | `savvy-codex-astra` | Astra family, effort high | Fable-sized work, and only with the user's yes, asked as for Fable (section "Models") |
+| Codex Astra | `savvy-codex-astra` | Astra family, effort high | **Plans only**, each launch on the user's explicit yes, as for Fable (section "Models"); other Fable-sized work goes to Sol |
 
 Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
@@ -144,16 +150,14 @@ lean, it starts at a fraction of that, and the cheaper model halves what is left
 simulator, the web or a skill goes to Careful or above, or its brief states the rule it needs in a few lines.
 
 Heuristics:
-- Uncertain between two tiers → take the higher one. Exception: Fable and Codex Astra are never picked alone (section "Models"): ask, and Heavy (or Sol) runs unless the user says yes.
+- Uncertain between two tiers → take the higher one. Exception: Fable and Codex Astra are for plans only and never picked alone (section "Models"): ask, and Heavy (or Sol) takes anything else.
 - Heavy vs Careful is about the kind of difficulty, not the amount: insight needed → Heavy; thoroughness needed → Careful. A task that needs both is two tasks: Heavy investigates and produces a precise brief, Careful implements it.
-- The same split holds for the top tier (Fable, Codex Astra), once the user has said yes to it: its task is the hard
-  part alone (the cause, the method, the decision), and its brief asks it to return the briefs for the rest (the
-  method, the parameters, the checks and their targets). The repeatable execution (rounds of change, run, measure,
-  adjust toward known targets, in code, data or assets) goes to Careful or Medium, or to the Codex tier where it is
-  in use (below). On such rounds most of a top-tier worker's tokens go to mechanical steps. A top-tier worker resumed
-  for another round is briefed the same way.
+- The same split holds for the top tier (Fable, Codex Astra), on the user's yes: its task is the plan alone (the
+  method, the decision), and its brief asks it to return the briefs for the rest (the parameters, the checks and their
+  targets). The repeatable execution (rounds of change, run, measure, adjust toward known targets, in code, data or
+  assets) goes to Careful or Medium, or to the Codex tier where it is in use (below), each step a fresh worker.
 - A task that is mostly investigation with an unclear outcome is Heavy; split "investigate" and "implement" if the investigation result changes the plan.
-- Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows: to `savvy-fable`, on the user's explicit request.
+- Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows.
 - The tier sets the difficulty; **the capability the task depends on picks the family** when two could take it
   (narrative text, visible polish, terminal-heavy work, accumulating constraints, a second opinion's direction):
   `references/routing.md`, read when planning. At the close of a flow, add what this flow showed about a family to
@@ -166,7 +170,7 @@ self-contained task the user wants done on OpenAI models, or to move work off th
 Long repetitive execution (many rounds toward known targets) gains the most from that move: make it when the user has
 asked for it or set it as their default, never on your own.
 - **Pick the intensity like a Claude tier**, the cheapest that gets it right: Luna for mechanical work, Terra for
-  standard work, Sol for delicate or unfamiliar work and for second opinions, Astra only with the user's yes. The
+  standard work, Sol for delicate or unfamiliar work and for second opinions, Astra for plans only, each launch on the user's yes. The
   relay picks the newest model of its family from Codex's own model list and sets the effort; a brief names a model
   or an effort only when the user asked for one.
 - A Codex task is marked as such in the plan you present before it is delegated, with its intensity.
@@ -196,9 +200,10 @@ asked for it or set it as their default, never on your own.
   window. The policy is the user's: set it with `/savvy-budget` when they say a reset may be used, never on your
   own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper
   tiers beside it. If the summary is unavailable, use the host's plan usage or the last relay report.
+  Fable and Codex Astra have their own gate, whatever the verdict: see section "Models".
 - **A week projected past its limit is the scarcer budget**, even under `full`: a short window comes back in hours,
   the week in days. While it lasts, take that family's legwork one tier down (Careful work to Medium with a precise
-  brief, Medium to Light), and ask before every Fable or Codex Astra task, whatever was said for the short window.
+  brief, Medium to Light), and ask before every Fable or Codex Astra task, whatever was said for the short window (those tiers are plans only in any case).
   When the Claude week is the one running out and Codex is signed in with room in its own week, offer the Codex tier
   for self-contained tasks (Terra or Sol at their usual sizes); it moves code to another vendor, so it runs only
   with the user's yes (section 3).

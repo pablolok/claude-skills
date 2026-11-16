@@ -123,6 +123,14 @@ const STRINGS = {
     badAnswer: "answer must quote the user's own words",
     badModel: 'model and effort must be strings',
     badStatus: 'codexStatus must be a safe filename stem',
+    badTier: 'tier must be fable or astra, and match the family when one is given',
+    badUses: 'uses must be 1, a positive whole number or "session"',
+    topDecided: (tier: string, uses: string) => `ok: ${tier} allowed for ${uses}`,
+    topUsesOne: '1 launch', topUsesMany: (n: number) => `${n} launches`, topUsesSession: 'the session',
+    topGate: (t: TopGateText) =>
+      `Top-tier gate: savvy-${t.tier} (${t.name}) is for PLANS only (writing a plan or a design-decision document), and each ${t.action} needs the user's explicit yes, whatever the budget says. ` +
+      `${t.spent ? 'The yes recorded for it is used up. ' : ''}Ask the user in chat; on their yes, record their words with the decide tool (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, or "session" if they said so for more). ` +
+      `For anything that is not a plan, offer ${t.alternative} instead.`,
     gate: (g: GateText) =>
       `Budget gate: ${g.family} verdict ask under the within policy — ${g.facts.map(f => `${f.window} ${f.used}% → ${f.projected}% at reset ${f.resetsAt}${f.exhaustsAt ? `, runs out ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Ask the user before starting savvy-${g.tier}${g.share.length ? ` (a ${g.tier} run so far ≈ ${g.share.map(x => `${x.percent}% of ${x.window === 'fiveHour' ? '5h' : 'week'}`).join(', ')})` : ''}. ` +
@@ -191,6 +199,14 @@ const STRINGS = {
     badAnswer: "answer deve riportare le parole dell'utente",
     badModel: 'model ed effort devono essere stringhe',
     badStatus: 'codexStatus deve essere un nome di file sicuro',
+    badTier: 'tier deve essere fable o astra, coerente con la famiglia se indicata',
+    badUses: 'uses deve essere 1, un intero positivo o "session"',
+    topDecided: (tier: string, uses: string) => `ok: ${tier} consentito per ${uses}`,
+    topUsesOne: '1 avvio', topUsesMany: (n: number) => `${n} avvii`, topUsesSession: 'la sessione',
+    topGate: (t: TopGateText) =>
+      `Blocco del livello massimo: savvy-${t.tier} (${t.name}) è solo per i PIANI (scrivere un piano o un documento di decisioni di progetto), e ogni ${t.action} vuole il sì esplicito dell'utente, qualunque cosa dica il budget. ` +
+      `${t.spent ? 'Il sì registrato per lui è esaurito. ' : ''}Chiedi all'utente in chat; se dice sì, registra le sue parole con lo strumento decide (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, o "session" se ne ha autorizzati di più). ` +
+      `Per tutto ciò che non è un piano, proponi ${t.alternative}.`,
     gate: (g: GateText) =>
       `Blocco del budget: ${g.family} chiede una decisione con la politica entro — ${g.facts.map(f => `${f.window === '5h' ? '5h' : 'settimana'} ${f.used}% → ${f.projected}% all'azzeramento ${f.resetsAt}${f.exhaustsAt ? `, si esaurisce ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Chiedi all'utente prima di avviare savvy-${g.tier}${g.share.length ? ` (finora un'esecuzione ${g.tier} ≈ ${g.share.map(x => `${x.percent}% di ${x.window === 'fiveHour' ? '5h' : 'settimana'}`).join(', ')})` : ''}. ` +
@@ -200,6 +216,7 @@ const STRINGS = {
 } as const
 
 // What the gate's refusal says, before it is put in words.
+type TopGateText = { tier: string; name: string; action: string; spent: boolean; alternative: string }
 type GateText = {
   family: string
   key: PlanFamily
@@ -809,6 +826,38 @@ export const decideBudget = (usage: UsageReadings, family: PlanFamily, at: numbe
   return { ...usage, decisions: { ...usage.decisions,
     [family]: { until: soonestReset(usage, family, at), at, by, ...(said ? { words: said } : {}) } } }
 }
+
+// Fable and Codex Astra are for plans only: each launch, and each resume, needs the user's recorded yes.
+const TOP_TIERS: Readonly<Record<string, { family: PlanFamily; name: string; alternative: string }>> = {
+  fable: { family: 'claude', name: 'Claude Fable', alternative: 'Heavy (Claude)' },
+  'codex-astra': { family: 'codex', name: 'Codex Astra', alternative: 'Sol (Codex)' },
+}
+const TOP_TIER_NAMES: Readonly<Record<string, string>> = { fable: 'fable', astra: 'codex-astra', 'codex-astra': 'codex-astra' }
+
+// An Agent launch or a SendMessage resume of a top tier, refused unless a recorded yes still has uses left.
+export const topTierGate = (subagentType: string, usage: UsageReadings, resume = false, language: Lang = 'en'): string | undefined => {
+  if (!isSavvy(subagentType)) return undefined
+  const tier = tierOf(subagentType), top = TOP_TIERS[tier]
+  if (!top) return undefined
+  const permit = usage.topTiers?.[tier]
+  if (permit && (permit.uses === 'session' || permit.uses > 0)) return undefined
+  const it = language === 'it'
+  return STRINGS[language].topGate({ tier: tier === 'fable' ? 'fable' : 'codex-astra', name: top.name,
+    action: resume ? (it ? 'ripresa (SendMessage)' : 'resume (SendMessage)') : (it ? 'avvio' : 'launch'),
+    spent: Boolean(permit), alternative: top.alternative })
+}
+
+// One launch or resume of a top tier used; a session permit stays, a counted one is left with one use fewer.
+export const spendTopTier = (usage: UsageReadings, subagentType: string): UsageReadings => {
+  const tier = isSavvy(subagentType) ? tierOf(subagentType) : 'other'
+  const permit = usage.topTiers?.[tier]
+  if (!permit || permit.uses === 'session') return usage
+  return { ...usage, topTiers: { ...usage.topTiers, [tier]: { ...permit, uses: permit.uses - 1 } } }
+}
+
+// The user's yes to a top tier: one launch by default, a number, or the whole session.
+export const allowTopTier = (usage: UsageReadings, tier: string, at: number, words: string, uses: number | 'session' = 1): UsageReadings =>
+  ({ ...usage, topTiers: { ...usage.topTiers, [tier]: { at, words: words.trim(), uses } } })
 
 const decisionHolds = (usage: UsageReadings, family: PlanFamily, at: number): boolean => {
   const until = usage.decisions?.[family]?.until
@@ -1724,9 +1773,22 @@ async function readBudgetResult($: EngineInterface): Promise<{ result: string }>
   return { result: await budgetLines($) }
 }
 
+async function recordTopTier($: EngineInterface, e: Record<string, unknown>): Promise<{ result: string } | { deny: string }> {
+  const tier = typeof e.tier === 'string' ? TOP_TIER_NAMES[e.tier] : undefined
+  if (!tier || (e.family !== undefined && e.family !== TOP_TIERS[tier]!.family)) return { deny: tr().badTier }
+  if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
+  const uses = e.uses === undefined ? 1 : e.uses
+  if (uses !== 'session' && !(typeof uses === 'number' && Number.isInteger(uses) && uses >= 1)) return { deny: tr().badUses }
+  const at = await $.clock.now()
+  await update($, usageReadings, prev => allowTopTier(prev, tier, at, e.answer as string, uses as number | 'session'))
+  const s = tr()
+  return { result: s.topDecided(TOP_TIERS[tier]!.name, uses === 'session' ? s.topUsesSession : uses === 1 ? s.topUsesOne : s.topUsesMany(uses as number)) }
+}
+
 async function recordDecision($: EngineInterface, e: Record<string, unknown>): Promise<{ result: string } | { deny: string }> {
   // A worker cannot open the gate it is held by: only the main session records the user's answer.
   if (e.agentId) return { result: tr().ignoredDecision }
+  if (e.tier !== undefined) return recordTopTier($, e)
   const family = PLAN_FAMILIES.find(value => value === e.family)
   if (!family) return { deny: tr().badFamily }
   if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
@@ -1809,14 +1871,18 @@ export const register: Register = (on, options) => {
       name: 'decide',
       description: 'Record the user\'s yes to costly work on a family whose budget verdict is ask: it opens the budget gate on that family\'s ' +
         'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) until the family\'s next reset. Call it only after the user said yes in chat, ' +
-        'quoting their words in answer; never on your own judgment. Main session only.',
+        'quoting their words in answer; never on your own judgment. Main session only. ' +
+        "With tier (fable or astra) it instead records the user's yes to launching that top tier, which is for PLANS only: it holds for one launch " +
+        'or resume by default, uses sets a number or "session" when the user\'s words allow more; it does not open the budget gate.',
       inputSchema: {
         type: 'object',
         properties: {
           family: { type: 'string', enum: [...PLAN_FAMILIES] },
           answer: { type: 'string', description: "The user's own words that said yes." },
+          tier: { type: 'string', enum: ['fable', 'astra'], description: 'Top tier the yes is for; Fable and Astra are for plans only.' },
+          uses: { description: 'With tier: launches or resumes the yes covers; 1 by default, or "session".', oneOf: [{ type: 'integer', minimum: 1 }, { type: 'string', enum: ['session'] }] },
         },
-        required: ['family', 'answer'],
+        required: ['answer'],
       },
     })
     await $.tool.register({
@@ -2002,6 +2068,12 @@ export const register: Register = (on, options) => {
       } catch { /* A host without a roster can still address a stored id/name. */ }
     }
     const id = target?.id
+    // A resume of a top-tier worker is a launch for the gate: it needs a recorded yes with a use left.
+    if (target && isSavvy(target.type)) {
+      const held = topTierGate(target.type, await read($, usageReadings), true, lang)
+      if (held) return { deny: held }
+      await update($, usageReadings, prev => spendTopTier(prev, target.type))
+    }
     await debugResume($, 'tool.call:SendMessage', e, { id, agentId: target?.agentId, description: target?.description })
     if (summary && id) await update($, agents, list => list.map(a => a.id === id ? { ...a, nextTitle: summary } : a))
     try {
@@ -2020,8 +2092,11 @@ export const register: Register = (on, options) => {
   // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     // The budget gate comes first: a refused call neither starts a worker nor moves the bar.
-    const refusal = budgetGate(String(e.subagent_type ?? ''), await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
+    const subagent = String(e.subagent_type ?? '')
+    const refusal = topTierGate(subagent, await read($, usageReadings), false, lang)
+      ?? budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
     if (refusal) return { deny: refusal }
+    await update($, usageReadings, prev => spendTopTier(prev, subagent))
     if (isSavvy(String(e.subagent_type ?? ''))) {
       // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
       await update($, flow, prev => {

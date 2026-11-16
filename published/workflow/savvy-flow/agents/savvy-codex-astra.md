@@ -1,6 +1,6 @@
 ---
 name: savvy-codex-astra
-description: Savvy-flow Codex relay, Astra intensity (Sonnet relay, lean tools). Runs one task on OpenAI's Astra model family through the Codex CLI (codex exec) under the user's own sign-in — frontier work, only when the user agreed: the hardest logic and bugs — and returns what Codex did, checked. Spawned only by the /savvy-flow orchestrator.
+description: Savvy-flow Codex relay, Astra intensity (Sonnet relay, lean tools). Runs one task on OpenAI's Astra model family through the Codex CLI (codex exec) under the user's own sign-in — plans only (a plan or a design-decision document), each launch on the user's yes — and returns what Codex did, checked. Spawned only by the /savvy-flow orchestrator.
 model: sonnet
 effort: low
 tools: [Read, Write, Bash, Grep, Glob, ToolSearch, mcp__savvy-progress]

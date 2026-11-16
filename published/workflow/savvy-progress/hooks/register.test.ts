@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
-import { budgetGate, budgetSummary, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates } from './register'
+import { budgetGate, budgetSummary, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
 import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
@@ -1140,6 +1140,9 @@ const launching = ($: Engine, on: On) =>
     return { result: { status: 'async_launched', agentId: call.description, prompt: 'Do the task.' } }
   })
 
+// The user's recorded yes to Fable for the whole session: tests that launch it by default hold one.
+const FABLE_YES: UsageReadings = { statuses: {}, topTiers: { fable: { at: 0, words: 'yes, a plan', uses: 'session' } } }
+
 const launch = ($: Engine, description: string, over: Record<string, unknown> = {}) =>
   $.tool.call({ tool: 'Agent', tool_use_id: `toolu_${description}`, description, prompt: 'Do the task.', subagent_type: 'savvy-flow:savvy-fable', ...over })
 
@@ -1150,6 +1153,7 @@ test("a run started at another effort than its tier's leaves Planned and shows t
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn' as const, usage: { ...USAGE, model: 'claude-fable-5-2' } }
   })
   await start($)
+  state.seed('usage', FABLE_YES)
   await plan($, [{ title: 'review', tier: 'fable', effort: 'xhigh' }, { title: 'plain', tier: 'fable' }])
 
   await launch($, 'review', { effort: 'xhigh' })
@@ -1181,6 +1185,7 @@ test("the engine's word on a run's effort replaces what its Agent call asked for
   launching($, on)
   answering(on)
   await start($)
+  state.seed('usage', FABLE_YES)
 
   await launch($, 'review', { effort: 'xhigh' })
   const step = $.turn.step({ turnId: 't1', index: 0, model: 'claude-opus-5-5', effort: 'high', messageCount: 1, agentId: 'review' })
@@ -3176,4 +3181,93 @@ test("the panel's clear button, beside Finished, empties it in the panel's langu
   const after = await $.ui.mount({ ...PANE, surface: 'desktop' })
   expect(await after.findAll({ type: 'Button', text: 'Svuota finiti' })).toHaveLength(0)
   await after.unmount()
+})
+
+// ---------------------------------------------------------------------------
+// The top-tier gate: Fable and Codex Astra are for plans only, each launch on the user's recorded yes.
+
+const topGated = ($: Engine, on: On, usage: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(10, 'fiveHour', 3) } }) => {
+  const { state } = budgetEngine(on)
+  launching($, on)
+  return { state, seed: (over: Partial<UsageReadings> = {}) => state.seed('usage', { ...usage, ...over }) }
+}
+const decideTier = ($: Engine, input: Record<string, unknown>) =>
+  $.tool.call({ tool: 'mcp__savvy-progress__decide', answer: 'yes, for the plan', ...input })
+
+test('the top-tier gate refuses Fable and Astra, either name, whatever the budget says, and names the way out', () => {
+  const ok: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(10, 'fiveHour', 3) } }
+  for (const type of ['savvy-fable', 'savvy-flow:savvy-fable', 'savvy-codex-astra', 'savvy-flow:savvy-codex-astra']) {
+    const refusal = topTierGate(type, ok)
+    expect(refusal).toContain('PLANS only')
+    expect(refusal).toContain('decide')
+    expect(refusal).toContain(type.includes('fable') ? 'Heavy (Claude)' : 'Sol (Codex)')
+  }
+  expect(topTierGate('savvy-flow:savvy-heavy', ok)).toBeUndefined()
+  expect(topTierGate('Explore', ok)).toBeUndefined()
+  expect(topTierGate('savvy-fable', ok, false, 'it')).toContain('PIANI')
+})
+
+test('an Agent call for Fable is refused without a yes even when the budget is ok, and starts nothing', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  const refused = await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })
+  expect(refused.deny).toContain('PLANS only')
+  expect(state.agents()).toEqual([])
+  expect((await launch($, 'astra', { subagent_type: 'savvy-flow:savvy-codex-astra' })).deny).toContain('Sol (Codex)')
+  expect((await launch($, 'tidy', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+})
+
+test('a recorded yes lets Fable launch once, and the second launch is refused again', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  expect((await decideTier($, { tier: 'fable', agentId: 'w1' })).result).toMatch(/^ignored/)
+  expect((await decideTier($, { tier: 'fable', answer: ' ' })).deny).toBeDefined()
+  expect((await decideTier($, { tier: 'opus' })).deny).toBeDefined()
+  expect((await decideTier($, { tier: 'fable', family: 'codex' })).deny).toBeDefined()
+  expect((await decideTier($, { tier: 'fable', uses: 0 })).deny).toBeDefined()
+  expect((await decideTier($, { tier: 'fable' })).result).toBe('ok: Claude Fable allowed for 1 launch')
+  expect(state.usage().topTiers?.fable).toEqual({ at: BUDGET_AT, words: 'yes, for the plan', uses: 1 })
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toBeUndefined()
+  const second = await launch($, 'build', { subagent_type: 'savvy-fable' })
+  expect(second.deny).toContain('used up')
+  expect(state.agents().map(a => a.description)).toEqual(['plan'])
+})
+
+test('a session yes lets Fable launch again and again; a counted yes covers that many', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  await decideTier($, { tier: 'fable', uses: 'session' })
+  for (const name of ['a', 'b', 'c']) expect((await launch($, name, { subagent_type: 'savvy-fable' })).deny).toBeUndefined()
+  await decideTier($, { tier: 'astra', uses: 2 })
+  expect(state.usage().topTiers?.['codex-astra']?.uses).toBe(2)
+  for (const name of ['x', 'y']) expect((await launch($, name, { subagent_type: 'savvy-codex-astra' })).deny).toBeUndefined()
+  expect((await launch($, 'z', { subagent_type: 'savvy-codex-astra' })).deny).toContain('used up')
+})
+
+test('the Astra relay is held like Fable, and the yes of one tier does not open the other', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  await decideTier($, { tier: 'astra' })
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('PLANS only')
+  expect((await launch($, 'relay', { subagent_type: 'savvy-flow:savvy-codex-astra' })).deny).toBeUndefined()
+  expect((await launch($, 'relay2', { subagent_type: 'savvy-codex-astra' })).deny).toContain('used up')
+  expect(state.usage().topTiers?.['codex-astra']?.uses).toBe(0)
+})
+
+test('a SendMessage resume of a top-tier worker needs a yes with a use left; other workers resume freely', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  state.seed(AGENTS, [run('fab', { type: 'savvy-flow:savvy-fable', status: 'done' }), run('hv', { type: 'savvy-flow:savvy-heavy', status: 'done' })])
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  seed()
+  const resume = (to: string) => $.tool.call({ tool: 'SendMessage', tool_use_id: `send-${to}`, to, message: 'go on' })
+  expect((await resume('fab')).deny).toContain('resume (SendMessage)')
+  expect((await resume('hv')).deny).toBeUndefined()
+  await decideTier($, { tier: 'fable' })
+  expect((await resume('fab')).deny).toBeUndefined()
+  expect((await resume('fab')).deny).toContain('used up')
 })

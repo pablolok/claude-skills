@@ -213,9 +213,13 @@ class TestModels(unittest.TestCase):
         self.assertGreater(self.text.index("## Themes"), self.text.index("## 6. Close"))
 
     def test_fable_runs_only_with_the_user_s_yes_and_a_reason(self) -> None:
-        self.assertIn("**`savvy-fable` and `savvy-codex-astra` run only with the user's yes**, whatever model you are.", self.text)
+        self.assertIn("**`savvy-fable` and `savvy-codex-astra` are for plans only**", self.text)
+        self.assertIn("**Each launch, and each resume, runs on the user's explicit yes**, whatever model you are", self.text)
         self.assertIn("why Fable rather than Heavy", self.text)
-        self.assertIn("Heavy (or Sol) runs unless the user says yes", self.text)
+        self.assertIn("record their words with the `decide` tool (`tier: \"fable\"` or `\"astra\"`", self.text)
+        self.assertIn("goes to Heavy, or Sol for Codex, unless the user explicitly asks for Fable", self.text)
+        self.assertIn("**Spend**: split every piece by kind of work", self.text)
+        self.assertIn("One fresh worker per step, never one worker resumed for hours", self.text)
 
     def test_the_orchestrator_is_the_session_s_model_never_another(self) -> None:
         self.assertIn("**You are the session's model.** The orchestrator runs on the model and effort the user selected "

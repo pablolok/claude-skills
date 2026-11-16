@@ -1,6 +1,6 @@
 ---
 name: savvy-fable
-description: Savvy-flow top worker (Fable, high effort). Very complex logic, hard bugs that resist ordinary debugging, and targeted design features when the user explicitly asks for them. Spawned only by the /savvy-flow orchestrator.
+description: Savvy-flow top worker (Fable, high effort). Plans only (a plan or a design-decision document), on the user's yes, recorded for each launch. Spawned only by the /savvy-flow orchestrator.
 model: fable
 effort: high
 disallowedTools: [mcp__ccd_turn, mcp__ccd_session]

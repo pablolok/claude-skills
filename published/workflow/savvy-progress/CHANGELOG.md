@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.16.0] - 2026-11-16
+- a top-tier gate: the Agent tool refuses savvy-fable and savvy-codex-astra (plain or savvy-flow:-prefixed) whatever the budget verdict, until the user's yes is recorded with the decide tool (tier fable or astra, their words; one launch by default, uses a number or "session"); a SendMessage resume of a worker the panel knows as one of those tiers is gated and spends a use too; the refusal says the tier is for plans only and offers Heavy (Sol for Astra); the tier yes does not open the budget gate
+
+
 ## [1.15.0] - 2026-11-15
 - a budget gate on the Agent tool: while a family's verdict is ask, its costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) are refused with the projection, the reset and the way out, until the user's yes is recorded — /savvy-budget <family> once, or the new decide tool quoting their words — valid until the family's next reset (five hours at most); every model step adds to a Claude spend kept with each plan reading, and the budget and progress tools add an estimates line: a tier's mean finished run as a share of each window; Clear finished beside the panel's Finished list, and the progress tool's clearFinished, empty it while the totals keep counting those runs; Russian removed and Italian detected on auto: everything the plugin writes in words (bar, panel, plan tiles and dates, commands' answers and descriptions, its messages to the model) follows the language, the tools' JSON and descriptions stay English
 

@@ -24,7 +24,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `scripts/codex-status.mjs` | Bounded atomic status snapshots from JSON stdout and positioned rollout tails; no dependencies. |
 | `references/themes.md` | The chat themes, one section per month: each theme's window, its mascot per tier, the orchestrator's mark, the review marks and the closing line. The orchestrator reads the current month's section, or one theme's row. |
-| `agents/savvy-fable.md` | Fable / high: the hardest logic and bugs; a targeted design feature only on request. |
+| `agents/savvy-fable.md` | Fable / high: plans only, on the user's yes for each launch. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
 | `agents/savvy-medium.md` | Sonnet / medium, lean tools: standard feature work. |
@@ -46,17 +46,17 @@ every task. A
 worker's model is pinned in its agent file; an Agent call of a type with no model of its own (`general-purpose`, a
 fork) inherits the session's model and would run as the orchestrator, so the skill allows only the savvy types, and
 built-in ones (Explore) with an explicit `model`. Audits, verification passes and other legwork get a tier like any
-task. `savvy-fable` never starts on the orchestrator's choice alone, whether it runs on Fable or Opus: for a task
-that looks like Fable work (or one Heavy failed), the orchestrator asks the user first, with the reason, the cost and
-its recommendation, and Heavy runs unless the user says Fable. A model or an effort the user sets for some tasks wins
+task. `savvy-fable` is for plans only and never starts on the orchestrator's choice alone: each launch
+and resume needs the user's yes, recorded with the `decide` tool (savvy-progress refuses it otherwise); anything else
+goes to Heavy unless the user asks for Fable. A model or an effort the user sets for some tasks wins
 over the tier's: it goes in those tasks' Agent calls, in the plan and in the progress bar. An agent the project
 requires (its own reviewer or auditor) runs as its own type and is a task of the plan like any other.
 
 ## Codex (OpenAI models)
 
 With the Codex CLI installed and signed in (`codex login status`), the orchestrator gains four Codex tiers, one per
-intensity: Luna (Light-sized work), Terra (Medium), Sol (Careful or Heavy, and second opinions) and Astra (Fable-sized,
-only with the user's yes). A relay `savvy-codex-<intensity>`
+intensity: Luna (Light-sized work), Terra (Medium), Sol (Careful or Heavy, and second opinions) and Astra (plans
+only, each launch on the user's yes). A relay `savvy-codex-<intensity>`
 runs a task with `codex exec` (read-only for a second opinion, `codex exec review` for a diff, workspace-write for a
 task in a tree nobody else writes; never `danger-full-access`), resumes the same Codex session for follow-ups, checks
 the git diff and the tests itself, and reports Codex usage from its small status snapshot. Use it for a second opinion

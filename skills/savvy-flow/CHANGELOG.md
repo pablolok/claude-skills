@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.0] - 2026-11-16
+- Fable and Codex Astra are for plans only (a plan or a design-decision document), each launch and resume on the user's explicit yes recorded with decide; hard bugs and design features go to Heavy or Sol unless the user explicitly asks for Fable; a Spend rule: split every piece by kind of work (design on Careful or Sol, mechanical work on Medium or Light), one fresh worker per step and never one resumed for hours, check budget before every costly launch, cut tiers and ask when a family is projected past its limit
+
+
 ## [1.16.1] - 2026-11-15
 - Codex briefs: its sandbox cannot write .git, so Codex leaves the message and the relay commits; a brief names the expected baseline (an editor's start-up notices, a bridge diagnostic) and says a call of its own refused by validation is fixed and sent again, not a stop; suites that create temporary folders in the tree and the agent CLI run outside the sandbox; findings for a document go to an existing file the brief names or come back as text, since the host refuses a subagent's Write of a new report file
 

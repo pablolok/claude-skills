@@ -110,6 +110,8 @@ export type WindowBudget = {
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
 /** The user's yes to costly work despite an ask verdict, until the family's soonest reset. */
+/** The user's recorded yes to a top tier (fable, codex-astra), which is for plans only: launches and resumes left, or the session. */
+export type TopTierPermit = { at: number; words: string; uses: number | 'session' }
 export type BudgetDecision = { until: string; at: number; by: 'user' | 'orchestrator'; words?: string }
 /** A tier's finished runs: their mean estimated cost, and that cost as a share of each window when observed. */
 export type TierEstimate = { runs: number; usd: number; fiveHour: number | null; week: number | null }
@@ -135,6 +137,7 @@ export type UsageReadings = {
   history?: Partial<Record<PlanFamily, PlanHistory>>
   policies?: Partial<Record<PlanFamily, BudgetPolicy>>
   decisions?: Partial<Record<PlanFamily, BudgetDecision>>
+  topTiers?: Record<string, TopTierPermit>
   /** Cumulative estimated spend per family, every model step of the session included. */
   spentUsd?: Partial<Record<PlanFamily, number>>
   claude?: PlanUsage

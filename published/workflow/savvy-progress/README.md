@@ -83,6 +83,12 @@ the mod needs.
   does a family with no projection yet. The user's yes opens it until the family's soonest reset: they type
   `/savvy-budget <family> once`, or the orchestrator records their answer, quoted, with the `decide` tool (main
   session only; the record is the orchestrator's word for it). The policy stays as it was.
+- **Top-tier gate**: `savvy-fable` and `savvy-codex-astra` (plain or `savvy-flow:`-prefixed) are for plans only, and
+  the Agent tool refuses them whatever the budget verdict, until the user's yes is recorded with `decide` and `tier`
+  (`fable` or `astra`) plus their words. A yes covers one launch by default; `uses` sets a number or `"session"` when
+  the user's words allow more. A SendMessage resume of a worker the panel knows as one of those tiers is gated the
+  same way and spends a use; a resume the panel cannot match to a row (an unknown id or name) is not seen. The
+  refusal says Fable is for plans and offers Heavy (Sol for Astra). The tier yes does not open the budget gate.
 - **Tier estimates**: every model step of the session, the main session's included, adds its estimated price to a
   running Claude spend, stored with each plan reading. Over a window's recent history, the percent it moved per
   dollar spent turns a tier's mean finished run (savvy Claude tiers, runs with a measured cost) into a share of the
@@ -173,6 +179,8 @@ the mod needs.
   (`null` until observed).
 - `mcp__savvy-progress__decide`: records the user's yes (`family`, `answer` quoting their words) to costly work on a
   family whose verdict is `ask`, opening the budget gate until that family's next reset. Ignored from a worker.
+  With `tier` (`fable` or `astra`) and optional `uses` (`1` by default, a number, or `"session"`) it records the yes
+  to a launch of that plans-only top tier instead.
   Both tools use the latest observations already taken by the panel. The flow reads this summary on progress
   updates and before long work; an `ask` calls for the user's decision with the projection and reset, or moving
   work to another family, a cheaper tier, or a slower pace. The tools never change the user's policy.
