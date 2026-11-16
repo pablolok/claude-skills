@@ -33,7 +33,8 @@ Task from the user: $ARGUMENTS
   whatever model you are and whatever the budget says. Ask first: the plan, why Fable rather than Heavy, the cost of
   the choice, your recommendation. On their yes, record their words with the `decide` tool (`tier: "fable"` or
   `"astra"`; it holds for one launch or resume, `uses: "session"` or a number only when the user's words set more).
-  The hook refuses the Agent call and the SendMessage resume of those workers until it is recorded, and says so. The
+  The hook refuses the Agent call and the SendMessage resume of those workers until it is recorded, and says so; the
+  gate also covers the `model` override (any agent type called with `model: "fable"`) and resumes. The
   user's answer settles that task only, unless they set Fable themselves for more (next rule); the rest of the plan goes on while it is pending. Anything that is not a
   plan (the hardest bugs, a design feature) goes to Heavy, or Sol for Codex, unless the user explicitly asks for Fable.
 - **Spend**: split every piece by kind of work: design and judgment on Careful or Sol, mechanical work (swap,

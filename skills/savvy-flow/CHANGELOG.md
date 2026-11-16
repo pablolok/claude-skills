@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.1] - 2026-11-16
+- the top-tier rule says the gate also covers the model override and resumes
+
+
 ## [1.17.0] - 2026-11-16
 - Fable and Codex Astra are for plans only (a plan or a design-decision document), each launch and resume on the user's explicit yes recorded with decide; hard bugs and design features go to Heavy or Sol unless the user explicitly asks for Fable; a Spend rule: split every piece by kind of work (design on Careful or Sol, mechanical work on Medium or Light), one fresh worker per step and never one resumed for hours, check budget before every costly launch, cut tiers and ask when a family is projected past its limit
 

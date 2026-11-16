@@ -3271,3 +3271,21 @@ test('a SendMessage resume of a top-tier worker needs a yes with a use left; oth
   expect((await resume('fab')).deny).toBeUndefined()
   expect((await resume('fab')).deny).toContain('used up')
 })
+
+test('an Agent call of any type with a Fable model hits the top-tier gate and spends a permit; a resume of such a worker too', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  state.seed(AGENTS, [run('odd', { type: 'general-purpose', model: 'claude-fable-5-2', status: 'done' })])
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  seed()
+  expect(topTierGate('general-purpose', { statuses: {} }, false, 'en', 'FABLE')).toContain('PLANS only')
+  for (const model of ['fable', 'Fable', 'FABLE', 'claude-fable-5-2']) {
+    expect((await launch($, `m-${model}`, { subagent_type: 'savvy-flow:savvy-heavy', model })).deny).toContain('PLANS only')
+  }
+  expect((await launch($, 'plain', { subagent_type: 'Explore', model: 'sonnet' })).deny).toBeUndefined()
+  await decideTier($, { tier: 'fable' })
+  expect((await launch($, 'ok', { subagent_type: 'general-purpose', model: 'Fable' })).deny).toBeUndefined()
+  expect((await launch($, 'again', { subagent_type: 'savvy-heavy', model: 'fable' })).deny).toContain('used up')
+  const resume = $.tool.call({ tool: 'SendMessage', tool_use_id: 'send-odd', to: 'odd', message: 'go on' })
+  expect((await resume).deny).toContain('used up')
+})

@@ -835,10 +835,15 @@ const TOP_TIERS: Readonly<Record<string, { family: PlanFamily; name: string; alt
 const TOP_TIER_NAMES: Readonly<Record<string, string>> = { fable: 'fable', astra: 'codex-astra', 'codex-astra': 'codex-astra' }
 
 // An Agent launch or a SendMessage resume of a top tier, refused unless a recorded yes still has uses left.
-export const topTierGate = (subagentType: string, usage: UsageReadings, resume = false, language: Lang = 'en'): string | undefined => {
-  if (!isSavvy(subagentType)) return undefined
-  const tier = tierOf(subagentType), top = TOP_TIERS[tier]
-  if (!top) return undefined
+// The top tier a call or a worker is: its savvy type, or any type run on a Fable model (`model: "FABLE"`, a model id).
+const topTierKey = (subagentType: string, model?: unknown): string | undefined => {
+  if (isSavvy(subagentType) && tierOf(subagentType) in TOP_TIERS) return tierOf(subagentType)
+  return typeof model === 'string' && /fable/i.test(model) ? 'fable' : undefined
+}
+
+export const topTierGate = (subagentType: string, usage: UsageReadings, resume = false, language: Lang = 'en', model?: unknown): string | undefined => {
+  const tier = topTierKey(subagentType, model), top = tier ? TOP_TIERS[tier] : undefined
+  if (!tier || !top) return undefined
   const permit = usage.topTiers?.[tier]
   if (permit && (permit.uses === 'session' || permit.uses > 0)) return undefined
   const it = language === 'it'
@@ -848,9 +853,10 @@ export const topTierGate = (subagentType: string, usage: UsageReadings, resume =
 }
 
 // One launch or resume of a top tier used; a session permit stays, a counted one is left with one use fewer.
-export const spendTopTier = (usage: UsageReadings, subagentType: string): UsageReadings => {
-  const tier = isSavvy(subagentType) ? tierOf(subagentType) : 'other'
-  const permit = usage.topTiers?.[tier]
+export const spendTopTier = (usage: UsageReadings, subagentType: string, model?: unknown): UsageReadings => {
+  const tier = topTierKey(subagentType, model)
+  const permit = tier ? usage.topTiers?.[tier] : undefined
+  if (!tier) return usage
   if (!permit || permit.uses === 'session') return usage
   return { ...usage, topTiers: { ...usage.topTiers, [tier]: { ...permit, uses: permit.uses - 1 } } }
 }
@@ -2069,10 +2075,10 @@ export const register: Register = (on, options) => {
     }
     const id = target?.id
     // A resume of a top-tier worker is a launch for the gate: it needs a recorded yes with a use left.
-    if (target && isSavvy(target.type)) {
-      const held = topTierGate(target.type, await read($, usageReadings), true, lang)
+    if (target) {
+      const held = topTierGate(target.type, await read($, usageReadings), true, lang, target.model)
       if (held) return { deny: held }
-      await update($, usageReadings, prev => spendTopTier(prev, target.type))
+      await update($, usageReadings, prev => spendTopTier(prev, target.type, target.model))
     }
     await debugResume($, 'tool.call:SendMessage', e, { id, agentId: target?.agentId, description: target?.description })
     if (summary && id) await update($, agents, list => list.map(a => a.id === id ? { ...a, nextTitle: summary } : a))
@@ -2093,10 +2099,10 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     // The budget gate comes first: a refused call neither starts a worker nor moves the bar.
     const subagent = String(e.subagent_type ?? '')
-    const refusal = topTierGate(subagent, await read($, usageReadings), false, lang)
+    const refusal = topTierGate(subagent, await read($, usageReadings), false, lang, e.model)
       ?? budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
     if (refusal) return { deny: refusal }
-    await update($, usageReadings, prev => spendTopTier(prev, subagent))
+    await update($, usageReadings, prev => spendTopTier(prev, subagent, e.model))
     if (isSavvy(String(e.subagent_type ?? ''))) {
       // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
       await update($, flow, prev => {

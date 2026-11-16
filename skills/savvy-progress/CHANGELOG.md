@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.16.1] - 2026-11-16
+- the top-tier gate also covers the model override: an Agent call of any type with a Fable model (any case, or a model id) is gated and spends a permit, and so does a resume of a worker running on Fable; the Agent tool offers no Astra model, so Astra stays gated by its relay type
+
+
 ## [1.16.0] - 2026-11-16
 - a top-tier gate: the Agent tool refuses savvy-fable and savvy-codex-astra (plain or savvy-flow:-prefixed) whatever the budget verdict, until the user's yes is recorded with the decide tool (tier fable or astra, their words; one launch by default, uses a number or "session"); a SendMessage resume of a worker the panel knows as one of those tiers is gated and spends a use too; the refusal says the tier is for plans only and offers Heavy (Sol for Astra); the tier yes does not open the budget gate
 
