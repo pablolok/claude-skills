@@ -74,6 +74,10 @@ and read on the same tiles. What exceeds the control is aliasing. Also read ghos
   tips; let the light strands be the silver ones, with a silver gain. This raised strand contrast into the
   reference's band where every lighting knob had failed (one case).
 - Measure the median from the imported mesh, one sample per strand id, not from the DCC.
+- **Near-white tips over a dark mass: narrow the groom's per-strand tone law, keep the spread.** The cap is only as
+  tight as the groom's own maximum; lowering the spread's contrast instead flattened the strands (one case).
+- When the engine's light is not the reference's, set value targets relative to the skin beside the hair, in views
+  lit alike (`hair-reference-review` §2).
   [references/strand-value.md](references/strand-value.md)
 
 ## 5. Occlusion, and what shows between strands

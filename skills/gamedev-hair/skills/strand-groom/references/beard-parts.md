@@ -31,6 +31,10 @@ reference flow and its failed builds broke. Treat each row as a starting design 
   millimetres off the model's, and a mask carve then bites the model's upper lip.
 - Decide with the art owner, before building, what shows. A default to check: the moustache covers the upper lip,
   and the beard starts right under a lower lip that stays visible.
+- Constructed guides (apex-and-tip arcs placed on the hull's front and the reference's edge line) failed three
+  attempts in one case even with the root region cut and the lengths bounded (SKILL.md §3): blended across columns whose
+  fronts differ, rooted at the corners where the collider counts them behind the lips, tips set under an edge that
+  lies on the lip seam. Read those three before a fourth construction.
 
 ## Under the lower lip
 
@@ -47,8 +51,17 @@ reference flow and its failed builds broke. Treat each row as a starting design 
   with few roots near its path cannot be made dense by bending strands at the bottom.
 - **End it by a taper of lengths** (an end-height table per tuft with jitter), not at one row: one row is a flat cut.
 - Match its length in the view that shows it best (usually the profile) and judge in profile and 3/4 together.
-- The curtain behind the point stays jaw locks with their own end heights.
-- Status: proposed from the causes of a failed gather; not yet built.
+- The curtain behind the point stays jaw locks with their own end heights; where they hang outside the reference
+  beside the point, end them short of the first point that leaves the reference's front or 3/4 mask, staggered per
+  lock by its own random draw (one stop for all is a stencil edge).
+- **Built once, as constructed guides**: a section loft through the hull's horizontal sections from the chin to its
+  lowest cell (each guide keeps its normalised place across and front to back, so the family narrows with the V),
+  joined to its roots by a short blend along the skin's normal, a few core guides run on past the hull to the
+  reference's tip as wisps; ends by a length table. It reached the tip as a mass in profile and a converging V in
+  front, with no rope or crease. Still open: it reads as one smooth brush, not separate pointed tufts; a pull of
+  whole locks toward a few tuft curves made bundles in depth only and moved strands off their guides. Tufts need
+  their own roots and guides.
+- Check the minimum spacing between converging guides near the tip (a rope where they all meet on one line).
 
 ## The cheek line
 

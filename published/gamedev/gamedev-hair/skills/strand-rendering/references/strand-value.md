@@ -38,6 +38,12 @@ raise strand contrast without breaking the clump contrast or the median value; t
 put strand contrast in band at all three views. The cost was a few very bright strands on the chin: read p99 and the
 share over a high L* against the reference, not only p50 and p90.
 
+The cap holds regular strands at the groom's own maximum, so it is only as tight as the groom's tone law. With a wide
+law (regular tones up to about 1.1 and beyond, the point's strands lighter still) a higher contrast still gave
+near-white tips over a mass that stayed dark. Narrowing the law in the groom (each class's range, the light zone's
+scale) at the same `k` cut the point's near-white p90 by 9-12 L*; lowering `k` instead flattened the strands below
+the contrast gate. The narrow law costs some strand contrast (about 1 in the close shot in that case): read it.
+
 ## Occlusion and shades
 
 - Rank shade (draw order, deepest darker) and root shade (near the skin darker) give depth inside the mass.

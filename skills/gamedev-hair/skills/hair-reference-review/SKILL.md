@@ -26,11 +26,21 @@ The review uses both, and the eye decides.
 4. **Register the reference through the model's landmarks** (mouth, nose, eyes, ears, jaw) and check the overlay
    before reading anything around them. Measure what a feature is (a lip line, a moustache's edge) before calling
    the reference and the model in conflict.
-5. **One pixel density.** Bring every picture (reference, DCC render, engine) to the same px/mm, the one a shipped
+5. **Check that the reference agrees with itself before anything is matched to it.** Read each feature's 3D extent
+   from every view that sees it (a tip's height and depth, a width at the mouth, the forward reach in profile
+   against the 3/4) and left against mirrored right. Views painted one at a time need not describe one object; when
+   they disagree well beyond the gauge, no groom and no multi-view method can satisfy them all. Then make a new set
+   as **one image**: every view in one grid, painted in one pass over renders of the model's own head, so the
+   generator holds one object; register each cell to its camera. Paint one view twice (a spare cell) to read its
+   repeatability directly. What still disagrees is decided once (§5).
+6. **One pixel density.** Bring every picture (reference, DCC render, engine) to the same px/mm, the one a shipped
    shot uses. Judge only at a size that ships: at twice the density everything looks different, and a feature the
-   shipped shot cannot resolve is not a defect.
-6. **One gauge.** The same code reads the reference, the DCC render and the engine in the same run.
-7. **Which defects each camera can show.** At the gameplay distance only value, outline and gross shape show; list
+   shipped shot cannot resolve is not a defect. Know the reference's **real** detail, not its pixel count: a grid's
+   cell upscaled to the working size carries detail several pixels wide, and a row at a finer scale (strand contrast,
+   wave, followed strand) cannot be read on it: report it against the older reference's numbers or the art owner's
+   words until a reference shows strands at a shipped density.
+7. **One gauge.** The same code reads the reference, the DCC render and the engine in the same run.
+8. **Which defects each camera can show.** At the gameplay distance only value, outline and gross shape show; list
    which defects live only in close shots, so the work goes where it is seen.
 
 ## 2. Read the rows
@@ -50,8 +60,17 @@ The review uses both, and the eye decides.
 
 Rules for the rows:
 
-- **Read the reference against itself first** (left vs mirrored right, boxes moved a few px, the orientation scale
-  halved and doubled). Its worst case is the noise floor; a gate tighter than about twice the floor judges noise.
+- **Read the reference against itself first** with the rows' own gauges (left vs mirrored right, the view painted
+  twice, boxes moved a few px, the orientation scale halved and doubled). Its worst disagreement on a row is that
+  row's floor, and the row's limit is never tighter: the floor itself for a shape row, about twice it for a noisy
+  statistic such as flow, never under the gauge's own resolution. A row the reference cannot read on itself (its two
+  reads disagree beyond any useful limit) only reports.
+- **Value against a reference painted in another light:** read it relative to skin patches beside the hair in the
+  same picture (hair L* percentiles minus the skin's median; a* and b* likewise). That cancels exposure and grade,
+  not the light's direction: read the mirrored views the same way first, and leave out of the value targets a view
+  whose painted key falls from another side (it reads several L* darker against its own skin). An absolute value
+  gate needs the groom rendered in the reference's light: one colour gain fitted on skin anchors does not carry a
+  picture into another light set-up (its anchors disagreed by about 12 L* in one case).
 - **Validate a new measure on the reference and on a known-wrong case before it gates anything.** A row that reads
   the reference poorly (one "cover by depth" row read 0.5-0.6 deep inside the reference's own beard) will also pass a
   visible wall; a row that cannot separate the reference from a build the eye rejected (or that build with the effect
@@ -95,8 +114,9 @@ change at a time before fixing anything.
 3. Met: the piece is done; state what it cost elsewhere (a row that got worse).
 4. Missed: diagnose from evidence (the defects list, a probe without a build). **Two failed attempts on the same
    piece stop it**: back to evidence, a new brief, or a question to the art owner.
-5. Conflicts inside the reference (two views that disagree in 3D, a painted feature off the model) are decided
-   once, by the art owner or a declared rule, and both numbers are reported from then on.
+5. Conflicts left inside the reference after §1.5 (two views that still disagree in 3D, a painted feature off the
+   model) are decided once, by the art owner or a declared rule (which view wins that region), and both numbers are
+   reported from then on.
 6. Before calling it done: the art owner's eye on stills and films at the shipped cameras.
 
 ## 6. Traps
@@ -113,8 +133,8 @@ change at a time before fixing anything.
 
 ## Open
 
-- The look rows' limits come from one reference set (three painted views of one beard); bands for other hair types
-  (straight, coily, short) are unknown.
+- The look rows' limits come from painted references of one beard; bands for other hair types (straight, coily,
+  short) are unknown, and a one-image multi-view set has so far been too coarse to read strands on.
 - A validated measure for a soft border (cover gradient inside the border line) does not exist yet.
 - The followed-strand row depends on the matte; a matte-independent version is wanted.
 - An independent judge's rubric for hair (filaments, crossing, halo, light over dark) is not written.

@@ -31,8 +31,15 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
 4. **Read the reference's flow before setting any direction.** A structure tensor per zone and per view, drawn as
    segments over the picture. Reason: a brief said "down and forward" for a cheek whose hair runs down and back in
    every view; the groom built to the brief was 50-60 degrees off.
-5. **Where the views disagree, declare which one wins** for that region (painted references need not agree in 3D),
-   and report both numbers.
+5. **Check that the reference agrees with itself** before matching it (`hair-reference-review` §1.5): views painted
+   one at a time need not agree in 3D, and no groom satisfies views that contradict each other. When they
+   contradict, make the set again as one multi-view image. Where views still disagree, declare which one wins for that region and report
+   both numbers.
+6. **Measure the mass before the texture.** Carve the reference's hull from its masks, carve the groom's own
+   projections the same way (like with like), and read the volume per zone (cm3) and each zone's shortfall and
+   excess in mm (p50 / p90) with its extents (reach, width, lowest tip). A groom far under the reference's volume is
+   a smaller beard: no reshaping, texture or shading recovers it. Grow it into the reference's hull first (one groom
+   at about half the volume covered under 0.6 of the masks; grown into the hull, about 0.9).
 
 ## 1. The build order
 
@@ -76,24 +83,52 @@ most of the look, noise and flyaways come last.
 - **Never gather strands after growth** to make a shape (a tuft, a point, a ponytail's end). Feed it from the
   roots: give it its own roots, lengths and direction from the root. Reason: a gather pulls in whatever crosses a
   row, smears what it catches and cannot add mass where no strand passes.
-- **A volume from the masks is a check, not a mold.** Use a visual hull of the reference masks as the "hair
-  outside" check and as a source of end heights; do not grow strands to fill it. Reason: filling it strand by
-  strand made a fleece, and the masks' blocky outlines carved shelves (smooth the outlines a few px before any
-  carve). A hull from a few views cannot carve concavities (under the lower lip, between moustache and beard).
+- **A volume from the masks bounds the growth; it is not a mold.** A visual hull of the reference's masks is where
+  the locks may march, the "hair outside" check, a source of end heights and of positions for constructed guides
+  (§3); never pack it strand by strand. Reason: filling it strand by strand made a fleece, and the masks' blocky
+  outlines carved shelves (smooth the outlines a few px before any carve). A hull from a few views cannot carve
+  concavities (under the lower lip, between moustache and beard), and where the views disagree its carve leaves
+  artefacts (a split bottom, a short tip): gate guides against the masks beyond the reference's own floor, not
+  against the hull.
+- **Every offset laid across a strand rides a smooth frame.** Lock offsets, waves, a flyaway's lift and a child's
+  spread are laid in a frame carried along the strand: a rotation-minimizing frame (double reflection, Wang et al.
+  2008), seeded from the root normal at the first sample where the strand has left it by a clear angle (about 15
+  degrees). Never `binormal = tangent x root normal` (it flips where the strand swings through the normal: a hook at
+  each flip), and never a frame sampled per point from a field (a volume's voxel "up" jumps a few degrees a point,
+  and a lift's lever turns the jumps into a zigzag; at least smooth it along the strand). Test it on a strand that
+  swings through its root normal and on a helix (the twist stays near zero).
 - **Flyaways are their own part:** a few long single hairs rooted at a lock's root, lifted off and running beside
   it. More lint reads as noise, not as a halo.
 - **Value per strand, not per lock.** Salt-and-pepper (grey) hair is strands of different value side by side;
   give each strand a class (silver, dark, regular) and deeper layers a darker tone. A curl does not make grey hair.
+  Keep each class's tone range narrow (regulars about 0.9-1.1 of the base): a wide spread reads as near-white tips
+  over a dark mass once the renderer adds its contrast, and narrowing the groom's law fixes that where lowering the
+  renderer's contrast flattens the strands (`strand-rendering` §4).
 - **Deterministic.** One seed per design, derived per zone; store parents and the design only; every variant must
   rebuild to the digit (strand and point counts, the masks). Reason: a number that moves between two runs of the
   same build cannot judge a change.
 
-## 3. Direction from the reference
+## 3. Direction and reach from the reference
 
 An orientation field triangulated from a few calibrated views (Wei et al. 2005) can give the direction where the
 views see the hair; parts give everything the field cannot (roots, lengths, ends, tufts, partings).
 [references/orientation-field.md](references/orientation-field.md). Its limits decide where it may be used:
 near-horizontal strands, regions one view alone sees, painted strokes that do not correspond between views.
+
+Where a part's reach must match the reference (a point's tip, a moustache's front), **construct its guides on the
+reference's measured geometry** instead of growing them: roots, tips and standoff placed on the hull's surfaces and
+sections and on the masks' edge lines; strands then interpolated from the guides. A growth law makes reach emerge,
+and twice it did not. When interpolating guides into strands:
+- **Root region inside the guides' coverage**: cut it at the outermost guide row. A strand rooted beyond it is
+  extrapolated (in one case turned onto the lip's normals and into the mouth: all the jumps and nearly every point
+  behind the lips came from that strip).
+- **Bound each strand by its guides**: no longer than their blended length, ending above the lowest point of its
+  nearest guides.
+- **Blend only guides on one surface**: strands blended across columns whose fronts differ stand several mm before or
+  behind their guides.
+A section loft (each guide keeps its normalised place across and front to back in every horizontal section of the
+hull) gave a point its mass to the tip in one case; arcs from apex to tip did not make a moustache in three attempts.
+[references/beard-parts.md](references/beard-parts.md)
 
 ## 4. Beards
 
@@ -127,6 +162,20 @@ Blender notes (one case each; check on your version):
   rows moved).
 - **Two failed attempts on a piece send it back to evidence**: stop building, probe the cause without a build
   (read the volume, the roots, the catchment, the reference itself), then brief the next attempt.
+- **Curl, loops and hooks: read the strands' 3D shape per part before changing anything** (swing of the tangent
+  over about 20 mm, residual from a copy smoothed over about 40 mm, coil = arc / chord, self-crossing in the front
+  and side projections, net turn for spirals), on the build and on the same build's guides with no wave.
+  - The guides' own bend is the floor a texture target sits on: set swing and residual targets as the guides' value
+    plus a few degrees, never as an absolute the march alone already exceeds.
+  - Two grooms grown differently that read the same swing have it from the strand-shape table (wave, sweep,
+    frizz), not from the growth; loops that come with a new growth are the march's.
+  - A lock that orbits a pocket of the volume (net turn of hundreds of degrees, its end near its root) is chasing a
+    target height the pocket lacks. **Trace the suspected trigger on the march before writing a fix** (the first
+    one written fired on none of the coiled locks), prove the cause by a probe that removes the term for every lock,
+    then fix only where it fires: removing it everywhere lost fill. A trigger on the volume's height against the
+    planned height caught most of a throat's orbits; at a cheek's upper border, where the same chase made locks climb
+    and hook back, only a rule narrow by place did (the lock's target stops rising after a few mm of run).
+  - Hooks that sit where a strand swings through its root normal are the frame's (§2), not the growth's.
 - **Judge the groom in the renderer that ships** before trusting an offline render's look: offline renders
   integrate sub-pixel coverage and cast card-to-card shadows the engine does not.
 
@@ -136,7 +185,11 @@ Blender notes (one case each; check on your version):
   the gain over hand-set flows are unproven.
 - The per-zone design-table pipeline is taken from one working head-hair groom; on a beard (tufts assigned at the
   root, the under-lip boost band, the cheek's height ramp) it is proposed, not built.
-- A long tapering point with wisps (goatee, beard tip, ponytail end) has no validated recipe yet.
+- A long tapering point (goatee, beard tip, ponytail end): a section loft gives its mass to the tip; separate
+  pointed tufts side by side have no validated recipe yet (pulling strands to tuft curves moved them off their
+  guides).
+- A moustache from constructed guides has no validated recipe yet; guides drawn by hand on the reference's views
+  are the untried alternative.
 - Starting values for clump power, wave ratio, frizz share and the height-per-distance ratio come from one or two
   grooms; contributors should replace them with ranges from more.
 - Which DCC features (Blender's Interpolate Hair Curves with guide groups, Houdini Guide Advect, XGen region maps)

@@ -8,8 +8,8 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 
 | row | definition | notes |
 |---|---|---|
-| fill | share of the reference's mask our matte covers, per view | a gate around 0.90 worked |
-| hair outside | share of our matte outside the reference's mask grown 3 px | a gate around 0.10; flyaways counted and not, both reported |
+| fill | share of the reference's mask our matte covers, per view | the limit is the reference's own worst self-disagreement (0.86-0.94 by view and zone in one set; about 0.90 where a set agreed closely) |
+| hair outside | share of our matte outside the reference's mask grown 3 px | the same rule (0.10-0.14 in one set); flyaways counted and not, both reported |
 | skin in the mask | share of the mask showing bare skin through our hair | |
 | edge by bands | in profile, our front (and back) edge minus the reference's, per 20 mm band from the top | the mouth and the point bands matter most on a beard |
 | zone fill | fill inside named boxes (cheek, join of moustache and cheek, under the jaw, the point) | a whole-view fill hides a bare zone |
@@ -25,6 +25,7 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 | light share | share over L* 62 (light tips) and over ~75-80 (near white) | |
 | hue | a* and b* medians, or C* and h | |
 | on hair only | the value rows on pixels where both pictures have hair | a median over the mask reads the backdrop where hair is missing |
+| relative to skin | each value row minus the median of fixed skin patches beside the hair (a forehead and a cheek patch, outside the hair grown a few px), per picture | for a reference painted or rendered in another light; cancels exposure and grade, not the light's direction (read the mirrored views first) |
 
 ## Hair look
 
@@ -49,8 +50,8 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 
 **The noise floor:** read the reference against itself (the left zones against the mirrored right, every box moved
 8 px each way, the tensor's scale halved and doubled); its worst case over all rows is the floor. In one reference
-that was a coherence ratio of 0.90, 4 degrees of spread and 6 degrees of direction. Gate at about twice the floor
-(one floor for each of the two reads compared).
+that was a coherence ratio of 0.90, 4 degrees of spread and 6 degrees of direction. Gate the flow rows at about
+twice the floor (one floor for each of the two reads compared); the shape rows at the floor itself (SKILL.md §2).
 
 Once a groom's direction is grown from an orientation field read off the same pictures, the flow rows are circular:
 report them, judge by the other rows and by eye.

@@ -29,6 +29,11 @@ Hand-tuning by eye drifts and cannot be repeated.
 
 - The rule chooses. If no arm is eligible, say so plainly, report the nearest arms and what each misses, and do not
   loosen a limit after seeing the results.
+- A gate on the named trait taken from the previous model (keep its strand contrast) can leave only the control
+  eligible when the new model narrows that trait by design (a narrower tone law). That is the sweep's answer, and a
+  valid one: the control stays, or the gate is re-based in a new table written before its own render. Say how far
+  the nearest arm falls short, and whether a wider table at the same steps could plausibly reach the gate (the
+  measured gain per knob step says so; a prediction decides only whether to render a table, never what to pick).
 - A second sweep is allowed when the first shows a reason (a curve that invents light tips, a range edge), with its
   own table written first. A prediction from interpolating the measured arms is not evidence; render it.
 - Then look at the nearest two arms by eye, at the views and in enlarged crops of the places the defects live
