@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.3] - 2026-11-16
+- corrections from re-reading 0.1.2 against its evidence — the tone-law lesson quotes the export's measured spread and says the narrower law reduced near-white tips rather than removed them; the rotation-minimizing frame is for interpolated offsets, while a flyaway's lift keeps its frame smoothed along the strand with a shorter lift; the guides' blend is a reach check, not a rule; the reference's mirrored views that disagree in value are handled as a declared choice; measures.md quotes the limits a self-consistent set actually gave
+
+
 ## [0.1.2] - 2026-11-16
 - hair-reference-review checks the reference agrees with itself across views before matching it (when views painted one at a time contradict each other, the set is made again as one multi-view image painted in one pass over the model's head), sets each limit at the reference's own worst self-disagreement, reports rows finer than the reference's real detail, and reads value relative to the skin beside the hair, leaving out views lit from another side; strand-groom measures the mass against the reference's hull before the texture, lays every cross-strand offset in a rotation-minimizing frame (never tangent x root normal, never a per-point field frame), constructs guides on the reference's geometry with the root region inside their coverage and lengths bounded by them, diagnoses curl from the strands' 3D shape against the guides' own floor and traces a growth trigger before fixing it only where it fires, keeps each tone class narrow; strand-rendering narrows the groom's tone law for near-white tips instead of lowering the spread, and a sweep whose named-trait gate leaves only the control eligible reports that as its answer
 

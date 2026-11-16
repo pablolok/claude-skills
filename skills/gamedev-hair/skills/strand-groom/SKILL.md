@@ -90,20 +90,22 @@ most of the look, noise and flyaways come last.
   concavities (under the lower lip, between moustache and beard), and where the views disagree its carve leaves
   artefacts (a split bottom, a short tip): gate guides against the masks beyond the reference's own floor, not
   against the hull.
-- **Every offset laid across a strand rides a smooth frame.** Lock offsets, waves, a flyaway's lift and a child's
-  spread are laid in a frame carried along the strand: a rotation-minimizing frame (double reflection, Wang et al.
-  2008), seeded from the root normal at the first sample where the strand has left it by a clear angle (about 15
-  degrees). Never `binormal = tangent x root normal` (it flips where the strand swings through the normal: a hook at
-  each flip), and never a frame sampled per point from a field (a volume's voxel "up" jumps a few degrees a point,
-  and a lift's lever turns the jumps into a zigzag; at least smooth it along the strand). Test it on a strand that
-  swings through its root normal and on a helix (the twist stays near zero).
+- **Offsets across a strand ride a smooth frame.** Lock offsets and waves interpolated onto a strand are laid in a
+  rotation-minimizing frame carried along it (double reflection, Wang et al. 2008), seeded from the root normal at
+  the first sample where the strand has left it by a clear angle (about 15 degrees); test it on a strand that swings
+  through its root normal and on a helix (the twist stays near zero). Never `binormal = tangent x root normal`: it
+  flips where the strand swings through the normal, a hook at each flip. A flyaway's lift is never laid on a frame
+  sampled per point from a field (a volume's voxel "up" jumps a few degrees a point and the lift's lever turns the
+  jumps into a zigzag): smooth that frame along the strand and shorten the lift (a transported frame for the lift
+  gained little more in one case).
 - **Flyaways are their own part:** a few long single hairs rooted at a lock's root, lifted off and running beside
   it. More lint reads as noise, not as a halo.
 - **Value per strand, not per lock.** Salt-and-pepper (grey) hair is strands of different value side by side;
   give each strand a class (silver, dark, regular) and deeper layers a darker tone. A curl does not make grey hair.
-  Keep each class's tone range narrow (regulars about 0.9-1.1 of the base): a wide spread reads as near-white tips
-  over a dark mass once the renderer adds its contrast, and narrowing the groom's law fixes that where lowering the
-  renderer's contrast flattens the strands (`strand-rendering` §4).
+  Read the tone's spread on the export (p10 / p90 over strand ids): a wide spread reads as near-white tips over a
+  dark mass once the renderer adds its contrast. Narrowing the groom's law (tone p10 / p90 0.55 / 1.10 -> 0.60 /
+  1.06, a light zone scaled down, in one case) reduced the tips where lowering the renderer's contrast flattened the
+  strands (`strand-rendering` §4).
 - **Deterministic.** One seed per design, derived per zone; store parents and the design only; every variant must
   rebuild to the digit (strand and point counts, the masks). Reason: a number that moves between two runs of the
   same build cannot judge a change.
@@ -124,8 +126,8 @@ and twice it did not. When interpolating guides into strands:
   behind the lips came from that strip).
 - **Bound each strand by its guides**: no longer than their blended length, ending above the lowest point of its
   nearest guides.
-- **Blend only guides on one surface**: strands blended across columns whose fronts differ stand several mm before or
-  behind their guides.
+- **Check each strand's reach against its own guides** (front per column, p50 / p90): strands blended across
+  columns whose fronts differ stood several mm before or behind their guides.
 A section loft (each guide keeps its normalised place across and front to back in every horizontal section of the
 hull) gave a point its mass to the tip in one case; arcs from apex to tip did not make a moustache in three attempts.
 [references/beard-parts.md](references/beard-parts.md)

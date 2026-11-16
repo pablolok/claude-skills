@@ -67,8 +67,10 @@ Rules for the rows:
   reads disagree beyond any useful limit) only reports.
 - **Value against a reference painted in another light:** read it relative to skin patches beside the hair in the
   same picture (hair L* percentiles minus the skin's median; a* and b* likewise). That cancels exposure and grade,
-  not the light's direction: read the mirrored views the same way first, and leave out of the value targets a view
-  whose painted key falls from another side (it reads several L* darker against its own skin). An absolute value
+  not the light's direction: read the mirrored views the same way first. When a view and its mirror disagree beyond
+  a few L* relative (11-15 L* in one set, where the beard is symmetric), the painted light differs between them:
+  keep one side in the value targets and declare it; a kept view's limit is then declared, not measured, and the
+  report says so. An absolute value
   gate needs the groom rendered in the reference's light: one colour gain fitted on skin anchors does not carry a
   picture into another light set-up (its anchors disagreed by about 12 L* in one case).
 - **Validate a new measure on the reference and on a known-wrong case before it gates anything.** A row that reads

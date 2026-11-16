@@ -8,8 +8,8 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 
 | row | definition | notes |
 |---|---|---|
-| fill | share of the reference's mask our matte covers, per view | the limit is the reference's own worst self-disagreement (0.86-0.94 by view and zone in one set; about 0.90 where a set agreed closely) |
-| hair outside | share of our matte outside the reference's mask grown 3 px | the same rule (0.10-0.14 in one set); flyaways counted and not, both reported |
+| fill | share of the reference's mask our matte covers, per view | the limit is the reference's own worst self-disagreement (whole views 0.86-0.88, zones 0.75-0.94 in one set) |
+| hair outside | share of our matte outside the reference's mask grown 3 px | the same rule (0.12-0.14 in one set); flyaways counted and not, both reported |
 | skin in the mask | share of the mask showing bare skin through our hair | |
 | edge by bands | in profile, our front (and back) edge minus the reference's, per 20 mm band from the top | the mouth and the point bands matter most on a beard |
 | zone fill | fill inside named boxes (cheek, join of moustache and cheek, under the jaw, the point) | a whole-view fill hides a bare zone |
