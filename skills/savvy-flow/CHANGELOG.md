@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.3] - 2026-11-17
+- the Spend rule monitors usage continuously: budget read at every worker return and step, each family's projection kept at or under 100 % at its reset, tiers cut, briefs shrunk and parallelism lowered when it rises, costly work paused with the user told when nothing cheaper fits
+
+
 ## [1.17.2] - 2026-11-16
 - the budget is reported to the user in their local time, to the minute: one compact line per window of each family (percent used, the time it runs out at the current pace or the percent projected at reset, the reset, the day when not today, the time of the reading); the progress tool's timestamps are UTC and are converted from the machine's clock, never presented as local
 

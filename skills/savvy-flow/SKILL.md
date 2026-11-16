@@ -39,8 +39,11 @@ Task from the user: $ARGUMENTS
   plan (the hardest bugs, a design feature) goes to Heavy, or Sol for Codex, unless the user explicitly asks for Fable.
 - **Spend**: split every piece by kind of work: design and judgment on Careful or Sol, mechanical work (swap,
   build, export, capture) on Medium or Light. One fresh worker per step, never one worker resumed for hours: a long
-  context is rebought on every turn. Check `budget` before every costly launch; when a family is projected past its
-  limit, cut a tier and ask the user (section 4).
+  context is rebought on every turn. Monitor usage continuously: read the `budget` summary at every worker return and
+  every step, not only before costly launches, and keep each family's projected use at its reset at or under 100 %.
+  When a projection rises past it, cut a tier (Heavy → Careful → Medium, Sol → Terra), shrink briefs, run fewer workers
+  in parallel and prefer the family with headroom; if no cheaper path fits, pause costly work and tell the user the
+  projection and the reset time (section 4). Report the projection whenever it changes the plan.
 - **A model or an effort the user sets wins over the tier's.** A general instruction (every agent on one model, every
   review at one effort) covers every task it describes, a specific one the tasks it names, and it holds until they
   change it: never ask again task by task. Setting Fable this way is the yes its rule asks for. Pass it as `model` /
