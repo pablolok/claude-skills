@@ -130,6 +130,21 @@ bare id in a project that declares `"citation": "bare"`.
 - **When to create a doc**: a multi-step plan, cross-file changes, or a spec. A genuine one-liner stays inline
   (`- **Doc**: —`); if it grows, create the doc and update the field.
 
+### OpenSpec projects
+
+When the project has an `openspec/` folder, the spec of a feature lives in an **OpenSpec change**, not in
+`features/<name>/spec.md`:
+
+- The entry's `Doc` links the change's **`proposal.md`** (a file, relative to the register:
+  `[proposal](../../openspec/changes/<id>/proposal.md)`). No `features/` folder is created for it.
+- **No phase table by hand**: the dashboard reads the change's `tasks.md` and turns each `## N. Section` into a phase
+  (all `[x]` → done, some → in progress, none → not started). Progress is kept by ticking the checkboxes in `tasks.md`.
+- The proposal may cite the entry (`BKLG-NNN`) under `## What Changes`; the dashboard ties them both ways.
+- **Close** = `openspec archive <id>` first, then close the entry; the history line links the archived proposal
+  (`openspec/changes/archive/YYYY-MM-DD-<id>/proposal.md`), so the archived change still names the entry.
+- The dashboard's **OpenSpec** view (pane key `7`, page tab) lists active changes with their tasks, the specs with
+  requirement/scenario counts, and the archived changes.
+
 ## GitHub Issues mirror and dashboard
 
 - **The mirror** (`backlog-github-sync.mjs`, open entries ⇄ issues labelled `backlog`) is **on only when the project

@@ -12,7 +12,7 @@ import { ASSET_EXTENSIONS } from "./docIndex.mjs";
 import { DEFAULTS } from "./project.mjs";
 
 /** The groups of the documents tree, in the order the sidebar lists them. */
-export const DOC_GROUPS = Object.freeze(["register", "work", "architecture", "archive", "other"]);
+export const DOC_GROUPS = Object.freeze(["register", "work", "openspec", "architecture", "archive", "other"]);
 
 /** The register's own folders of work docs (a folder per entry). */
 const WORK_FOLDERS = Object.freeze(["features", "bugs", "analysis", "diagnostic"]);
@@ -58,6 +58,7 @@ function groupOf(rel, config) {
     return WORK_FOLDERS.includes(first) ? "work" : "register";
   }
   if (rel.startsWith(`${config.architectureDir}/`)) return "architecture";
+  if (rel.startsWith("openspec/")) return "openspec";
   return "other";
 }
 

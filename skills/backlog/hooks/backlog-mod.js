@@ -7,7 +7,7 @@
 // The pane speaks English unless the plugin's `language` option says Italian; it never guesses from the locale. `l`
 // switches between the two and keeps the pick in the option.
 //
-// Keys while the pane has focus: 1-6 switch view, r refreshes, l switches language, b goes back, Tab/arrows move
+// Keys while the pane has focus: 1-7 switch view (7 is OpenSpec: its changes, their tasks, the specs), r refreshes, l switches language, b goes back, Tab/arrows move
 // between rows, Enter opens the focused row, Esc closes. A phase (in the working-on-now card and on an entry's page) opens its detail in
 // place: what it is, its state and the whole note of its state cell.
 
@@ -45,7 +45,15 @@ const STATUS_COLOR = { 'in-progress': 'warning', blocked: 'error', open: 'subtle
 
 const WORDS = {
   en: {
-    tabs: ['Overview', 'In progress', 'Next', 'To verify', 'Documents', 'Activity'],
+    tabs: ['Overview', 'In progress', 'Next', 'To verify', 'Documents', 'Activity', 'OpenSpec'],
+    os: {
+      none: 'This project has no openspec/ folder.',
+      noneHint: 'Run "openspec init" to start one. An entry whose Doc links a file of a change takes the change\'s task sections as its phases.',
+      counts: (t) => `${t.active} active · ${t.archived} archived · ${t.specs} specs · ${t.requirements} requirements`,
+      tasks: 'Tasks', active: 'Active changes', specs: 'Specs', archived: 'Archived changes', sections: 'Sections',
+      reqs: (r, s) => `${r} requirements · ${s} scenarios`, tasksOf: (d, n) => `${d}/${n} tasks`, noTasks: 'no tasks.md',
+      entries: 'Entries', archivedOn: 'archived', delta: { added: 'added', modified: 'modified', removed: 'removed', renamed: 'renamed' },
+    },
     refresh: 'Refresh', back: 'Back', loading: 'Reading the register…', updated: 'updated', otherLanguage: 'Italiano',
     closed: 'Entries closed', phases: 'Phases done', of: (a, b) => `${a} of ${b}`,
     noEntries: 'no entries yet', noPhases: 'no phases declared',
@@ -66,14 +74,22 @@ const WORDS = {
     },
     noRegister: 'This project has no backlog yet.',
     startOne: (p) => `No register at ${p}. Ask for "/backlog add …" to start one; if the register lives elsewhere, set "docsDir" in .claude/backlog.json.`,
-    groups: { register: 'Register', work: 'Work docs', architecture: 'Architecture', archive: 'Archive', other: 'Other' },
+    groups: { register: 'Register', work: 'Work docs', openspec: 'OpenSpec', architecture: 'Architecture', archive: 'Archive', other: 'Other' },
     states: { done: 'done', active: 'in progress', planned: 'not started', dropped: 'dropped' },
     statuses: { 'in-progress': 'in progress', open: 'open', blocked: 'blocked' },
     priorities: { high: 'high', medium: 'medium', low: 'low' },
     command: 'Open the backlog dashboard: progress, work in progress, next, documents',
   },
   it: {
-    tabs: ['Panoramica', 'In corso', 'Prossimi', 'Da verificare', 'Documenti', 'Attività'],
+    tabs: ['Panoramica', 'In corso', 'Prossimi', 'Da verificare', 'Documenti', 'Attività', 'OpenSpec'],
+    os: {
+      none: 'Questo progetto non ha una cartella openspec/.',
+      noneHint: 'Lancia "openspec init" per iniziarne una. Una voce il cui Doc collega un file di una change prende le sezioni dei suoi task come fasi.',
+      counts: (t) => `${t.active} attive · ${t.archived} archiviate · ${t.specs} spec · ${t.requirements} requisiti`,
+      tasks: 'Task', active: 'Change attive', specs: 'Spec', archived: 'Change archiviate', sections: 'Sezioni',
+      reqs: (r, s) => `${r} requisiti · ${s} scenari`, tasksOf: (d, n) => `${d}/${n} task`, noTasks: 'nessun tasks.md',
+      entries: 'Voci', archivedOn: 'archiviata il', delta: { added: 'aggiunti', modified: 'modificati', removed: 'rimossi', renamed: 'rinominati' },
+    },
     refresh: 'Aggiorna', back: 'Indietro', loading: 'Leggo il registro…', updated: 'aggiornato', otherLanguage: 'English',
     closed: 'Voci chiuse', phases: 'Fasi completate', of: (a, b) => `${a} su ${b}`,
     noEntries: 'nessuna voce ancora', noPhases: 'nessuna fase dichiarata',
@@ -94,7 +110,7 @@ const WORDS = {
     },
     noRegister: 'Questo progetto non ha ancora un backlog.',
     startOne: (p) => `Nessun registro in ${p}. Chiedi "/backlog add …" per iniziarne uno; se il registro sta altrove, imposta "docsDir" in .claude/backlog.json.`,
-    groups: { register: 'Registro', work: 'Documenti di lavoro', architecture: 'Architettura', archive: 'Archivio', other: 'Altri' },
+    groups: { register: 'Registro', work: 'Documenti di lavoro', openspec: 'OpenSpec', architecture: 'Architettura', archive: 'Archivio', other: 'Altri' },
     states: { done: 'fatta', active: 'in corso', planned: 'da iniziare', dropped: 'annullata' },
     statuses: { 'in-progress': 'in corso', open: 'aperta', blocked: 'bloccata' },
     priorities: { high: 'alta', medium: 'media', low: 'bassa' },
@@ -125,14 +141,14 @@ let failure = ''
 let loading = false
 let loadedAt = 0
 let isOpen = false
-let view = { name: 'overview' } // overview | progress | next | pending | docs | activity | entry {id} | doc {path, text}
+let view = { name: 'overview' } // overview | progress | next | pending | docs | activity | openspec | entry {id} | doc {path, text} | change {dir}
 let trail = [] // the views Back returns to
 /** The drawn diagrams of the documents opened: path → { status: 'pending' | 'done' | 'failed', segments, message }. */
 const diagrams = new Map()
 let docFilter = ''
 let openPhase = null // { id, name }: the phase whose detail is shown under its entry's phases
 
-const TAB_VIEWS = ['overview', 'progress', 'next', 'pending', 'docs', 'activity']
+const TAB_VIEWS = ['overview', 'progress', 'next', 'pending', 'docs', 'activity', 'openspec']
 
 // ─── pure helpers ────────────────────────────────────────────────────────────────────────────────────────────────
 const clip = (text, width) => {
@@ -607,7 +623,107 @@ function overview($, el, width, now) {
     blank(el),
     heading(el, `${T.next} · ${b.next.length}`),
     ...b.next.slice(0, LIST_LIMIT.overview).map((n) => nextRow($, el, n, width)),
+    ...(b.openspec?.changes.length
+      ? [
+          blank(el),
+          heading(el, `OpenSpec · ${T.os.active} · ${b.openspec.changes.length}`),
+          ...b.openspec.changes.slice(0, LIST_LIMIT.overview).map((c) => changeRow($, el, c, width)),
+          ...(b.openspec.changes.length > LIST_LIMIT.overview ? [dim(el, T.more(b.openspec.changes.length - LIST_LIMIT.overview))] : []),
+        ]
+      : []),
   ]
+}
+
+// ─── OpenSpec ────────────────────────────────────────────────────────────────────────────────────────────────────
+/** A change of the board by id: the active one first, then the newest archived. */
+function changeById(id) {
+  const s = snapshot.board.openspec
+  return s ? s.changes.find((c) => c.id === id) ?? s.archived.find((c) => c.id === id) ?? null : null
+}
+
+/** What a change's deltas do to the specs, the kinds it touches only. */
+const deltaText = (d) =>
+  Object.entries(d)
+    .filter(([, n]) => n)
+    .map(([k, n]) => `${n} ${T.os.delta[k] ?? k}`)
+    .join(' · ')
+
+/** One change as a pressable row: its task sections as a bar, its tasks and the entries tied to it. */
+function changeRow($, el, c, width) {
+  const facts = [c.tasks.total ? T.os.tasksOf(c.tasks.done, c.tasks.total) : T.os.noTasks, c.entries.join(' ')].filter(Boolean).join(' · ')
+  const title = el.Button({ key: 'change-' + c.dir, label: clip(`${c.id}  ${plain(c.title)}`, width - 2), plain: true, onPress: () => go($, { name: 'change', dir: c.dir }) })
+  if (hasSvg(el)) return card(el, [title, el.Svg({ source: entryStrip({ phaseCounts: c.phaseCounts, priority: null }, facts), alt: `${c.id}: ${facts}` })])
+  return el.Box({
+    flexDirection: 'column',
+    children: [
+      title,
+      el.Box({
+        flexDirection: 'row',
+        columnGap: 1,
+        children: [el.Text({ children: ['   '] }), ...(c.phases.length ? [bar(el, c.phaseCounts, 12)] : []), dim(el, clip(facts, width - 18))],
+      }),
+    ],
+  })
+}
+
+function openspecView($, el, width) {
+  const s = snapshot.board.openspec
+  if (!s) return [heading(el, T.os.none), dim(el, T.os.noneHint)]
+  const t = s.totals
+  const rows = [dim(el, T.os.counts(t))]
+  if (s.project) rows.push(el.Button({ key: 'os-project', label: s.project, plain: true, onPress: () => openDoc($, s.project) }))
+  if (t.tasksTotal) {
+    rows.push(el.Box({
+      flexDirection: 'row',
+      columnGap: 2,
+      children: [heading(el, T.os.tasks), bar(el, { done: t.tasksDone, planned: t.tasksTotal - t.tasksDone }, Math.max(10, Math.min(40, width - 30))), dim(el, T.of(t.tasksDone, t.tasksTotal))],
+    }))
+  }
+  rows.push(blank(el), heading(el, `${T.os.active} · ${s.changes.length}`))
+  rows.push(...(s.changes.length ? s.changes.map((c) => changeRow($, el, c, width)) : [dim(el, T.nothing)]))
+  rows.push(blank(el), heading(el, `${T.os.specs} · ${s.specs.length}`))
+  for (const sp of s.specs) {
+    rows.push(el.Button({ key: 'spec-' + sp.path, label: clip(`${sp.name}  ·  ${T.os.reqs(sp.requirements, sp.scenarios)}`, width - 2), plain: true, onPress: () => openDoc($, sp.path) }))
+  }
+  rows.push(blank(el), heading(el, `${T.os.archived} · ${s.archived.length}`))
+  for (const c of s.archived.slice(0, LIST_LIMIT.activity)) {
+    rows.push(el.Button({ key: 'arch-' + c.dir, label: clip(`${c.date ?? ''}  ${c.id}  ${plain(c.title)}`, width - 2), plain: true, dimColor: true, onPress: () => go($, { name: 'change', dir: c.dir }) }))
+  }
+  return rows
+}
+
+/** One change: why, the entries tied to it, its documents, what its deltas do, then every task by section. */
+function changeView($, el, width) {
+  const s = snapshot.board.openspec
+  const c = s && [...s.changes, ...s.archived].find((x) => x.dir === view.dir)
+  if (!c) return [el.Text({ color: 'error', children: [`${T.notFound}: ${view.dir}`] })]
+  const rows = [
+    heading(el, clip(`${c.id}  ${plain(c.title)}`, width)),
+    dim(el, clip(c.archived ? `${T.os.archivedOn} ${c.date ?? ''} · ${c.dir}` : c.dir, width)),
+  ]
+  if (c.why) rows.push(blank(el), markdown($, el, 'change-why', c.why, c.dir).element)
+  rows.push(blank(el), ...entryButtons($, el, T.os.entries, c.entries, 'change-entry'))
+  rows.push(el.Box({
+    flexDirection: 'row',
+    columnGap: 2,
+    flexWrap: 'wrap',
+    children: [dim(el, T.docsOf + ':'), ...c.docs.map((d) => el.Button({ key: 'cdoc-' + d, label: d.slice(c.dir.length + 1), plain: true, onPress: () => openDoc($, d) }))],
+  }))
+  const deltas = deltaText(c.deltas)
+  if (deltas) rows.push(dim(el, clip(`Delta: ${deltas}${c.capabilities.length ? ' · ' + c.capabilities.join(', ') : ''}`, width)))
+  rows.push(blank(el))
+  if (!c.tasks.total) return [...rows, dim(el, T.os.noTasks)]
+  const label = T.os.tasksOf(c.tasks.done, c.tasks.total)
+  rows.push(hasSvg(el)
+    ? el.Svg({ source: phaseSummary(c.phaseCounts, `${T.os.sections} · ${label}`), alt: label })
+    : el.Box({ flexDirection: 'row', columnGap: 2, children: [heading(el, T.os.tasks), bar(el, c.phaseCounts, 24), dim(el, label)] }))
+  c.sections.forEach((sec, i) => {
+    const p = c.phases[i]
+    const st = phaseStyle(p.state)
+    rows.push(el.Text({ color: st.color, bold: true, children: [clip(`${st.mark} ${sec.name}. ${plain(sec.label)}  ${p.note}`, width)] }))
+    for (const t of sec.tasks) rows.push(el.Text({ dimColor: t.done, children: [clip(`   ${t.done ? '☑' : '☐'} ${t.id ? t.id + ' ' : ''}${plain(t.text)}`, width)] }))
+  })
+  return rows
 }
 
 function nextRow($, el, n, width) {
@@ -757,6 +873,15 @@ function entryView($, el, width, now) {
       children: [dim(el, T.docsOf + ':'), ...e.docs.map((d) => el.Button({ key: 'edoc-' + d.path, label: d.label, plain: true, onPress: () => openDoc($, d.path) }))],
     }))
   }
+  const changes = (e.changes ?? []).map(changeById).filter(Boolean)
+  if (changes.length) {
+    rows.push(el.Box({
+      flexDirection: 'row',
+      columnGap: 2,
+      flexWrap: 'wrap',
+      children: [dim(el, 'OpenSpec:'), ...changes.map((c) => el.Button({ key: 'echange-' + c.dir, label: `${c.id} (${T.os.tasksOf(c.tasks.done, c.tasks.total)})`, plain: true, onPress: () => go($, { name: 'change', dir: c.dir }) }))],
+    }))
+  }
   rows.push(
     ...entryButtons($, el, T.waitsOn, e.waitsOn, 'wait'),
     ...entryButtons($, el, T.unblocksL, e.unblocks, 'unblock'),
@@ -816,7 +941,7 @@ function docView($, el, width) {
 
 /** The row of tabs and the pane's own keys. */
 function header($, el, width, now) {
-  const active = view.name === 'entry' || view.name === 'doc' ? null : view.name
+  const active = view.name === 'entry' || view.name === 'doc' || view.name === 'change' ? null : view.name
   const tabs = TAB_VIEWS.map((name, i) =>
     el.Button({
       key: 'tab-' + name,
@@ -855,6 +980,8 @@ function viewBody($, el, width, now) {
     case 'pending': return pendingView($, el, width)
     case 'docs': return docsView($, el, width)
     case 'activity': return activityView($, el, width, now)
+    case 'openspec': return openspecView($, el, width)
+    case 'change': return changeView($, el, width)
     case 'entry': return entryView($, el, width, now)
     case 'doc': return docView($, el, width)
     default: return overview($, el, width, now)

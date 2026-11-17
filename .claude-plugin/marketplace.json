@@ -11,7 +11,7 @@
       "name": "backlog",
       "source": "./published/workflow/backlog",
       "description": "Manage a project's tracked work in BACKLOG.md — add, list, process, close; AND the entry point when STARTING work that needs a design doc (spec, plan, report) — open a BKLG entry first, unasked, so its doc folder is tracked and archived. Ships the doc gates, a GitHub Issues mirror and a local dashboard. Trigger on \"/backlog\", \"add to backlog\", \"metti nel backlog\", \"what's in the backlog\", \"backlog dashboard\", \"close BKLG-NNN\", or before creating a features/bugs/diagnostic/analysis folder.",
-      "version": "1.12.0",
+      "version": "1.13.0",
       "category": "workflow",
       "strict": true,
       "skills": [
@@ -175,7 +175,7 @@
       "name": "savvy-flow",
       "source": "./published/workflow/savvy-flow",
       "description": "Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI when it is signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.",
-      "version": "1.18.1",
+      "version": "1.19.0",
       "category": "workflow",
       "strict": false,
       "skills": [

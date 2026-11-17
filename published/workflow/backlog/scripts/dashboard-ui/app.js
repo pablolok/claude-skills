@@ -15,7 +15,7 @@ const WORDS = {
     groupBy: "Group by", noGroup: "No grouping", status: "Status", priority: "Priority", none: "—",
     docsOf: "Documents", links: "Links", cites: "Cites", waitsOn: "Waits on", commits: "Recent commits naming it",
     filterDocs: "Filter documents…", usedBy: "Entries linking it", notFound: "Not found", refreshed: "updated",
-    groups: { register: "Register", work: "Work docs", architecture: "Architecture", archive: "Archive", other: "Other" },
+    groups: { register: "Register", work: "Work docs", openspec: "OpenSpec", architecture: "Architecture", archive: "Archive", other: "Other" },
     states: { done: "done", active: "in progress", planned: "not started", dropped: "dropped" },
     statuses: { "in-progress": "in progress", open: "open", blocked: "blocked" },
     priorities: { high: "high", medium: "medium", low: "low" },
@@ -23,6 +23,15 @@ const WORDS = {
     offline: "The dashboard server is not answering.", ofTotal: (a, b) => `${a} of ${b}`,
     noEntries: "no entries yet", noPhases: "no phases declared",
     otherLanguage: "Italiano", switchLanguage: "Show the dashboard in Italian",
+    openspec: "OpenSpec",
+    os: {
+      none: "This project has no openspec/ folder.",
+      noneHint: "Run \"openspec init\" to start one. An entry whose Doc links a file of a change takes the change's task sections as its phases.",
+      active: "Active changes", archived: "Archived changes", specs: "Specs", tasks: "Tasks", sections: "Sections", entries: "Entries",
+      tasksOf: (d, n) => `${d}/${n} tasks`, noTasks: "no tasks.md", reqs: (r, s) => `${r} requirements · ${s} scenarios`,
+      archivedOn: "archived", requirements: "Requirements", why: "Why",
+      delta: { added: "added", modified: "modified", removed: "removed", renamed: "renamed" },
+    },
   },
   it: {
     overview: "Panoramica", entries: "Voci", docs: "Documenti", activity: "Attività",
@@ -34,7 +43,7 @@ const WORDS = {
     groupBy: "Raggruppa per", noGroup: "Nessun raggruppamento", status: "Stato", priority: "Priorità", none: "—",
     docsOf: "Documenti", links: "Collegamenti", cites: "Cita", waitsOn: "Aspetta", commits: "Commit recenti che la nominano",
     filterDocs: "Filtra documenti…", usedBy: "Voci che lo collegano", notFound: "Non trovato", refreshed: "aggiornato",
-    groups: { register: "Registro", work: "Documenti di lavoro", architecture: "Architettura", archive: "Archivio", other: "Altri" },
+    groups: { register: "Registro", work: "Documenti di lavoro", openspec: "OpenSpec", architecture: "Architettura", archive: "Archivio", other: "Altri" },
     states: { done: "fatta", active: "in corso", planned: "da iniziare", dropped: "scartata" },
     statuses: { "in-progress": "in corso", open: "aperta", blocked: "bloccata" },
     priorities: { high: "alta", medium: "media", low: "bassa" },
@@ -42,6 +51,15 @@ const WORDS = {
     offline: "Il server della dashboard non risponde.", ofTotal: (a, b) => `${a} su ${b}`,
     noEntries: "nessuna voce ancora", noPhases: "nessuna fase dichiarata",
     otherLanguage: "English", switchLanguage: "Mostra la dashboard in inglese",
+    openspec: "OpenSpec",
+    os: {
+      none: "Questo progetto non ha una cartella openspec/.",
+      noneHint: "Lancia \"openspec init\" per iniziarne una. Una voce il cui Doc collega un file di una change prende le sezioni dei suoi task come fasi.",
+      active: "Change attive", archived: "Change archiviate", specs: "Spec", tasks: "Task", sections: "Sezioni", entries: "Voci",
+      tasksOf: (d, n) => `${d}/${n} task`, noTasks: "nessun tasks.md", reqs: (r, s) => `${r} requisiti · ${s} scenari`,
+      archivedOn: "archiviata il", requirements: "Requisiti", why: "Perché",
+      delta: { added: "aggiunti", modified: "modificati", removed: "rimossi", renamed: "rinominati" },
+    },
   },
 };
 /** Where this browser keeps the reader's language pick. */
@@ -297,8 +315,64 @@ const Views = {
 
     const recent = panel(T.recent, Views.commitList(b.activity.slice(0, OVERVIEW_LIMIT.recent)), `<a class="small" href="#/activity">${esc(T.activity)}</a>`);
     const closed = panel(T.closed, Views.closedList(b.closed.slice(0, OVERVIEW_LIMIT.closed)), more(b.closed.length, OVERVIEW_LIMIT.closed, "#/activity"));
+    const os = b.openspec?.changes.length
+      ? panel(`${T.openspec} · ${T.os.active}`, `<div class="cards">${b.openspec.changes.slice(0, OVERVIEW_LIMIT.next).map(Views.changeCard).join("")}</div>`, `<a class="small" href="#/openspec">${esc(T.openspec)}</a>`)
+      : "";
 
-    return `${kpis}<div class="grid"><div class="stack">${left}${recent}</div><div class="stack">${next}${pending}${closed}</div></div>`;
+    return `${kpis}<div class="grid"><div class="stack">${left}${os}${recent}</div><div class="stack">${next}${pending}${closed}</div></div>`;
+  },
+
+  // ─── OpenSpec ───
+  deltaText: (d) => Object.entries(d ?? {}).filter(([, n]) => n).map(([k, n]) => `${n} ${T.os.delta[k] ?? k}`).join(" · "),
+
+  changeCard(c) {
+    return `<article class="card clickable" data-href="#/change/${esc(c.dir)}">
+      <div class="head"><span class="id">${esc(c.id)}</span><span class="title">${Markdown.inline(c.title)}</span></div>
+      ${c.why ? `<p class="note">${Markdown.inline(c.why)}</p>` : ""}
+      <div class="foot">${c.tasks.total ? `${bar(c.phaseCounts)}<span class="small muted">${esc(T.os.tasksOf(c.tasks.done, c.tasks.total))}</span>` : `<span class="small muted">${esc(T.os.noTasks)}</span>`}${c.entries.map(entryChip).join("")}</div>
+    </article>`;
+  },
+
+  openspec(b) {
+    const s = b.openspec;
+    if (!s) return panel(T.os.none, `<p class="small muted">${esc(T.os.noneHint)}</p>`);
+    const t = s.totals;
+    const kpis = `<div class="kpis">
+      <div class="kpi wide"><div class="l">${esc(T.os.tasks)}</div><div class="n">${esc(share(t.tasksDone, t.tasksTotal))}</div>
+        <div class="small muted">${esc(t.tasksTotal ? T.ofTotal(t.tasksDone, t.tasksTotal) : T.os.noTasks)}</div>${bar({ done: t.tasksDone, planned: t.tasksTotal - t.tasksDone })}</div>
+      <div class="kpi"><div class="l">${esc(T.os.active)}</div><div class="n">${t.active}</div></div>
+      <div class="kpi"><div class="l">${esc(T.os.archived)}</div><div class="n">${t.archived}</div></div>
+      <div class="kpi"><div class="l">${esc(T.os.specs)}</div><div class="n">${t.specs}</div></div>
+      <div class="kpi"><div class="l">${esc(T.os.requirements)}</div><div class="n">${t.requirements}</div></div>
+    </div>`;
+    const active = panel(`${T.os.active} · ${s.changes.length}`, `<div class="cards">${s.changes.map(Views.changeCard).join("") || `<p class="empty">${esc(T.nothing)}</p>`}</div>`,
+      s.project ? `<a class="small" href="#/doc/${esc(s.project)}">project.md</a>` : "");
+    const specs = panel(`${T.os.specs} · ${s.specs.length}`, s.specs.length ? `<ul class="list">${s.specs.map((sp) =>
+      `<li><div class="row"><a class="grow" href="#/doc/${esc(sp.path)}">${esc(sp.name)}</a><span class="meta">${esc(T.os.reqs(sp.requirements, sp.scenarios))}</span></div></li>`).join("")}</ul>` : `<p class="empty">${esc(T.nothing)}</p>`);
+    const archived = panel(`${T.os.archived} · ${s.archived.length}`, s.archived.length ? `<ul class="list">${s.archived.map((c) =>
+      `<li><div class="row"><a class="id" href="#/change/${esc(c.dir)}">${esc(c.id)}</a><span class="grow">${Markdown.inline(c.title)}</span>${c.date ? `<span class="meta">${esc(c.date)}</span>` : ""}</div></li>`).join("")}</ul>` : `<p class="empty">${esc(T.nothing)}</p>`);
+    return `${kpis}<div class="grid"><div class="stack">${active}</div><div class="stack">${specs}${archived}</div></div>`;
+  },
+
+  change(b, dir) {
+    const s = b.openspec;
+    const c = s && [...s.changes, ...s.archived].find((x) => x.dir === dir);
+    if (!c) return panel(T.notFound, `<p class="empty">${esc(dir)}</p>`);
+    const deltas = Views.deltaText(c.deltas);
+    const sections = c.sections.map((sec, i) => {
+      const p = c.phases[i];
+      return `<div class="os-section"><h3><span class="dot ${p.state}"></span>${esc(sec.name)}. ${Markdown.inline(sec.label)} <span class="small muted">${esc(p.note)}</span></h3>
+        <ul class="tasks">${sec.tasks.map((t) => `<li class="${t.done ? "done" : ""}"><span class="box">${t.done ? "☑" : "☐"}</span>${t.id ? `<code>${esc(t.id)}</code> ` : ""}${Markdown.inline(t.text)}</li>`).join("")}</ul></div>`;
+    }).join("");
+    return `<div class="page"><div class="stack">
+        <section class="panel"><header><h2><span class="id">${esc(c.id)}</span> ${Markdown.inline(c.title)}</h2>${c.archived ? chip("", `${T.os.archivedOn} ${c.date ?? ""}`) : ""}</header>
+          <p class="small muted">${esc(c.dir)}</p>${c.why ? `<div class="md"><p><b>${esc(T.os.why)}:</b> ${Markdown.inline(c.why)}</p></div>` : ""}</section>
+        ${panel(T.os.tasks, c.tasks.total ? `${bar(c.phaseCounts)}${legend(c.phaseCounts)}<p class="small muted">${esc(T.os.tasksOf(c.tasks.done, c.tasks.total))}</p>${sections}` : `<p class="empty">${esc(T.os.noTasks)}</p>`)}
+      </div><div class="stack">
+        ${panel(T.docsOf, `<ul class="list">${c.docs.map((d) => `<li><a href="#/doc/${esc(d)}">${esc(d.slice(c.dir.length + 1))}</a></li>`).join("")}</ul>`)}
+        ${deltas ? panel("Delta", `<p>${esc(deltas)}</p>${c.capabilities.length ? `<p class="small muted">${c.capabilities.map(esc).join(", ")}</p>` : ""}`) : ""}
+        ${panel(T.os.entries, c.entries.length ? `<p>${c.entries.map(entryChip).join(" ")}</p>` : `<p class="empty">${esc(T.nothing)}</p>`)}
+      </div></div>`;
   },
 
   commitList(commits) {
@@ -389,6 +463,11 @@ const Views = {
         <section class="panel"><div class="md" id="entry-md">${Markdown.block(body)}</div></section>
       </div><div class="stack">
         ${panel(T.docsOf, e.docs.length ? `<ul class="list">${e.docs.map((d) => `<li><a href="#/doc/${esc(d.path)}">${esc(d.label)}</a><div class="meta">${esc(d.path)}</div></li>`).join("")}</ul>` : `<p class="empty">${esc(T.nothing)}</p>`)}
+        ${(() => {
+          const s = b.openspec;
+          const changes = (e.changes ?? []).map((id) => s?.changes.find((c) => c.id === id) ?? s?.archived.find((c) => c.id === id)).filter(Boolean);
+          return changes.length ? panel(T.openspec, `<div class="cards">${changes.map(Views.changeCard).join("")}</div>`) : "";
+        })()}
         ${links ? panel(T.links, `<dl class="fields">${links}</dl>`) : ""}
         ${panel(T.commits, e.last && !commits.length ? `<p class="small">${lastLine(e)}</p>` : Views.commitList(commits))}
       </div></div>`;
@@ -446,7 +525,7 @@ const DocPage = {
 };
 
 // ─── routing ───────────────────────────────────────────────────────────────────────────────────────────────────
-const TABS = [["overview", "#/"], ["entries", "#/entries"], ["docs", "#/docs"], ["activity", "#/activity"]];
+const TABS = [["overview", "#/"], ["entries", "#/entries"], ["openspec", "#/openspec"], ["docs", "#/docs"], ["activity", "#/activity"]];
 
 function parseRoute() {
   const hash = decodeURI(location.hash.replace(/^#/, "")) || "/";
@@ -457,6 +536,7 @@ function parseRoute() {
     return { tab: "docs", doc: at < 0 ? rest : rest.slice(0, at), anchor: at < 0 ? "" : rest.slice(at + 1) };
   }
   if (pathPart.startsWith("/entry/")) return { tab: "entries", entry: pathPart.slice("/entry/".length) };
+  if (pathPart.startsWith("/change/")) return { tab: "openspec", change: pathPart.slice("/change/".length) };
   const tab = pathPart.replace(/^\//, "") || "overview";
   return { tab, query: new URLSearchParams(queryPart) };
 }
@@ -476,6 +556,11 @@ async function render() {
   } else if (route.tab === "entries") {
     view.innerHTML = Views.entries(b, route.query);
     Views.bindEntries();
+  } else if (route.change) {
+    view.innerHTML = Views.change(b, route.change);
+    window.scrollTo(0, 0);
+  } else if (route.tab === "openspec") {
+    view.innerHTML = Views.openspec(b);
   } else if (route.tab === "activity") {
     view.innerHTML = Views.activity(b);
   } else {

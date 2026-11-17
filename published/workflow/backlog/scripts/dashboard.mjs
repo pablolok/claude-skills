@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { LOG_FORMAT, LOG_LIMIT, parseLog } from "./dashboard-activity.mjs";
 import { buildBoard, docsToRead } from "./dashboard-board.mjs";
 import { docTree, mediaType, servablePath } from "./dashboard-docs.mjs";
+import { linkEntries, phasesFromChanges, readOpenSpec } from "./dashboard-openspec.mjs";
 import { createHandler, listen } from "./dashboard-server.mjs";
 import { allFiles } from "./docIndex.mjs";
 import { project } from "./project.mjs";
@@ -47,13 +48,18 @@ function readCommits(root) {
   }
 }
 
-/** The board of the project as it is now. */
+/** The board of the project as it is now, OpenSpec's changes tied to its entries when the project has `openspec/`. */
 function readBoard({ root, config, backlog, history }) {
   const backlogText = readText(root, backlog);
   const historyText = readText(root, history);
   const docTexts = new Map(docsToRead(backlogText, config, historyText).map((rel) => [rel, readText(root, rel)]));
-  const board = buildBoard({ backlog: backlogText, history: historyText, config, docTexts, commits: readCommits(root) });
-  return { project: { name: path.basename(root), backlog, history, docsDir: config.docsDir, citation: config.citation }, ...board };
+  const openspec = readOpenSpec(allFiles(root, config), (rel) => readText(root, rel));
+  const board = buildBoard({
+    backlog: backlogText, history: historyText, config, docTexts, commits: readCommits(root),
+    extraPhases: phasesFromChanges(openspec),
+  });
+  linkEntries(board, openspec);
+  return { project: { name: path.basename(root), backlog, history, docsDir: config.docsDir, citation: config.citation }, ...board, openspec };
 }
 
 /** One servable file, read only when it resolves inside the root (links followed included). */
