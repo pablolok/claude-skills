@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.20.0] - 2026-11-17
+- a family with no stored policy is on pace: nobody has to type /savvy-budget; within is the opt-in to be asked, and a stored within, full or pace still wins
+
+
 ## [1.19.0] - 2026-11-17
 - the pace budget policy — /savvy-budget <family> pace, or decide with policy pace on the user's words, persists until changed; under it the budget gate never refuses a costly tier, a projection over 100 % has verdict retier with an advice string, a weekly projection under 90 % with the reset under two days away has verdict spend, and the bar title shows pace (ritmo in Italian); the top-tier gate is unchanged
 

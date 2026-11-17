@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.18.1] - 2026-11-17
+- pace is the default budget policy: the orchestrator never asks about the budget unless the user set within
+
+
 ## [1.18.0] - 2026-11-17
 - the pace policy in the Spend rule and section 4 — under pace the orchestrator never asks about the budget: it keeps every family's 5-hour and weekly projection at or under 100 % (the week aimed at 90-100 % at its reset) by re-tiering, one costly worker at a time, moving work only within the other family's limits, and pacing when nothing fits; the within policy is unchanged
 

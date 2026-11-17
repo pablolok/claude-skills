@@ -1905,8 +1905,8 @@ test('plan usage occupies two equal tiles beneath the metric tiles', async ($, o
   state.seed(FLOW, flowOf())
   const header = await headerOf($)
   expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 233 }, { x: 239, y: 90, width: 233 }])
-  expect(header.source).toContain('Claude · plan · within</text>')
-  expect(header.source).toContain('Codex · plan · within</text>')
+  expect(header.source).toContain('Claude · plan · pace</text>')
+  expect(header.source).toContain('Codex · plan · pace</text>')
   expect(header.height).toBe(176)
 })
 
@@ -2001,7 +2001,7 @@ test('without Codex the Claude plan tile spans the whole row', async ($, on) => 
   state.seed(FLOW, flowOf())
   const header = await headerOf($)
   expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 472 }])
-  expect(header.source).toContain('Claude · plan · within</text>')
+  expect(header.source).toContain('Claude · plan · pace</text>')
   expect(header.source).not.toContain('Codex · plan')
   expect(header.height).toBe(176)
 })
@@ -2782,7 +2782,7 @@ test('stale recent history falls back to the average and wrong-window history is
 
 test('the budget summary exposes per-window values and user policy verdicts', () => {
   const usage: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') },
-    codex: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { codex: 'full' } }
+    codex: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { claude: 'within', codex: 'full' } }
   expect(budgetSummary(usage, BUDGET_AT)).toEqual({
     claude: {
       fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
@@ -2800,8 +2800,8 @@ test('the budget summary exposes per-window values and user policy verdicts', ()
 test('budget summary leaves absent windows out and unknown projections null', () => {
   expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {} })
   expect(budgetSummary({ statuses: {}, claude: { fiveHour: { percentUsed: 12 } }, codex: { week: budgetWindow(90, 'week', 10081) } }, BUDGET_AT)).toEqual({
-    claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'within', verdict: 'ok' } },
-    codex: { week: { used: 0, resetsAt: budgetWindow(90, 'week', 10081).resetsAt, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'within', verdict: 'ok' } },
+    claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
+    codex: { week: { used: 0, resetsAt: budgetWindow(90, 'week', 10081).resetsAt, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
   })
 })
 
@@ -2822,12 +2822,12 @@ test('budget command lists defaults and persists only the chosen family through 
   const { state, registered } = budgetEngine(on)
   await start($)
   expect(registered.some(tool => tool.name === 'budget')).toBe(true)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude within · Codex within.' })
-  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude within · Codex full.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
+  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude pace · Codex full.' })
   expect(state.usage().policies).toEqual({ codex: 'full' })
   await start($)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude within · Codex full.' })
-  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude within · Codex within.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex full.' })
+  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude pace · Codex within.' })
 })
 
 test('budget command rejects missing, extra or invalid arguments without changing policies', async ($, on) => {
@@ -2909,13 +2909,14 @@ test('Codex history uses snapshot timestamps and never invents samples for uncha
 test('plan tiles show projected percent or exhaustion with policy colour and title', () => {
   const fitting = planTile(0, 0, 600, 'Claude', { fiveHour: budgetWindow(36) }, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
   expect(fitting).toContain('→ 72%')
-  expect(fitting).toContain('Claude · plan · within')
+  expect(fitting).toContain('Claude · plan · pace')
   const over = planTile(0, 0, 600, 'Codex', { fiveHour: budgetWindow() }, '#000', BUDGET_AT, BUDGET_AT, { ...BUDGET_FORMAT, policy: 'full' })
   expect(over).toContain('100% ↯ Thu 13:40')
   expect(over).toContain('fill="#E0A526"')
   expect(over).toContain('Codex · plan · full')
-  const within = planTile(0, 0, 600, 'Claude', { fiveHour: budgetWindow() }, '#000', BUDGET_AT, BUDGET_AT, BUDGET_FORMAT)
+  const within = planTile(0, 0, 600, 'Claude', { fiveHour: budgetWindow() }, '#000', BUDGET_AT, BUDGET_AT, { ...BUDGET_FORMAT, policy: 'within' })
   expect(within).toContain('fill="#D0453F"')
+  expect(within).toContain('Claude · plan · within')
 })
 
 test('tiles drop projections before reset text at 360, 420, 480 and 600 pixels', () => {
@@ -2933,10 +2934,11 @@ test('tiles drop projections before reset text at 360, 420, 480 and 600 pixels',
 
 test('tiles and compact text share recent projections and each family gets only one warning', () => {
   const plan = { fiveHour: budgetWindow(40), week: budgetWindow(60, 'week') }
-  const usage = recordPlanUsage(recordPlanUsage({ statuses: {}, codex: plan }, 'claude', { ...plan, fiveHour: budgetWindow(10) }, BUDGET_AT - 15 * MINUTE), 'claude', plan, BUDGET_AT)
+  const asking = { claude: 'within', codex: 'within' } as const
+  const usage = recordPlanUsage(recordPlanUsage({ statuses: {}, codex: plan, policies: asking }, 'claude', { ...plan, fiveHour: budgetWindow(10) }, BUDGET_AT - 15 * MINUTE), 'claude', plan, BUDGET_AT)
   expect(budgetSummary(usage, BUDGET_AT).claude.fiveHour).toMatchObject({ projectedAtReset: 340, pace: 'recent', verdict: 'ask' })
   expect(planUsageText(usage, BUDGET_AT)).toBe('Claude! 40/60%  Codex! 40/60%')
-  expect(planUsageText({ ...usage, policies: { claude: 'full' } }, BUDGET_AT)).toBe('Claude 40/60%  Codex! 40/60%')
+  expect(planUsageText({ ...usage, policies: { ...asking, claude: 'full' } }, BUDGET_AT)).toBe('Claude 40/60%  Codex! 40/60%')
   expect(planTile(0, 0, 600, 'Claude', plan, '#000', BUDGET_AT, BUDGET_AT, { ...BUDGET_FORMAT, history: usage.history?.claude })).toContain('100% ↯ Thu 12:30')
   expect(planUsageText({ statuses: {}, claude: { fiveHour: budgetWindow(60, 'fiveHour', 301) } }, BUDGET_AT)).toBe('Claude 0/—%')
 })
@@ -2951,8 +2953,9 @@ test('the panel passes stored family policy to its plan tiles', async ($, on) =>
 // ---------------------------------------------------------------------------
 // The budget gate, the user's one-shot decision and the cost of a tier's run.
 
+// A family that asks: these fixtures store within, since an unset family is on pace.
 const askUsage = (over: Partial<UsageReadings> = {}): UsageReadings =>
-  ({ statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, ...over })
+  ({ statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { claude: 'within', codex: 'within' }, ...over })
 
 // Two Claude readings half an hour apart, with what the session had spent at each.
 const spending = (fromPercent: number, toPercent: number, fromUsd: number, toUsd: number): UsageReadings => {
@@ -3016,7 +3019,7 @@ test('the gate passes cheap tiers, other agents, the other family and windows wi
   }
   // A Claude ask does not hold Codex back, and a Codex ask holds its costly relays alone.
   expect(budgetGate('savvy-codex-sol', askUsage(), [], BUDGET_AT)).toBeUndefined()
-  const codexAsks: UsageReadings = { statuses: {}, codex: { fiveHour: budgetWindow() } }
+  const codexAsks: UsageReadings = { statuses: {}, codex: { fiveHour: budgetWindow() }, policies: { codex: 'within' } }
   expect(budgetGate('savvy-flow:savvy-codex-astra', codexAsks, [], BUDGET_AT)).toContain('/savvy-budget codex once')
   expect(budgetGate('savvy-heavy', codexAsks, [], BUDGET_AT)).toBeUndefined()
   // over (a full policy), no projection yet, and a fitting projection all pass.
@@ -3026,7 +3029,7 @@ test('the gate passes cheap tiers, other agents, the other family and windows wi
 })
 
 test("the gate's refusal gives the tier's estimated share of each window when there is one", () => {
-  const usage = { ...spending(40, 60, 10, 30), claude: { fiveHour: budgetWindow(), week: budgetWindow(21, 'week') } }
+  const usage = { ...spending(40, 60, 10, 30), policies: { claude: 'within' } as const, claude: { fiveHour: budgetWindow(), week: budgetWindow(21, 'week') } }
   const refusal = budgetGate('savvy-heavy', usage, [run('h1', { type: 'savvy-heavy', status: 'done', costUsd: 5 })], BUDGET_AT)
   expect(refusal).toContain('≈ 5% of 5h')
   expect(refusal).not.toContain('≈ null')
@@ -3037,7 +3040,7 @@ test('a decision holds until the soonest reset of its family and then the gate a
   expect(decided.decisions?.claude).toEqual({ until: budgetWindow().resetsAt, at: BUDGET_AT, by: 'user' })
   expect(budgetGate('savvy-heavy', decided, [], BUDGET_AT)).toBeUndefined()
   // The week still asks once the five-hour window that bounded the decision has reset.
-  const weekAsks: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(30), week: budgetWindow(60, 'week') } }
+  const weekAsks: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(30), week: budgetWindow(60, 'week') }, policies: { claude: 'within' } }
   const weekDecided = decideBudget(weekAsks, 'claude', BUDGET_AT, 'user')
   expect(weekDecided.decisions?.claude?.until).toBe(budgetWindow().resetsAt)
   expect(budgetGate('savvy-heavy', weekDecided, [], BUDGET_AT)).toBeUndefined()
@@ -3079,7 +3082,7 @@ test('the user opens the gate with /savvy-budget <family> once until the next re
   const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
   expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within. Claude: go until ${until}.` })
   expect(state.usage().decisions?.claude).toMatchObject({ by: 'user', until: budgetWindow().resetsAt })
-  expect(state.usage().policies).toBeUndefined()
+  expect(state.usage().policies).toEqual({ claude: 'within', codex: 'within' })
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
 })
 
@@ -3486,7 +3489,7 @@ test('the bar title shows the pace policy', async ($, on) => {
 test('/savvy-budget <family> pace sets the policy and lists it', async ($, on) => {
   const { state } = budgetEngine(on)
   await start($)
-  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex within.' })
+  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
   expect(state.usage().policies).toEqual({ claude: 'pace' })
 })
 
@@ -3501,12 +3504,12 @@ test('the decide tool records pace from the user words, and it survives a reset'
   expect((await decideWith($, { family: 'claude', policy: 'full', answer: 'x' })).deny).toBeDefined()
   say('Go on, but stay inside the budget.')
   expect((await decideWith($, { family: 'claude', policy: 'pace', answer: 'stay inside the budget' })).result).toBe('ok: Claude pace')
-  expect(state.usage().policies).toEqual({ claude: 'pace' })
+  expect(state.usage().policies).toEqual({ claude: 'pace', codex: 'within' })
   expect(state.usage().decisions).toBeUndefined()
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
   // A reading after the window reset keeps the policy.
   const later = recordPlanUsage(state.usage(), 'claude', { fiveHour: budgetWindow(5, 'fiveHour', 10) }, BUDGET_AT + 301 * MINUTE)
-  expect(later.policies).toEqual({ claude: 'pace' })
+  expect(later.policies).toEqual({ claude: 'pace', codex: 'within' })
   expect(budgetSummary(later, BUDGET_AT + 301 * MINUTE).claude.fiveHour?.policy).toBe('pace')
 })
 
@@ -3516,4 +3519,26 @@ test('under pace the top-tier gate still refuses Fable without its own yes', asy
   seed({ policies: { claude: 'pace' } })
   expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('PLANS only')
   expect(topTierGate('savvy-fable', paceUsage())).toContain('PLANS only')
+})
+
+// A family nobody set is on pace: the user never has to type /savvy-budget.
+
+test('a family with no stored policy is on pace: the gate lets a costly tier through a projection over 100', () => {
+  const unset: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') } }
+  expect(unset.policies).toBeUndefined()
+  expect(budgetSummary(unset, BUDGET_AT).claude.fiveHour).toMatchObject({ policy: 'pace', verdict: 'retier' })
+  for (const tier of ['savvy-heavy', 'savvy-careful', 'savvy-flow:savvy-heavy']) {
+    expect(budgetGate(tier, unset, [], BUDGET_AT)).toBeUndefined()
+  }
+})
+
+test('a policy the user stored as within still refuses, and /savvy-budget within opts back into asking', async ($, on) => {
+  const within = askUsage({ policies: { claude: 'within' } })
+  expect(budgetSummary(within, BUDGET_AT).claude.fiveHour).toMatchObject({ policy: 'within', verdict: 'ask' })
+  expect(budgetGate('savvy-heavy', within, [], BUDGET_AT)).toContain('/savvy-budget claude once')
+  const { state } = budgetEngine(on)
+  await start($)
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
+  expect(await budgetCommand($, 'claude within')).toMatchObject({ text: 'Budget: Claude within · Codex pace.' })
+  expect(state.usage().policies).toEqual({ claude: 'within' })
 })

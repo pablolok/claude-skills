@@ -197,18 +197,19 @@ asked for it or set it as their default, never on your own.
   Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows), read the `budget` summary returned by the
   progress tool; its read-only `budget` tool can refresh your view without changing the bar. Its `estimates` line,
   once a tier has finished runs, gives what one run of that tier has cost as a share of each Claude window. For a
-  family with any `ask` verdict, ask the user before starting or resuming long work on it, giving the projection
+  family with any `ask` verdict (only a family the user set to `within`: `pace` is the default), ask the user before starting or resuming long work on it, giving the projection
   (percent at reset or when it runs out), the reset and that estimate; the Agent tool refuses those tiers until the
   answer is recorded. On a yes, record it with the `decide` tool, quoting their words (it holds until the family's
   next reset; `/savvy-budget <family> once` is the user's own way); never record a yes they did not give: a yes is the user's reply to THIS block, never an earlier sentence, and the tool refuses words said before the gate's refusal. Otherwise
   move the work to the other family or a cheaper tier, or pace it. Under `full`, continue, pacing only the short
-  window. The policy is the user's: set it with `/savvy-budget` when they say a reset may be used, never on your
+  window. The policy is the user's: set `full` or `within` with `/savvy-budget` only when they say so, never on your
   own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper
   tiers beside it. If the summary is unavailable, use the host's plan usage or the last relay report.
   Fable and Codex Astra have their own gate, whatever the verdict: see section "Models".
-- **Under `pace` the budget is yours to keep, never to ask about.** The user sets it (`/savvy-budget <family> pace`),
-  or says in chat that work should go on inside the budget without being asked; then record their words with `decide`
-  (family and `policy: "pace"`, quoted like any yes). It holds until the user changes it. The gate stops refusing costly
+- **Under `pace`, the default, the budget is yours to keep, never to ask about.** A family the user never set is on
+  `pace`; `within` is what a user sets (`/savvy-budget <family> within`) to be asked. If they set `within` and later
+  say work should go on inside the budget without being asked, record their words with `decide` (family and
+  `policy: "pace"`, quoted like any yes). A stored policy holds until the user changes it. The gate stops refusing costly
   tiers for the budget (the Fable and Astra gate is unchanged: each launch still needs its own yes). Keep every family's
   5-hour and weekly projection at or under 100 %, the week aimed at 90-100 % at its reset, by yourself:
   - read the summary at every worker return; a `retier` verdict carries an `advice`, act on it before the next launch;

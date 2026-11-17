@@ -722,7 +722,9 @@ const PLAN_TEXT_SIZE = 11
 // Same nine-pixel inset as the existing plan tiles, on both sides.
 const PLAN_TEXT_INSET = 9
 
-const budgetPolicy = (usage: UsageReadings, family: PlanFamily): BudgetPolicy => usage.policies?.[family] ?? 'within'
+// A family the user never set is on pace; within is what a user stores to be asked.
+const DEFAULT_POLICY: BudgetPolicy = 'pace'
+const budgetPolicy = (usage: UsageReadings, family: PlanFamily): BudgetPolicy => usage.policies?.[family] ?? DEFAULT_POLICY
 
 const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, key: PlanWindowKey, at: number, spentUsd?: number): WindowHistory => {
   const last = previous?.samples.at(-1)
@@ -1457,7 +1459,7 @@ const projectionMarker = (projection: PlanProjection | undefined, policy: Budget
 export const planTile = (x: number, y: number, width: number, name: string, plan: PlanUsage | undefined, color: string, at: number, readAt?: number, options?: PlanTileOptions): string => {
   const s = STRINGS[options?.lang ?? 'en']
   const age = readAt === undefined ? '' : ` · ${readingAge(readAt, at, options?.lang ?? 'en')}`
-  const policy = options?.policy ?? 'within'
+  const policy = options?.policy ?? DEFAULT_POLICY
   const window = (label: string, key: PlanWindowKey, value: PlanUsage['fiveHour'], offset: number): string => {
     const resetWindow = isReset(value, at)
     const percentUsed = resetWindow ? 0 : value?.percentUsed

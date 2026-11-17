@@ -73,13 +73,13 @@ the mod needs.
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
   before the reset when space is tight.
 - **Budget policy**: `/savvy-budget <claude|codex> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists both.
-  Each defaults to `within`: exhausting a window early needs the user's decision before long work. `full` means
-  the user accepts using a reset and running out early; the flow continues, pacing only the short window. `pace`
-  means the orchestrator keeps the family inside its windows by re-tiering, without asking: the gate never refuses
-  for the budget, a projection over 100 % has verdict `retier` with an `advice`, a weekly one under 90 % with the
-  reset under two days away has verdict `spend`. The orchestrator may record `pace` with `decide` (`policy: "pace"`,
-  the user's words quoted); it persists until the user changes it. The Fable and Astra gate is unchanged. Only set
-  a policy when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
+  A family nobody set is on `pace`, so nobody has to type the command: the orchestrator keeps the family inside its
+  windows by re-tiering, without asking. The gate never refuses for the budget, a projection over 100 % has verdict
+  `retier` with an `advice`, a weekly one under 90 % with the reset under two days away has verdict `spend`. The
+  orchestrator may record `pace` with `decide` (`policy: "pace"`, the user's words quoted). `within` is the opt-in to
+  be asked: exhausting a window early then needs the user's decision before long work. `full` means the user accepts
+  using a reset and running out early; the flow continues, pacing only the short window. A stored policy persists until
+  the user changes it. The Fable and Astra gate is unchanged. Only set `within` or `full` when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
   title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
 - **Budget gate**: while a family's verdict is `ask`, the Agent tool refuses its costly tiers (`savvy-fable`,
   `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex) with a message that
