@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { AgentRun, BudgetPolicy, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
+import type { AgentRun, BudgetPolicy, GateRefusal, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
 import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -121,6 +121,7 @@ const STRINGS = {
     ignoredDecision: "ignored: only the main session records the user's decision",
     badFamily: 'family must be claude or codex',
     badAnswer: "answer must quote the user's own words",
+    staleAnswer: "Not recorded: those words are not a reply to this gate's refusal (the user said them earlier, or never). Ask the user now, and quote their reply.",
     badModel: 'model and effort must be strings',
     badStatus: 'codexStatus must be a safe filename stem',
     badTier: 'tier must be fable or astra, and match the family when one is given',
@@ -199,6 +200,7 @@ const STRINGS = {
     ignoredDecision: "ignorato: solo la sessione principale registra la decisione dell'utente",
     badFamily: 'family deve essere claude o codex',
     badAnswer: "answer deve riportare le parole dell'utente",
+    staleAnswer: "Non registrato: quelle parole non sono una risposta al blocco appena avvenuto (l'utente le ha dette prima, o mai). Chiedi ora all'utente, e riporta la sua risposta.",
     badModel: 'model ed effort devono essere stringhe',
     badStatus: 'codexStatus deve essere un nome di file sicuro',
     badTier: 'tier deve essere fable o astra, coerente con la famiglia se indicata',
@@ -1793,12 +1795,43 @@ async function readBudgetResult($: EngineInterface): Promise<{ result: string }>
   return { result: await budgetLines($) }
 }
 
+// What the user has written this session: user messages with text of their own (tool results are no words of theirs).
+async function userWords($: EngineInterface): Promise<string[]> {
+  try {
+    return (await $.session.messages()).filter(m => m.role === 'user' && !m.toolResults?.length && m.text.trim()).map(m => m.text)
+  } catch {
+    return []
+  }
+}
+
+const normalized = (text: string): string => text.toLowerCase().replace(/[\s"'“”‘’«»]+/g, ' ').trim()
+
+// The gate said ask just now: remember when, and how many user messages came before, so only a later one can answer it.
+async function noteRefusal($: EngineInterface, scope: { family: PlanFamily } | { tier: string }): Promise<void> {
+  const refusal: GateRefusal = { at: await $.clock.now(), userMessages: (await userWords($)).length }
+  await update($, usageReadings, prev => ({ ...prev, refusals: 'family' in scope
+    ? { ...prev.refusals, families: { ...prev.refusals?.families, [scope.family]: refusal } }
+    : { ...prev.refusals, tiers: { ...prev.refusals?.tiers, [scope.tier]: refusal } } }))
+}
+
+// The words a yes quotes must come from a user message submitted after the gate's latest refusal for that scope;
+// with no refusal yet, from any user message. Undefined when they do, else the message to refuse with.
+async function quoteFault($: EngineInterface, answer: string, since: GateRefusal | undefined): Promise<string | undefined> {
+  const said = await userWords($)
+  const quote = normalized(answer)
+  const found = (messages: string[]): boolean => messages.some(text => normalized(text).includes(quote))
+  if (!quote || !found(said)) return tr().badAnswer
+  return !since || found(said.slice(since.userMessages)) ? undefined : tr().staleAnswer
+}
+
 async function recordTopTier($: EngineInterface, e: Record<string, unknown>): Promise<{ result: string } | { deny: string }> {
   const tier = typeof e.tier === 'string' ? TOP_TIER_NAMES[e.tier] : undefined
   if (!tier || (e.family !== undefined && e.family !== TOP_TIERS[tier]!.family)) return { deny: tr().badTier }
   if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
   const uses = e.uses === undefined ? 1 : e.uses
   if (uses !== 'session' && !(typeof uses === 'number' && Number.isInteger(uses) && uses >= 1)) return { deny: tr().badUses }
+  const fault = await quoteFault($, e.answer, (await read($, usageReadings)).refusals?.tiers?.[tier])
+  if (fault) return { deny: fault }
   const at = await $.clock.now()
   await update($, usageReadings, prev => allowTopTier(prev, tier, at, e.answer as string, uses as number | 'session'))
   const s = tr()
@@ -1812,6 +1845,8 @@ async function recordDecision($: EngineInterface, e: Record<string, unknown>): P
   const family = PLAN_FAMILIES.find(value => value === e.family)
   if (!family) return { deny: tr().badFamily }
   if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
+  const fault = await quoteFault($, e.answer, (await read($, usageReadings)).refusals?.families?.[family])
+  if (fault) return { deny: fault }
   const at = await $.clock.now()
   await update($, usageReadings, prev => decideBudget(prev, family, at, 'orchestrator', e.answer as string))
   return { result: tr().decided(FAMILY_NAME[family], (await read($, usageReadings)).decisions![family]!.until) }
@@ -2091,7 +2126,10 @@ export const register: Register = (on, options) => {
     // A resume of a top-tier worker is a launch for the gate: it needs a recorded yes with a use left.
     if (target) {
       const held = topTierGate(target.type, await read($, usageReadings), true, lang, target.model)
-      if (held) return { deny: held }
+      if (held) {
+        await noteRefusal($, { tier: topTierKey(target.type, target.model)! })
+        return { deny: held }
+      }
       await update($, usageReadings, prev => spendTopTier(prev, target.type, target.model))
     }
     await debugResume($, 'tool.call:SendMessage', e, { id, agentId: target?.agentId, description: target?.description })
@@ -2113,9 +2151,17 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
     // The budget gate comes first: a refused call neither starts a worker nor moves the bar.
     const subagent = String(e.subagent_type ?? '')
-    const refusal = topTierGate(subagent, await read($, usageReadings), false, lang, e.model)
-      ?? budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
-      ?? planGate(subagent, e.description, await read($, flow), lang)
+    const topRefusal = topTierGate(subagent, await read($, usageReadings), false, lang, e.model)
+    if (topRefusal) {
+      await noteRefusal($, { tier: topTierKey(subagent, e.model)! })
+      return { deny: topRefusal }
+    }
+    const budgetRefusal = budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
+    if (budgetRefusal) {
+      await noteRefusal($, { family: GATED_TIERS[tierOf(subagent)]! })
+      return { deny: budgetRefusal }
+    }
+    const refusal = planGate(subagent, e.description, await read($, flow), lang)
     if (refusal) return { deny: refusal }
     await update($, usageReadings, prev => spendTopTier(prev, subagent, e.model))
     if (isSavvy(String(e.subagent_type ?? ''))) {

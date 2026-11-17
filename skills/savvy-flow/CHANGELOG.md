@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.5] - 2026-11-17
+- a yes recorded with decide is the user's reply to the gate's block, never an earlier sentence: the tool refuses words said before the refusal
+
+
 ## [1.17.4] - 2026-11-17
 - progress bar: work that is not in the current plan means re-planning first (the new plan replaces the bar's), and the plan gate refuses launches outside it
 

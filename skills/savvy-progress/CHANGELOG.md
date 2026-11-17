@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.18.0] - 2026-11-17
+- the decide tool takes a yes only from a user message submitted after the gate's latest refusal: each refusal of the budget gate (per family) and of the top-tier gate (per tier, Agent launch and SendMessage resume) records when it happened and how many user messages the session held; a quote found only in earlier messages is refused (en and it) with "ask the user now, and quote their reply"; with no refusal yet the quote must still come from a user message
+
+
 ## [1.17.0] - 2026-11-17
 - a plan gate on the Agent tool: while a plan with tasks is active, a savvy worker whose description is not the title of a task of the current plan is refused, with the way out (call progress with the new title, tasks and total, then launch with description = the task's title), so the bar and the panel cannot keep a stale plan; it does nothing without tasks or once the flow is finished, non-savvy agents (Explore, claude-code-guide) and SendMessage resumes pass
 

@@ -199,7 +199,7 @@ asked for it or set it as their default, never on your own.
   family with any `ask` verdict, ask the user before starting or resuming long work on it, giving the projection
   (percent at reset or when it runs out), the reset and that estimate; the Agent tool refuses those tiers until the
   answer is recorded. On a yes, record it with the `decide` tool, quoting their words (it holds until the family's
-  next reset; `/savvy-budget <family> once` is the user's own way); never record a yes they did not give. Otherwise
+  next reset; `/savvy-budget <family> once` is the user's own way); never record a yes they did not give: a yes is the user's reply to THIS block, never an earlier sentence, and the tool refuses words said before the gate's refusal. Otherwise
   move the work to the other family or a cheaper tier, or pace it. Under `full`, continue, pacing only the short
   window. The policy is the user's: set it with `/savvy-budget` when they say a reset may be used, never on your
   own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper

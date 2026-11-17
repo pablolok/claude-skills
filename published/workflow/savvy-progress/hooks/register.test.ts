@@ -2681,8 +2681,14 @@ type BudgetFixtures = {
   status?: typeof STATUS_ONE
 }
 
+// What the user has typed so far, as the transcript the decide tool reads their words from.
+let transcript: { role: 'user' | 'assistant'; text: string; toolUses: [] }[] = []
+const say = (text: string): void => void transcript.push({ role: 'user', text, toolUses: [] })
+
 const budgetEngine = (on: On, fixtures: BudgetFixtures = {}) => {
   const fixture = engine(on, { infos: [] }, BUDGET_AT, fixtures.env)
+  transcript = []
+  on('session.messages', () => ({ value: transcript }))
   on('session.usage', () => ({ value: { startedAt: BUDGET_AT, context: { window: 1_000_000 }, rateLimits: fixtures.rateLimits?.() ?? [] } }))
   // Select one filesystem mock; the harness rejects registering a replacement.
   if (fixtures.status) return { ...fixture, files: statusFiles(on, fixtures.status) }
@@ -3082,6 +3088,7 @@ test('the decide tool records the user answer from the main session only and wan
   await start($)
   seed()
   const decide = (input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__decide', ...input })
+  say('Yes, use it, go ahead.')
   expect((await decide({ family: 'claude', answer: 'yes', agentId: 'w1' })).result).toMatch(/^ignored/)
   expect(state.usage().decisions).toBeUndefined()
   expect((await decide({ family: 'claude', answer: '   ' })).deny).toBeDefined()
@@ -3089,6 +3096,81 @@ test('the decide tool records the user answer from the main session only and wan
   expect((await decide({ family: 'claude', answer: 'yes, use it' })).result).toBe(`ok: Claude go until ${budgetWindow().resetsAt}`)
   expect(state.usage().decisions?.claude).toEqual({ until: budgetWindow().resetsAt, at: BUDGET_AT, by: 'orchestrator', words: 'yes, use it' })
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+})
+
+const OLD_POLICY = 'the weekly one should reach the reset between 90 and 100, never leave it unspent'
+const decideWith = ($: Engine, input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__decide', ...input })
+
+test('a yes quoting a user message from before the gate refused is refused, and a quote of their reply after it is recorded', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  say(OLD_POLICY)
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
+  expect(state.usage().refusals?.families?.claude).toEqual({ at: BUDGET_AT, userMessages: 1 })
+  const stale = await decideWith($, { family: 'claude', answer: OLD_POLICY })
+  expect(stale.deny).toContain('Ask the user now')
+  expect(state.usage().decisions).toBeUndefined()
+  say('Ok, go on with Heavy.')
+  expect((await decideWith($, { family: 'claude', answer: 'go on with heavy' })).result).toBe(`ok: Claude go until ${budgetWindow().resetsAt}`)
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+})
+
+test('a yes quoting words no user message holds is refused, with or without a refusal before', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  say('something else entirely')
+  expect((await decideWith($, { family: 'claude', answer: 'yes, I made it up' })).deny).toContain('quote')
+  expect((await decideWith($, { family: 'claude', answer: '  "  " ' })).deny).toBeDefined()
+  expect(state.usage().decisions).toBeUndefined()
+})
+
+test('with no refusal yet the decide tool takes a quote from any user message', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  say('Yes, Heavy is fine whenever you need it.')
+  expect(state.usage().refusals).toBeUndefined()
+  expect((await decideWith($, { family: 'claude', answer: 'Heavy is fine' })).result).toContain('ok: Claude')
+})
+
+test('the refusal of one family does not date the other', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, { ...askUsage(), codex: { fiveHour: budgetWindow(10, 'fiveHour', 3) } })
+  await start($)
+  seed()
+  say('Codex is fine to use')
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
+  expect(state.usage().refusals?.families?.codex).toBeUndefined()
+  expect((await decideWith($, { family: 'codex', answer: 'Codex is fine' })).result).toContain('ok: Codex')
+})
+
+test('a tier yes must quote a user message after the latest refusal of that tier, and a family refusal does not date it', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  say(OLD_POLICY)
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('PLANS only')
+  expect(state.usage().refusals?.tiers?.fable).toEqual({ at: BUDGET_AT, userMessages: 1 })
+  expect((await decideWith($, { tier: 'fable', answer: OLD_POLICY })).deny).toContain('Ask the user now')
+  expect(state.usage().topTiers).toBeUndefined()
+  say('Yes, Fable for the plan.')
+  expect((await decideWith($, { tier: 'fable', answer: 'fable for the plan' })).result).toBe('ok: Claude Fable allowed for 1 launch')
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toBeUndefined()
+  // Used up, refused again: a newer refusal makes the earlier yes stale too.
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('used up')
+  expect((await decideWith($, { tier: 'fable', answer: 'fable for the plan' })).deny).toContain('Ask the user now')
+  expect((await decideWith($, { tier: 'astra', answer: 'fable for the plan' })).result).toContain('ok: Codex Astra')
+})
+
+test('a tier yes with no refusal of that tier yet quotes any user message', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  expect((await decideWith($, { tier: 'fable', answer: 'yes' })).deny).toContain('quote')
+  say('Yes, Fable once.')
+  expect((await decideWith($, { tier: 'fable', answer: 'fable once' })).result).toContain('ok: Claude Fable')
+  expect(state.usage().refusals).toBeUndefined()
 })
 
 test('every Claude model step, the main session and the workers alike, adds to the family spend', async ($, on) => {
@@ -3191,8 +3273,10 @@ const topGated = ($: Engine, on: On, usage: UsageReadings = { statuses: {}, clau
   launching($, on)
   return { state, seed: (over: Partial<UsageReadings> = {}) => state.seed('usage', { ...usage, ...over }) }
 }
-const decideTier = ($: Engine, input: Record<string, unknown>) =>
-  $.tool.call({ tool: 'mcp__savvy-progress__decide', answer: 'yes, for the plan', ...input })
+const decideTier = ($: Engine, input: Record<string, unknown>) => {
+  if (!transcript.length) say('Yes, for the plan.')
+  return $.tool.call({ tool: 'mcp__savvy-progress__decide', answer: 'yes, for the plan', ...input })
+}
 
 test('the top-tier gate refuses Fable and Astra, either name, whatever the budget says, and names the way out', () => {
   const ok: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(10, 'fiveHour', 3) } }
