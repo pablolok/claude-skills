@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.6] - 2026-11-17
+- a review agent never makes the orchestrator wait idle: it gets a narrow brief (the diff, its files and the questions, no new investigation of what workers verified), runs in the background while the orchestrator does everything that does not depend on its verdict (tracker, counts, read-only checks, the commit message, the next brief), and after the fixes the same reviewer is resumed for a targeted check of those points only
+
+
 ## [1.17.5] - 2026-11-17
 - a yes recorded with decide is the user's reply to the gate's block, never an earlier sentence: the tool refuses words said before the refusal
 

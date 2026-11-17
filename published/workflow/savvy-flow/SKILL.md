@@ -279,6 +279,12 @@ asked for it or set it as their default, never on your own.
   price, so a large worker whose next task needs little of it is rotated too. The handoff note is short — state,
   decisions, how to rebuild, traps, open issues; facts, no history — and goes to the handoff file of its registry row.
 - Do not implement in parallel with workers. While they run, prepare the next briefs or the review checklist.
+- **Never wait idle on a reviewer.** A review agent (the project's reviewer or auditor, or a worker asked for a
+  review) gets a narrow brief: the diff, the files it touches and the questions to answer, never a new investigation
+  of what the workers already verified or a re-check of every reference. It runs in the background, and meanwhile
+  you do everything that does not depend on its verdict: tracker updates, counts, read-only checks, the commit
+  message, the next brief. After the fixes, resume the same reviewer for a targeted check of those points only; a
+  fresh full review only when the scope changed.
 
 ## 5. Adversarial review (orchestrator only)
 
