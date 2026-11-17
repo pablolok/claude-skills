@@ -239,14 +239,16 @@ const priorityRank = (p) => (p ? PRIORITIES.indexOf(p) : PRIORITIES.length);
  * @param {Map<string,string>} docTexts root-relative doc path → its text (the docs an entry links; absent = unread)
  * @param {Map<string,{date:string,sha:string,subject:string}>} touched
  * @param {object} config
+ * @param {(rel:string)=>Array<object>} extraPhases phases a linked doc brings from outside its text (an OpenSpec change's tasks)
  */
-function shapeEntries(entries, docTexts, touched, config) {
+function shapeEntries(entries, docTexts, touched, config, extraPhases = () => []) {
   const ids = new Set(entries.map((e) => e.id));
   const shaped = entries.map((e) => {
     const docs = docLinks(e.fields.Doc, config.docsDir);
     const phases = uniquePhases([
       phasesIn(e.block),
       ...ownDocs(docs, config.docsDir).map((d) => phasesIn(docTexts.get(d.path) ?? "")),
+      ...ownDocs(docs, config.docsDir).map((d) => extraPhases(d.path)),
     ]);
     const status = canonicalField(e.fields, "Status", config);
     const cites = [...citedEntries(e.block, config)].filter((id) => id !== e.id && ids.has(id));
@@ -304,8 +306,8 @@ const registerFiles = (config) => [`${config.docsDir}/BACKLOG.md`, `${config.doc
  * The whole board.
  * @param {{backlog:string, history:string, config?:object, docTexts?:Map<string,string>, commits?:ReturnType<import("./dashboard-activity.mjs").parseLog>}} input
  */
-export function buildBoard({ backlog, history, config = DEFAULTS, docTexts = new Map(), commits = [] }) {
-  const entries = shapeEntries(openEntries(backlog, config), docTexts, lastTouched(commits), config);
+export function buildBoard({ backlog, history, config = DEFAULTS, docTexts = new Map(), commits = [], extraPhases }) {
+  const entries = shapeEntries(openEntries(backlog, config), docTexts, lastTouched(commits), config, extraPhases);
   const closed = closedEntries(history, config);
   const closedWhole = closed.filter((c) => c.phase === "");
   const pending = pendingLedgers(backlog, config);

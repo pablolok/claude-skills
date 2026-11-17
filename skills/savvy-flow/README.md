@@ -23,6 +23,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | :--- | :--- |
 | `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `scripts/codex-status.mjs` | Bounded atomic status snapshots from JSON stdout and positioned rollout tails; no dependencies. |
+| `references/openspec.md` | The flow on an OpenSpec project (an `openspec/` folder): a behaviour change is planned as an OpenSpec change whose `tasks.md` `## N.` groups are the worker tasks, approved by the user before delegating; workers never edit the change, the orchestrator ticks a group's lines on accept, validates with `openspec validate --strict` and offers the archive at close. Never OpenSpec's own apply workflow. A new project can start on OpenSpec instead of SPEC.md and PLAN.md. |
 | `references/themes.md` | The chat themes, one section per month: each theme's window, its mascot per tier, the orchestrator's mark, the review marks and the closing line. The orchestrator reads the current month's section, or one theme's row. |
 | `agents/savvy-fable.md` | Fable / high: plans only, on the user's yes for each launch. |
 | `agents/savvy-heavy.md` | Opus / xhigh: unfamiliar code, unclear root cause. |

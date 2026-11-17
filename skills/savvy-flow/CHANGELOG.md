@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.0] - 2026-11-17
+- OpenSpec projects — references/openspec.md: on a project with an openspec/ folder a behaviour change is planned as an OpenSpec change whose tasks.md groups are the worker tasks, approved by the user before delegating; workers never edit the change, the orchestrator ticks a group's lines on accept and keeps openspec validate --strict green, the archive is offered at close on the user's yes; OpenSpec's own apply workflow is never run inside the flow; a new project may start on OpenSpec instead of SPEC.md and PLAN.md
+
+
 ## [1.18.1] - 2026-11-17
 - pace is the default budget policy: the orchestrator never asks about the budget unless the user set within
 

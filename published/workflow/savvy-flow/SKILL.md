@@ -94,6 +94,7 @@ flow, never in place of it:
 
 1. Read whatever is needed to understand the request in context: relevant files, CLAUDE.md, recent git history. Use an Explore subagent only for wide searches, with `model` set to `haiku` or `sonnet` in the call (left unset, it runs as you).
    - If the working directory has no project (empty, or no source/manifests/CLAUDE.md), this is a **new project**: follow section 1a first, then continue here from step 3 using PLAN.md as the task list.
+   - **OpenSpec project** (an `openspec/` folder at the root): read `references/openspec.md` before planning. A task that changes behaviour is planned as an OpenSpec change whose `tasks.md` groups are the worker tasks, approved by the user before delegating; review ticks them, close offers the archive. It applies on top of every section below.
 2. Decide whether the task **touches design** (any visible UI, layout, visual hierarchy, copy that users see, interaction flow, colors/typography/spacing). If yes → go to section 2 before any implementation.
 3. Break the work into **tasks** with:
    - a clear, self-contained brief (what, where, constraints, definition of done, how to verify);
@@ -110,6 +111,9 @@ flow, never in place of it:
 ## 1a. New project (greenfield)
 
 No delegation until the spec is approved. Workers cannot see this chat, so the spec must live in files.
+
+With OpenSpec (asked in step 2; recommended when the `openspec` CLI is installed) the spec and the plan are an
+OpenSpec change instead of `docs/SPEC.md` and `docs/PLAN.md`: `references/openspec.md`, "New project".
 
 1. **Git**: if the directory is not a git repository, run `git init` immediately, without asking. Add a stack-appropriate `.gitignore`. Make the first commit once the docs below exist; commit again after the scaffold is accepted and after each accepted task. Never push without being asked.
 2. Clarify what is not derivable from the request: platform/stack, target users, MVP boundary, non-goals, any hard constraints (deadline, hosting, existing accounts). Ask in one batch, not one question per turn.
@@ -317,6 +321,9 @@ For each returned task:
 
 Cap at two return rounds per task; after that, re-plan or ask the user.
 
+On an OpenSpec change, the review also checks the scenarios of the requirements the task implements, and an accepted
+task's lines are ticked in `tasks.md` in the task's commit (`references/openspec.md`, "Review").
+
 ## 6. Close
 
 Before the report, leave the repository with only the branches it had before the flow, locally and on the remote:
@@ -325,6 +332,9 @@ take what the workers' worktrees hold that is still needed, then remove every wo
 `git branch -a` and the remote's heads to confirm. A worker's worktree is removed as soon as its diff is integrated,
 not left for the end: the user reads every leftover branch in their git client as work still open. Removing it also
 ends that worker — it can no longer be resumed — so give its topic's next task to a fresh worker from the start.
+
+On an OpenSpec change: every task line ticked and `openspec validate <id> --strict` green before the report, which
+offers the archive; the archive itself waits for the user's yes (`references/openspec.md`, "Close").
 
 Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration, and the Codex usage last reported when the Codex tier ran.
 

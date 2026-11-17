@@ -23,10 +23,12 @@ test("the tree groups every markdown file: register, work docs, architecture, ar
     "docs/implementations/BACKLOG.md", "docs/implementations/BACKLOG-HISTORY.md",
     "docs/implementations/features/import/spec.md", "docs/implementations/bugs/retry/plan.md",
     "docs/implementations/archive/old/report.md", "docs/architecture/sync.md",
+    "openspec/changes/add-x/proposal.md", "openspec/specs/auth/spec.md",
   ], config);
   assert.deepEqual(Object.fromEntries(tree.map((g) => [g.group, g.docs])), {
     register: ["docs/implementations/BACKLOG-HISTORY.md", "docs/implementations/BACKLOG.md"],
     work: ["docs/implementations/bugs/retry/plan.md", "docs/implementations/features/import/spec.md"],
+    openspec: ["openspec/changes/add-x/proposal.md", "openspec/specs/auth/spec.md"],
     architecture: ["docs/architecture/sync.md"],
     archive: ["docs/implementations/archive/old/report.md"],
     other: ["README.md"],

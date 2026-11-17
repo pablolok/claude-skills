@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.0] - 2026-11-17
+- OpenSpec projects — in a project with an openspec/ folder an entry's Doc links a change's proposal.md and the dashboard takes the change's tasks.md sections as the entry's phases (all [x] done, some in progress, none not started); a new OpenSpec view (pane key 7, page tab) lists active changes with their tasks, the specs with requirement/scenario counts and the archived changes; openspec/ files get their own group in Documents; read from the files alone, no openspec CLI needed
+
+
 ## [1.12.0] - 2026-11-12
 - Dashboard language: English by default, never guessed from the locale; Italian on request — the pane's l key (kept in the new language plugin option), the page's header button (kept by the browser). A pane the plugin reloaded under reads the register again
 

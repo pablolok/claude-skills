@@ -174,7 +174,7 @@ tab). Type `/backlog-dashboard`: a pane opens beside the transcript (a wide full
 
 | key | does |
 |---|---|
-| `1`–`6` | Overview · In progress · Next · To verify · Documents · Activity |
+| `1`–`7` | Overview · In progress · Next · To verify · Documents · Activity · OpenSpec |
 | Tab / ↑ ↓, Enter | move between rows, open the focused one (an entry, a document, a link) |
 | `b`, `r`, Esc | back, refresh (it also refreshes itself every minute while open), close |
 | `l` | switch between English and Italian; the pick is kept in the plugin's `language` option |
@@ -214,6 +214,10 @@ to Italian and back, and this browser keeps the pick. Its views:
 - **Documents** — every markdown file git keeps, grouped (register, work docs, architecture, archive, the rest);
   relative links and images resolve, entry ids link to their entry, a doc lists the entries that link it.
 - **Activity** — the recent commits with the entries they name, and the closed lines.
+- **OpenSpec** — only in a project with an `openspec/` folder: the active changes with their task sections as a
+  phase bar, the specs with their requirement and scenario counts, the archived changes; a change opens on its Why,
+  its documents, what its deltas do and every task line. Read by `scripts/dashboard-openspec.mjs` from the files
+  alone (the `openspec` CLI is not needed).
 
 What it reads, and how:
 
@@ -223,6 +227,7 @@ What it reads, and how:
 | phases | phase-table rows (`**P1** …` with a state cell opening with ✅ ⏳ 🔨 ⛔ 📋) in the card and in its own docs (not `archive/`) |
 | waits on / unblocks | the ids a `blocked` Status cites |
 | last touched | the newest commit whose **subject** names the id (an id only in the body is a mention) |
+| phases of an OpenSpec change | an entry whose `Doc` links a file of `openspec/changes/<id>/`: each `## N. <section>` of the change's `tasks.md` is a phase — all boxes `[x]` done, some in progress, none not started |
 | next | not started, not blocked: what blocked entries wait on first, then priority, then the oldest `Added` — a hint; being cited is shown, not ranked (a tracker is cited by all it gathers) |
 
 ## Tests
