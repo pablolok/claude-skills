@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
-import { budgetGate, budgetSummary, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
+import { budgetGate, budgetSummary, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
 import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
@@ -3055,7 +3055,7 @@ test('an Agent call refused by the gate starts nothing and leaves the bar where 
   const { state, seed } = gatedLaunch($, on, askUsage())
   await start($)
   seed()
-  await plan($, [{ title: 'dig', tier: 'heavy' }])
+  await plan($, [{ title: 'dig', tier: 'heavy' }, { title: 'tidy', tier: 'medium' }])
   await $.tool.call({ tool: 'mcp__savvy-progress__progress', phase: 'plan' })
   const refused = await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })
   expect(refused.deny).toContain('/savvy-budget claude once')
@@ -3288,4 +3288,62 @@ test('an Agent call of any type with a Fable model hits the top-tier gate and sp
   expect((await launch($, 'again', { subagent_type: 'savvy-heavy', model: 'fable' })).deny).toContain('used up')
   const resume = $.tool.call({ tool: 'SendMessage', tool_use_id: 'send-odd', to: 'odd', message: 'go on' })
   expect((await resume).deny).toContain('used up')
+})
+
+// The plan gate: the bar tells the truth, so a savvy worker outside the current plan is refused.
+const planned = ($: Engine, on: On) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  launching($, on)
+  return state
+}
+const careful = { subagent_type: 'savvy-flow:savvy-careful' }
+
+test('the plan gate refuses a savvy launch outside the plan, names the way out, and starts nothing', async ($, on) => {
+  const state = planned($, on)
+  await start($)
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  const refused = await launch($, 'extra', careful)
+  expect(refused.deny).toBe("Plan gate: 'extra' is not a task of the current plan 'Fix bug'. Update the plan first: call progress with the new title, tasks and total (the new plan replaces the old one), then launch with description = the task's title.")
+  expect(state.agents()).toEqual([])
+  expect(planGate('savvy-careful', 'extra', state.flow(), 'it')).toContain('Blocco del piano')
+  expect(planGate('Explore', 'extra', state.flow())).toBeUndefined()
+})
+
+test('the plan gate lets a launch whose description is a task title through', async ($, on) => {
+  const state = planned($, on)
+  await start($)
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  expect((await launch($, 'build', careful)).deny).toBeUndefined()
+  expect(state.agents().map(a => a.description)).toEqual(['build'])
+  expect((await launch($, 'Explore the repo', { subagent_type: 'Explore' })).deny).toBeUndefined()
+})
+
+test('the plan gate lets the launch through once the plan is replaced to include it', async ($, on) => {
+  planned($, on)
+  await start($)
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  expect((await launch($, 'verify', careful)).deny).toContain('Plan gate')
+  await plan($, [{ title: 'build', tier: 'careful' }, { title: 'verify', tier: 'careful' }])
+  expect((await launch($, 'verify', careful)).deny).toBeUndefined()
+})
+
+test('without a plan, or with a finished one, the plan gate does nothing', async ($, on) => {
+  planned($, on)
+  await start($)
+  expect((await launch($, 'anything', careful)).deny).toBeUndefined()
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  await $.tool.call({ tool: 'mcp__savvy-progress__progress', finished: true })
+  expect((await launch($, 'later', careful)).deny).toBeUndefined()
+})
+
+test('a SendMessage resume of a worker already matched to a task passes the plan gate', async ($, on) => {
+  const state = planned($, on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  expect((await launch($, 'build', careful)).deny).toBeUndefined()
+  await plan($, [{ title: 'other', tier: 'careful' }])
+  const resumed = await $.tool.call({ tool: 'SendMessage', tool_use_id: 'send-build', to: 'build', message: 'go on' })
+  expect(resumed.deny).toBeUndefined()
+  expect(state.agents().map(a => a.description)).toEqual(['build'])
 })

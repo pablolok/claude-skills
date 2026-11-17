@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.0] - 2026-11-17
+- a plan gate on the Agent tool: while a plan with tasks is active, a savvy worker whose description is not the title of a task of the current plan is refused, with the way out (call progress with the new title, tasks and total, then launch with description = the task's title), so the bar and the panel cannot keep a stale plan; it does nothing without tasks or once the flow is finished, non-savvy agents (Explore, claude-code-guide) and SendMessage resumes pass
+
+
 ## [1.16.1] - 2026-11-16
 - the top-tier gate also covers the model override: an Agent call of any type with a Fable model (any case, or a model id) is gated and spends a permit, and so does a resume of a worker running on Fable; the Agent tool offers no Astra model, so Astra stays gated by its relay type
 

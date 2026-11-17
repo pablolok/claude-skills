@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.17.4] - 2026-11-17
+- progress bar: work that is not in the current plan means re-planning first (the new plan replaces the bar's), and the plan gate refuses launches outside it
+
+
 ## [1.17.3] - 2026-11-17
 - the Spend rule monitors usage continuously: budget read at every worker return and step, each family's projection kept at or under 100 % at its reset, tiers cut, briefs shrunk and parallelism lowered when it rises, costly work paused with the user told when nothing cheaper fits
 

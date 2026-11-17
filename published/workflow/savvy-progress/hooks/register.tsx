@@ -131,6 +131,8 @@ const STRINGS = {
       `Top-tier gate: savvy-${t.tier} (${t.name}) is for PLANS only (writing a plan or a design-decision document), and each ${t.action} needs the user's explicit yes, whatever the budget says. ` +
       `${t.spent ? 'The yes recorded for it is used up. ' : ''}Ask the user in chat; on their yes, record their words with the decide tool (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, or "session" if they said so for more). ` +
       `For anything that is not a plan, offer ${t.alternative} instead.`,
+    planGate: (description: string, title: string) =>
+      `Plan gate: '${description}' is not a task of the current plan '${title}'. Update the plan first: call progress with the new title, tasks and total (the new plan replaces the old one), then launch with description = the task's title.`,
     gate: (g: GateText) =>
       `Budget gate: ${g.family} verdict ask under the within policy — ${g.facts.map(f => `${f.window} ${f.used}% → ${f.projected}% at reset ${f.resetsAt}${f.exhaustsAt ? `, runs out ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Ask the user before starting savvy-${g.tier}${g.share.length ? ` (a ${g.tier} run so far ≈ ${g.share.map(x => `${x.percent}% of ${x.window === 'fiveHour' ? '5h' : 'week'}`).join(', ')})` : ''}. ` +
@@ -207,6 +209,8 @@ const STRINGS = {
       `Blocco del livello massimo: savvy-${t.tier} (${t.name}) è solo per i PIANI (scrivere un piano o un documento di decisioni di progetto), e ogni ${t.action} vuole il sì esplicito dell'utente, qualunque cosa dica il budget. ` +
       `${t.spent ? 'Il sì registrato per lui è esaurito. ' : ''}Chiedi all'utente in chat; se dice sì, registra le sue parole con lo strumento decide (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, o "session" se ne ha autorizzati di più). ` +
       `Per tutto ciò che non è un piano, proponi ${t.alternative}.`,
+    planGate: (description: string, title: string) =>
+      `Blocco del piano: '${description}' non è un compito del piano attuale '${title}'. Aggiorna prima il piano: chiama progress con il nuovo titolo, i compiti e il totale (il nuovo piano sostituisce il vecchio), poi avvia con description = il titolo del compito.`,
     gate: (g: GateText) =>
       `Blocco del budget: ${g.family} chiede una decisione con la politica entro — ${g.facts.map(f => `${f.window === '5h' ? '5h' : 'settimana'} ${f.used}% → ${f.projected}% all'azzeramento ${f.resetsAt}${f.exhaustsAt ? `, si esaurisce ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Chiedi all'utente prima di avviare savvy-${g.tier}${g.share.length ? ` (finora un'esecuzione ${g.tier} ≈ ${g.share.map(x => `${x.percent}% di ${x.window === 'fiveHour' ? '5h' : 'settimana'}`).join(', ')})` : ''}. ` +
@@ -887,6 +891,16 @@ export const budgetGate = (subagentType: string, usage: UsageReadings, runs: Age
   const estimate = family === 'claude' ? tierEstimates(runs, usage, at)[tier] : undefined
   const share = PLAN_WINDOWS.flatMap(window => estimate?.[window] == null ? [] : [{ window, percent: estimate[window]! }])
   return STRINGS[language].gate({ family: FAMILY_NAME[family], key: family, tier, facts, share })
+}
+
+// An Agent call of a savvy worker outside the current plan, refused: the panel matches runs to planned
+// tasks by description = title, so a launch the plan does not name would leave the bar stale. Open when no
+// plan is active (no tasks, or the flow finished), and for any non-savvy type (Explore, claude-code-guide).
+export const planGate = (subagentType: string, description: unknown, plan: Flow | null | undefined, language: Lang = 'en'): string | undefined => {
+  if (!isSavvy(subagentType) || !plan || plan.isFinished || !plan.tasks?.length) return undefined
+  const asked = typeof description === 'string' ? description.trim() : ''
+  if (plan.tasks.some(t => t.title === asked)) return undefined
+  return STRINGS[language].planGate(asked, plan.title)
 }
 
 export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefined => {
@@ -2101,6 +2115,7 @@ export const register: Register = (on, options) => {
     const subagent = String(e.subagent_type ?? '')
     const refusal = topTierGate(subagent, await read($, usageReadings), false, lang, e.model)
       ?? budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
+      ?? planGate(subagent, e.description, await read($, flow), lang)
     if (refusal) return { deny: refusal }
     await update($, usageReadings, prev => spendTopTier(prev, subagent, e.model))
     if (isSavvy(String(e.subagent_type ?? ''))) {
