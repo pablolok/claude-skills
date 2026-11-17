@@ -1478,7 +1478,7 @@ test('with the language on it, the plan tiles, the budget command, the gate and 
   expect(header).not.toContain(' plan ')
   expect(header).not.toContain('ago')
   expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro.' })
-  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex> <entro|pieno|una-volta>' })
+  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex> <entro|pieno|ritmo|una-volta>' })
   const refused = (await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny ?? ''
   expect(refused).toContain('Blocco del budget')
   expect(refused).toContain('/savvy-budget claude una-volta')
@@ -2834,7 +2834,7 @@ test('budget command rejects missing, extra or invalid arguments without changin
   const { state } = budgetEngine(on)
   await start($)
   for (const args of ['claude', 'both full', 'claude unlimited', 'claude full extra']) {
-    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full|once>' })
+    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full|pace|once>' })
   }
   expect(state.usage().policies).toBeUndefined()
 })
@@ -3430,4 +3430,90 @@ test('a SendMessage resume of a worker already matched to a task passes the plan
   const resumed = await $.tool.call({ tool: 'SendMessage', tool_use_id: 'send-build', to: 'build', message: 'go on' })
   expect(resumed.deny).toBeUndefined()
   expect(state.agents().map(a => a.description)).toEqual(['build'])
+})
+
+// ---------------------------------------------------------------------------
+// The pace policy: stay inside every window by re-tiering, never by asking.
+
+const paceUsage = (over: Partial<UsageReadings> = {}): UsageReadings => askUsage({ policies: { claude: 'pace' }, ...over })
+
+test('under pace the gate never refuses a costly tier for the budget, whatever the projection', () => {
+  for (const tier of ['savvy-heavy', 'savvy-careful', 'savvy-flow:savvy-heavy']) {
+    expect(budgetGate(tier, paceUsage(), [], BUDGET_AT)).toBeUndefined()
+  }
+  const codexPace: UsageReadings = { statuses: {}, codex: { fiveHour: budgetWindow() }, policies: { codex: 'pace' } }
+  expect(budgetGate('savvy-codex-sol', codexPace, [], BUDGET_AT)).toBeUndefined()
+  // The same projection under within is still refused.
+  expect(budgetGate('savvy-heavy', askUsage(), [], BUDGET_AT)).toBeDefined()
+})
+
+test('under pace a projection over 100 is retier with advice, a weekly one under 90 near its reset is spend, the rest ok', () => {
+  const summary = budgetSummary(paceUsage(), BUDGET_AT).claude
+  expect(summary.fiveHour).toMatchObject({ policy: 'pace', projectedAtReset: 120, verdict: 'retier' })
+  expect(summary.fiveHour?.advice).toMatch(/tier/)
+  expect(summary.fiveHour?.advice).toMatch(/headroom/)
+  // Week 20% used 5040 min in projects to 40%, but its reset is 3.5 days away: ok.
+  expect(summary.week).toMatchObject({ verdict: 'ok' })
+  expect(summary.week?.advice).toBeUndefined()
+  const week = (used: number, elapsedMinutes: number): UsageReadings =>
+    ({ statuses: {}, claude: { week: budgetWindow(used, 'week', elapsedMinutes) }, policies: { claude: 'pace' } })
+  const weekOf = (usage: UsageReadings) => budgetSummary(usage, BUDGET_AT).claude.week
+  // One day left: 60% used over 8640 min projects to 70%: spend.
+  expect(weekOf(week(60, 8640))).toMatchObject({ projectedAtReset: 70, verdict: 'spend' })
+  expect(weekOf(week(60, 8640))?.advice).toMatch(/room/)
+  // 90% and 100% exactly are ok.
+  expect(weekOf(week(77.14285714285714, 8640))?.verdict).toBe('ok')
+  expect(weekOf(week(85.71428571428571, 8640))?.verdict).toBe('ok')
+  // Two days left or more: ok even when low; just under two days: spend.
+  expect(weekOf(week(30, 7200))?.verdict).toBe('ok')
+  expect(weekOf(week(30, 7201))?.verdict).toBe('spend')
+  // Over 100 in the week is retier too.
+  expect(weekOf(week(95, 8640))).toMatchObject({ verdict: 'retier' })
+  // A five-hour window under 90 is never spend.
+  const fiveHour: UsageReadings = { statuses: {}, claude: { fiveHour: budgetWindow(10, 'fiveHour', 270) }, policies: { claude: 'pace' } }
+  expect(budgetSummary(fiveHour, BUDGET_AT).claude.fiveHour?.verdict).toBe('ok')
+  // Other policies are unchanged.
+  expect(budgetSummary(askUsage({ policies: { claude: 'full' } }), BUDGET_AT).claude.fiveHour?.verdict).toBe('over')
+})
+
+test('the bar title shows the pace policy', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  state.seed('usage', { statuses: {}, claude: { fiveHour: budgetWindow() }, policies: { claude: 'pace' } })
+  expect((await headerOf($)).source).toContain('Claude · plan · pace')
+})
+
+test('/savvy-budget <family> pace sets the policy and lists it', async ($, on) => {
+  const { state } = budgetEngine(on)
+  await start($)
+  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex within.' })
+  expect(state.usage().policies).toEqual({ claude: 'pace' })
+})
+
+test('the decide tool records pace from the user words, and it survives a reset', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  say(OLD_POLICY)
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
+  expect((await decideWith($, { family: 'claude', policy: 'pace', answer: OLD_POLICY })).deny).toContain('Ask the user now')
+  expect((await decideWith($, { policy: 'pace', answer: 'x' })).deny).toBeDefined()
+  expect((await decideWith($, { family: 'claude', policy: 'full', answer: 'x' })).deny).toBeDefined()
+  say('Go on, but stay inside the budget.')
+  expect((await decideWith($, { family: 'claude', policy: 'pace', answer: 'stay inside the budget' })).result).toBe('ok: Claude pace')
+  expect(state.usage().policies).toEqual({ claude: 'pace' })
+  expect(state.usage().decisions).toBeUndefined()
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
+  // A reading after the window reset keeps the policy.
+  const later = recordPlanUsage(state.usage(), 'claude', { fiveHour: budgetWindow(5, 'fiveHour', 10) }, BUDGET_AT + 301 * MINUTE)
+  expect(later.policies).toEqual({ claude: 'pace' })
+  expect(budgetSummary(later, BUDGET_AT + 301 * MINUTE).claude.fiveHour?.policy).toBe('pace')
+})
+
+test('under pace the top-tier gate still refuses Fable without its own yes', async ($, on) => {
+  const { seed } = topGated($, on)
+  await start($)
+  seed({ policies: { claude: 'pace' } })
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('PLANS only')
+  expect(topTierGate('savvy-fable', paceUsage())).toContain('PLANS only')
 })

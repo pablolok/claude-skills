@@ -72,10 +72,14 @@ the mod needs.
   that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
   before the reset when space is tight.
-- **Budget policy**: `/savvy-budget <claude|codex> <within|full|once>` sets a family's policy; `/savvy-budget` lists both.
+- **Budget policy**: `/savvy-budget <claude|codex> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists both.
   Each defaults to `within`: exhausting a window early needs the user's decision before long work. `full` means
-  the user accepts using a reset and running out early; the flow continues, pacing only the short window. Only set
-  it when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
+  the user accepts using a reset and running out early; the flow continues, pacing only the short window. `pace`
+  means the orchestrator keeps the family inside its windows by re-tiering, without asking: the gate never refuses
+  for the budget, a projection over 100 % has verdict `retier` with an `advice`, a weekly one under 90 % with the
+  reset under two days away has verdict `spend`. The orchestrator may record `pace` with `decide` (`policy: "pace"`,
+  the user's words quoted); it persists until the user changes it. The Fable and Astra gate is unchanged. Only set
+  a policy when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
   title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
 - **Budget gate**: while a family's verdict is `ask`, the Agent tool refuses its costly tiers (`savvy-fable`,
   `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex) with a message that
@@ -171,7 +175,9 @@ the mod needs.
   string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude` and `codex`,
   each with observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
   `pace` (`recent` or `average`), `policy`, and `verdict`: `ok` when it fits or has no projection yet, `over` when it
-  does not fit under `full`, `ask` when it does not fit under `within`. Missing estimates are `null`, unavailable
+  does not fit under `full`, `ask` when it does not fit under `within`; under `pace`, `retier` (with an `advice`
+  string) when it does not fit and `spend` for a weekly window projected under 90 % with its reset under two days
+  away. Missing estimates are `null`, unavailable
   windows are omitted, and times are ISO timestamps. Expired readings report zero used with no projection.
 - `mcp__savvy-progress__budget`: returns the string `budget: <compact JSON>` with the same summary, without changing
   the bar or state. Once a savvy Claude tier has a finished run, both tools add a last line,
@@ -207,7 +213,7 @@ work is covered by its subscription; the displayed API-equivalent estimate is no
   bar, the panel and its plan tiles (dates and times included), the commands' answers and descriptions, the budget
   gate's refusal and the theme note told to the model — while the tools' JSON lines and descriptions stay English, as
   the contract the flow parses. `/savvy-budget` takes its arguments in either language (`within`/`entro`,
-  `full`/`pieno`, `once`/`una-volta`). The panel's language picker, beside the theme picker, sets it as well: the
+  `full`/`pieno`, `pace`/`ritmo`, `once`/`una-volta`). The panel's language picker, beside the theme picker, sets it as well: the
   panel speaks the language at once and the option keeps it.
 - `theme`: `auto` (default), `classic`, or one theme pinned until `auto` is chosen again (every id `/savvy-theme`
   lists, from `new-year` to `winter`). `auto` follows the calendar above by the local date, and moves on when the date

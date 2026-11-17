@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.18.0] - 2026-11-17
+- the pace policy in the Spend rule and section 4 — under pace the orchestrator never asks about the budget: it keeps every family's 5-hour and weekly projection at or under 100 % (the week aimed at 90-100 % at its reset) by re-tiering, one costly worker at a time, moving work only within the other family's limits, and pacing when nothing fits; the within policy is unchanged
+
+
 ## [1.17.6] - 2026-11-17
 - a review agent never makes the orchestrator wait idle: it gets a narrow brief (the diff, its files and the questions, no new investigation of what workers verified), runs in the background while the orchestrator does everything that does not depend on its verdict (tracker, counts, read-only checks, the commit message, the next brief), and after the fixes the same reviewer is resumed for a targeted check of those points only
 

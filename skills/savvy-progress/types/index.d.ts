@@ -87,7 +87,7 @@ export type PlanWindow = { percentUsed: number; resetsAt?: string }
 export type PlanUsage = { fiveHour?: PlanWindow; week?: PlanWindow }
 export type PlanFamily = 'claude' | 'codex'
 export type PlanWindowKey = keyof PlanUsage
-export type BudgetPolicy = 'within' | 'full'
+export type BudgetPolicy = 'within' | 'full' | 'pace'
 /** spentUsd: the family's estimated session spend when the reading was taken, when known. */
 export type UsageSample = { at: number; percentUsed: number; spentUsd?: number }
 export type WindowHistory = { resetsAt?: string; samples: UsageSample[] }
@@ -106,7 +106,9 @@ export type WindowBudget = {
   pace: PlanProjection['pace'] | null
   policy: BudgetPolicy
   /** ok includes windows with no projection yet; consult the nullable fields. */
-  verdict: 'ok' | 'over' | 'ask'
+  verdict: 'ok' | 'over' | 'ask' | 'retier' | 'spend'
+  /** Under pace, with retier or spend: what to do about it. */
+  advice?: string
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
 /** The user's yes to costly work despite an ask verdict, until the family's soonest reset. */

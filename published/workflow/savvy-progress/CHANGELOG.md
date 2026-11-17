@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.0] - 2026-11-17
+- the pace budget policy — /savvy-budget <family> pace, or decide with policy pace on the user's words, persists until changed; under it the budget gate never refuses a costly tier, a projection over 100 % has verdict retier with an advice string, a weekly projection under 90 % with the reset under two days away has verdict spend, and the bar title shows pace (ritmo in Italian); the top-tier gate is unchanged
+
+
 ## [1.18.0] - 2026-11-17
 - the decide tool takes a yes only from a user message submitted after the gate's latest refusal: each refusal of the budget gate (per family) and of the top-tier gate (per tier, Agent launch and SendMessage resume) records when it happened and how many user messages the session held; a quote found only in earlier messages is refused (en and it) with "ask the user now, and quote their reply"; with no refusal yet the quote must still come from a user message
 

@@ -100,20 +100,22 @@ const STRINGS = {
     ctx: 'ctx',
     clearFinished: 'Clear finished',
     planWord: 'plan',
-    policy: { within: 'within', full: 'full' } as Record<BudgetPolicy, string>,
+    policy: { within: 'within', full: 'full', pace: 'pace' } as Record<BudgetPolicy, string>,
     fiveHour: '5h',
     week: '7d',
     windowReset: 'reset',
     ago: (minutes: number) => minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`,
     budget: 'Budget',
-    budgetUsage: 'Usage: /savvy-budget <claude|codex> <within|full|once>',
+    budgetUsage: 'Usage: /savvy-budget <claude|codex> <within|full|pace|once>',
     goUntil: (family: string, time: string) => `${family}: go until ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} go until ${until}`,
+    pacing: (family: string) => `ok: ${family} pace`,
+    badPolicy: 'policy must be pace',
     agentsInfo: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
     savvyTheme: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
     themeHint: '[theme|auto]',
-    savvyBudget: 'Set a family budget policy: within the rolling windows, full when you accept using a reset, once for costly work until the next reset; no arguments lists policies',
-    budgetHint: '[claude|codex] [within|full|once]',
+    savvyBudget: 'Set a family budget policy: within the rolling windows, full when you accept using a reset, pace to keep working by re-tiering without asking, once for costly work until the next reset; no arguments lists policies',
+    budgetHint: '[claude|codex] [within|full|pace|once]',
     themeNote: (theme: string, id: string) => `savvy-progress: the theme is now ${theme} (\`${id}\`); savvy-flow's chat follows it from the next message.`,
     ignoredFlow: 'ignored: only the main session reports the flow',
     ignoredSteps: 'ignored: only subagents report steps',
@@ -179,15 +181,17 @@ const STRINGS = {
     ctx: 'cont',
     clearFinished: 'Svuota finiti',
     planWord: 'piano',
-    policy: { within: 'entro', full: 'pieno' } as Record<BudgetPolicy, string>,
+    policy: { within: 'entro', full: 'pieno', pace: 'ritmo' } as Record<BudgetPolicy, string>,
     fiveHour: '5h',
     week: '7g',
     windowReset: 'azzerata',
     ago: (minutes: number) => minutes < 60 ? `${minutes} min fa` : minutes < 1440 ? `${Math.floor(minutes / 60)} h fa` : `${Math.floor(minutes / 1440)} g fa`,
     budget: 'Budget',
-    budgetUsage: 'Uso: /savvy-budget <claude|codex> <entro|pieno|una-volta>',
+    budgetUsage: 'Uso: /savvy-budget <claude|codex> <entro|pieno|ritmo|una-volta>',
     goUntil: (family: string, time: string) => `${family}: via libera fino a ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} via libera fino a ${until}`,
+    pacing: (family: string) => `ok: ${family} ritmo`,
+    badPolicy: 'policy deve essere pace',
     agentsInfo: 'Mostra o nasconde il pannello dei sottoagenti: in corso, finiti e pianificati, con modello, contesto, costo e tempo',
     savvyTheme: 'Sceglie il tema delle figure (una festa, un periodo, una stagione, classico) o auto per il calendario; senza nome li elenca',
     themeHint: '[tema|auto]',
@@ -764,6 +768,24 @@ export const projectPlanWindow = (value: PlanWindow | undefined, key: PlanWindow
     pace: recent === undefined ? 'average' : 'recent', fits }
 }
 
+// Under pace the orchestrator re-tiers by itself: over 100% it cuts, a week under 90% near its reset has room.
+const PACE_SPEND_BELOW = 90
+const PACE_SPEND_WITHIN_MS = 2 * 1440 * MINUTE_MS
+const PACE_ADVICE = {
+  retier: 'Projection over 100%: cut a tier, shrink briefs, run fewer workers in parallel; move work to the family with headroom only if that family\'s own windows stay at or under 100%.',
+  spend: 'Weekly projection under 90% with the reset under two days away: room to use more.',
+} as const
+
+const windowVerdict = (policy: BudgetPolicy, key: PlanWindowKey, value: PlanWindow, projection: PlanProjection | undefined, at: number): WindowBudget['verdict'] => {
+  if (!projection) return 'ok'
+  if (policy === 'pace') {
+    if (!projection.fits) return 'retier'
+    const left = Date.parse(value.resetsAt ?? '') - at
+    return key === 'week' && projection.projectedAtReset < PACE_SPEND_BELOW && left > 0 && left < PACE_SPEND_WITHIN_MS ? 'spend' : 'ok'
+  }
+  return projection.fits ? 'ok' : policy === 'within' ? 'ask' : 'over'
+}
+
 export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary => {
   const summary: BudgetSummary = { claude: {}, codex: {} }
   for (const family of PLAN_FAMILIES) {
@@ -772,9 +794,11 @@ export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary =
       const value = usage[family]?.[key]
       if (!value) continue
       const projection = projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
+      const verdict = windowVerdict(policy, key, value, projection, at)
       summary[family][key] = { used: isReset(value, at) ? 0 : value.percentUsed, resetsAt: value.resetsAt ?? null,
         projectedAtReset: projection?.projectedAtReset ?? null, exhaustsAt: projection?.exhaustsAt ?? null,
-        pace: projection?.pace ?? null, policy, verdict: projection?.fits === false ? policy === 'within' ? 'ask' : 'over' : 'ok' }
+        pace: projection?.pace ?? null, policy, verdict,
+        ...(verdict === 'retier' || verdict === 'spend' ? { advice: PACE_ADVICE[verdict] } : {}) }
     }
   }
   return summary
@@ -1761,7 +1785,7 @@ const describeBudgetPolicies = (usage: UsageReadings, at: number): string => {
 
 // The command takes each argument in either language.
 const BUDGET_ARGS: Readonly<Record<string, BudgetPolicy | 'once'>> = {
-  within: 'within', full: 'full', once: 'once', entro: 'within', pieno: 'full', 'una-volta': 'once', unavolta: 'once',
+  within: 'within', full: 'full', pace: 'pace', once: 'once', entro: 'within', pieno: 'full', ritmo: 'pace', 'una-volta': 'once', unavolta: 'once',
 }
 
 async function runBudgetCommand($: EngineInterface, e: CommandRunInput): Promise<{ text: string }> {
@@ -1844,10 +1868,16 @@ async function recordDecision($: EngineInterface, e: Record<string, unknown>): P
   if (e.tier !== undefined) return recordTopTier($, e)
   const family = PLAN_FAMILIES.find(value => value === e.family)
   if (!family) return { deny: tr().badFamily }
+  if (e.policy !== undefined && e.policy !== 'pace') return { deny: tr().badPolicy }
   if (typeof e.answer !== 'string' || !e.answer.trim()) return { deny: tr().badAnswer }
   const fault = await quoteFault($, e.answer, (await read($, usageReadings)).refusals?.families?.[family])
   if (fault) return { deny: fault }
   const at = await $.clock.now()
+  if (e.policy !== undefined) {
+    // The user's standing word: the policy persists until they change it, unlike a yes that ends at a reset.
+    await update($, usageReadings, prev => ({ ...prev, policies: { ...prev.policies, [family]: 'pace' } }))
+    return { result: tr().pacing(FAMILY_NAME[family]) }
+  }
   await update($, usageReadings, prev => decideBudget(prev, family, at, 'orchestrator', e.answer as string))
   return { result: tr().decided(FAMILY_NAME[family], (await read($, usageReadings)).decisions![family]!.until) }
 }
@@ -1867,7 +1897,8 @@ export const register: Register = (on, options) => {
         'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
         'Returns a string: an ok: acknowledgement first, then a budget: line with compact JSON per family/window ' +
         '(used, resetsAt, projectedAtReset, exhaustsAt, pace, policy, verdict). ' +
-        'A verdict of ask needs the user\'s decision before long work (the Agent tool refuses a costly tier of that family until it is recorded); over is accepted by full policy. ' +
+        'A verdict of ask needs the user\'s decision before long work (the Agent tool refuses a costly tier of that family until it is recorded); over is accepted by full policy; ' +
+        'under pace the verdict is retier (projection over 100%, with an advice string: re-tier, never ask) or spend (weekly under 90% with the reset under two days away). ' +
         'Once a tier has finished runs, a third line, estimates:, gives its mean cost and share of each window. ' +
         'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
@@ -1917,8 +1948,8 @@ export const register: Register = (on, options) => {
     await $.tool.register({
       name: 'budget',
       description: 'Read the current budget summary per family (claude, codex) and window (fiveHour, week), without changing the progress bar. ' +
-        'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask). ' +
-        'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set only by /savvy-budget. ' +
+        'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask, retier, spend) and, for retier and spend, an advice string. ' +
+        'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set by /savvy-budget, or by decide with policy pace. ' +
         'Once a tier has finished runs, a second line, estimates:, gives per tier the runs, their mean cost in USD and that cost as a percent of each Claude window (null until observed).',
       inputSchema: { type: 'object', properties: {}, required: [] },
     })
@@ -1928,12 +1959,15 @@ export const register: Register = (on, options) => {
         'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) until the family\'s next reset. Call it only after the user said yes in chat, ' +
         'quoting their words in answer; never on your own judgment. Main session only. ' +
         "With tier (fable or astra) it instead records the user's yes to launching that top tier, which is for PLANS only: it holds for one launch " +
-        'or resume by default, uses sets a number or "session" when the user\'s words allow more; it does not open the budget gate.',
+        'or resume by default, uses sets a number or "session" when the user\'s words allow more; it does not open the budget gate. ' +
+        'With policy "pace" (and family) it instead records the user\'s standing word to keep working inside the budget by re-tiering, ' +
+        'without asking: the family\'s policy becomes pace and stays until the user changes it with /savvy-budget; answer quotes their words.',
       inputSchema: {
         type: 'object',
         properties: {
           family: { type: 'string', enum: [...PLAN_FAMILIES] },
           answer: { type: 'string', description: "The user's own words that said yes." },
+          policy: { type: 'string', enum: ['pace'], description: 'Record the pace policy for the family, from the user\'s own words; it persists.' },
           tier: { type: 'string', enum: ['fable', 'astra'], description: 'Top tier the yes is for; Fable and Astra are for plans only.' },
           uses: { description: 'With tier: launches or resumes the yes covers; 1 by default, or "session".', oneOf: [{ type: 'integer', minimum: 1 }, { type: 'string', enum: ['session'] }] },
         },

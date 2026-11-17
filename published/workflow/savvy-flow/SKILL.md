@@ -43,7 +43,8 @@ Task from the user: $ARGUMENTS
   every step, not only before costly launches, and keep each family's projected use at its reset at or under 100 %.
   When a projection rises past it, cut a tier (Heavy → Careful → Medium, Sol → Terra), shrink briefs, run fewer workers
   in parallel and prefer the family with headroom; if no cheaper path fits, pause costly work and tell the user the
-  projection and the reset time (section 4). Report the projection whenever it changes the plan.
+  projection and the reset time (section 4). Report the projection whenever it changes the plan. Under the `pace`
+  policy you do all of this yourself and never ask about the budget (section 4).
 - **A model or an effort the user sets wins over the tier's.** A general instruction (every agent on one model, every
   review at one effort) covers every task it describes, a specific one the tasks it names, and it holds until they
   change it: never ask again task by task. Setting Fable this way is the yes its rule asks for. Pass it as `model` /
@@ -205,6 +206,19 @@ asked for it or set it as their default, never on your own.
   own. With the short window high (say, past half), run one costly worker per family at a time and keep the cheaper
   tiers beside it. If the summary is unavailable, use the host's plan usage or the last relay report.
   Fable and Codex Astra have their own gate, whatever the verdict: see section "Models".
+- **Under `pace` the budget is yours to keep, never to ask about.** The user sets it (`/savvy-budget <family> pace`),
+  or says in chat that work should go on inside the budget without being asked; then record their words with `decide`
+  (family and `policy: "pace"`, quoted like any yes). It holds until the user changes it. The gate stops refusing costly
+  tiers for the budget (the Fable and Astra gate is unchanged: each launch still needs its own yes). Keep every family's
+  5-hour and weekly projection at or under 100 %, the week aimed at 90-100 % at its reset, by yourself:
+  - read the summary at every worker return; a `retier` verdict carries an `advice`, act on it before the next launch;
+  - cut tiers (Heavy → Careful → Medium, Sol → Terra → Luna); use a costly tier only where only it can do the step
+    (a tool or a depth no cheaper tier has); run one costly worker at a time; shrink briefs;
+  - move work to the other family only while that family's own windows stay at or under 100 %;
+  - a `spend` verdict (week under 90 % with the reset under two days away) means room: raise a tier or run more in
+    parallel for work that is waiting;
+  - when nothing fits, pace: hold the costly work until the short window resets and carry on with what fits, rather
+    than asking.
 - **Report the budget in the user's local time, to the minute.** Whenever you give the budget to the user (an `ask`,
   a status, the close), write one compact line per window of each family you report (5-hour and weekly): the percent
   used, the time it runs out at the current pace (when it does not before the reset, the percent projected at reset)
