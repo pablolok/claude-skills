@@ -2415,6 +2415,25 @@ test('the tool call a worker has been in for a while shows on its row with its t
   expect((await panelOf($)).terminal).toContain('1/4 · reading the config')
 })
 
+test('a worker parked on its background work says so on its row, with the time it has waited', async ($, on) => {
+  const listed = { infos: [{ ...WAITING_WORKER_INFO, status: 'running' }] as AgentInfo[] }
+  const { state, clock } = engine(on, listed, 0)
+  state.seed(AGENTS, [run('worker', { stepDone: 2, stepTotal: 4, stepNote: 'running the suite' })])
+  answering(on)
+  on('turn.complete', () => ({ text: '' }))
+  await start($)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  listed.infos = [WAITING_WORKER_INFO]
+  await clock.advance(5000)
+  await clock.advance(60_000)
+  expect((await panelOf($)).terminal).toContain('2/4 · waiting on background work · 1:00')
+  // Woken by its work, it is at work again: the note comes back.
+  await stepOf($, 'worker', 0)
+  await clock.advance(1000)
+  expect(byId(state.agents(), 'worker')?.waitingSince).toBeUndefined()
+  expect((await panelOf($)).terminal).toContain('2/4 · running the suite')
+})
+
 test('a tool call names the action, a file by its own name on any system', () => {
   expect(activityOf({ tool: 'Bash', command: 'npm test -- --run', description: 'Run the unit tests' })).toBe('Bash: Run the unit tests')
   expect(activityOf({ tool: 'Bash', command: '  pnpm   build' })).toBe('Bash: pnpm')

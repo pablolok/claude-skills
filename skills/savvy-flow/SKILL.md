@@ -249,7 +249,7 @@ asked for it or set it as their default, never on your own.
   with its elapsed time, so a brief does not repeat the step rule. A completion notice saying that a worker which
   already reported "is waiting on its own background work" means it left commands running: before accepting the
   task, have it stop them (SendMessage), or stop them yourself with `TaskStop` when it names their ids. Left
-  alone they hold the machine and keep the worker listed as running.
+  alone they hold the machine and the panel flags the worker.
 - Findings meant for a document go to an existing file the brief names (an edit goes through), or come back as text
   that you save: the host refuses a subagent's Write of a new report, analysis or summary file.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.21.1] - 2026-11-18
+- A worker parked on its own background work (a command it started there or one the host moved there) reads 'waiting on background work' with the time it has waited, until a model step shows it at work again; the README says the hand-back tool exists only in some permission modes (auto among them).
+
+
 ## [1.21.0] - 2026-11-18
 - A worker that delivered its report through SubagentHandback is finished at once, whatever its roster says: a command it left in the background no longer keeps it running as a ghost, and its row reads 'background work left running'. A running worker's row shows the tool call it has been in for 30 seconds or more, with its time, so a long command never leaves the row silent; the step tool asks for a call at the start of each step and before each long command.
 

@@ -35,6 +35,8 @@ export type AgentRun = {
   turnId?: string
   /** The engine's agent roster reports waiting on work owned by this worker. */
   isWaiting?: boolean
+  /** When the roster first said `waiting`: the row tells how long the worker has been parked. */
+  waitingSince?: number
   /** Hidden from the panel's Finished list by the user or the flow; still counted in the totals. */
   isCleared?: boolean
   /** An answered turn still needs the roster to confirm that the worker finished. */

@@ -53,14 +53,17 @@ the mod needs.
   A worker that delivered its report through the host's `SubagentHandback` tool is finished at once, whatever its
   roster says: a command it left in the background keeps the roster at `waiting` for as long as that command lives,
   so its row reads `background work left running` instead of running on. A later turn (a SendMessage, its background
-  work waking it) makes it a running row that has not reported yet.
+  work waking it) makes it a running row that has not reported yet. The host hands that tool to a background
+  subagent only in some permission modes (auto among them); a worker without it ends with a plain answer and,
+  with background work left, stays `waiting` until the roster settles.
   A resumed worker takes a new task title from SendMessage's `summary` and starts at round 1 for that title.
   This also works when SendMessage reuses an existing loop without `agent.spawn`: the queued title takes effect
   before that agent's next model turn, without renaming steps of its current turn.
 - **Live tool call**: a running worker's row shows the tool call it has been in for 30 seconds or more, with its
   description (or a file's own name, a pattern, a command's program) and its time, in place of its step note
-  (`2/6 · Bash: Run the full test suite · 3:05`); the note comes back when the call returns. A long command never
-  leaves a row silent between the worker's own step calls.
+  (`2/6 · Bash: Run the full test suite · 3:05`); the note comes back when the call returns. A worker parked on its
+  own background work (a command it started there, or one the host moved there) reads `waiting on background work`
+  with the time it has waited, until a model step shows it at work again.
 - **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`), follows `session.measure`, and is polled
   at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;

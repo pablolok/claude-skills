@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.1] - 2026-11-18
+- The worker rules and the skill no longer say a worker with background work stays listed as running after its report: the panel finishes a handed-back worker and flags what it left; between step calls the panel shows only the tool the worker is in.
+
+
 ## [1.19.0] - 2026-11-18
 - Every worker reports a step at the start of each step and before any command expected to run over a minute, starts long commands in the background and waits for their notice, never polls with an unbounded loop, and stops its own background commands (TaskStop, now in the lean and relay tool lists) before its report; the orchestrator does not repeat the step rule in briefs and has a worker that reported while still waiting on background work stop it before accepting the task.
 

@@ -80,6 +80,7 @@ const STRINGS = {
     skippedOne: 'skipped',
     skipped: 'skipped',
     leftBackground: 'background work left running',
+    waitingBackground: 'waiting on background work',
     tokensWord: 'tokens',
     agentsCount: 'agents',
     isRunning: 'running',
@@ -162,6 +163,7 @@ const STRINGS = {
     skippedOne: 'saltato',
     skipped: 'saltati',
     leftBackground: 'lavoro in background lasciato attivo',
+    waitingBackground: 'in attesa del lavoro in background',
     tokensWord: 'token',
     agentsCount: 'agenti',
     isRunning: 'in corso',
@@ -1549,10 +1551,13 @@ export const activityOf = (e: Record<string, unknown>): string => {
 }
 
 // The row's step line: the worker's count and its note, or the tool call it has been in
-// for a while with its time; a worker that reported with work still in the background says so.
+// for a while with its time, or how long it has been parked on its own background work;
+// a worker that reported with work still in the background says so.
 const stepLine = (a: AgentRun, at: number): string => {
   const isLong = a.status === 'running' && !!a.activity && a.activityAt !== undefined && at - a.activityAt >= ACTIVITY_AFTER_MS
-  const note = isLong ? `${a.activity} · ${fmtTime(at - a.activityAt!)}` : a.stepNote
+  const isParked = a.status === 'running' && a.isWaiting === true && !a.isHandedBack && a.waitingSince !== undefined
+  const note = isLong ? `${a.activity} · ${fmtTime(at - a.activityAt!)}`
+    : isParked ? `${tr().waitingBackground} · ${fmtTime(at - a.waitingSince!)}` : a.stepNote
   return [a.stepTotal ? stepCount(a) : '', note, a.isHandedBack && a.leftBackground ? tr().leftBackground : '']
     .filter(Boolean).join(' · ')
 }
@@ -1700,13 +1705,14 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usag
     // for it: a command it left in the background keeps it `waiting` for as long as
     // that command lives. The row says so instead of running on as a ghost.
     if (relay.isHandedBack && relay.status !== 'failed') {
-      relay = { ...relay, status: 'done', endedAt: relay.endedAt ?? listedAt, isWaiting: undefined,
+      relay = { ...relay, status: 'done', endedAt: relay.endedAt ?? listedAt, isWaiting: undefined, waitingSince: undefined,
         pendingCompletion: undefined, leftBackground: listed === 'waiting' || undefined }
     } else if (listed === 'waiting' && relay.status !== 'failed') {
-      relay = { ...relay, status: 'running', endedAt: undefined, isWaiting: true, pendingCompletion: undefined }
+      relay = { ...relay, status: 'running', endedAt: undefined, isWaiting: true, waitingSince: relay.waitingSince ?? listedAt,
+        pendingCompletion: undefined }
     } else if (relay.status === 'running') {
       const settled = (status: AgentRun['status']): AgentRun => ({ ...relay, status, endedAt: listedAt,
-        isWaiting: undefined, pendingCompletion: undefined })
+        isWaiting: undefined, waitingSince: undefined, pendingCompletion: undefined })
       // A just-ended turn may have been evicted already, or be a workflow agent
       // absent from this roster. Its answer still settles it in that case.
       if (listed === undefined && relay.pendingCompletion) relay = settled('done')
@@ -2358,6 +2364,8 @@ export const register: Register = (on, options) => {
               // Woken again after its report (a SendMessage, its background work ending):
               // a run that has not reported yet.
               ...(a.status !== 'running' ? { isHandedBack: undefined, leftBackground: undefined } : {}),
+              // A model step is work again, not a wait on background work.
+              waitingSince: undefined,
               ...(a.codexStatus ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
               endedAt: undefined,
               contextTokens:
