@@ -39,6 +39,14 @@ export type AgentRun = {
   isCleared?: boolean
   /** An answered turn still needs the roster to confirm that the worker finished. */
   pendingCompletion?: boolean
+  /** The worker delivered its report (SubagentHandback): its run is over, whatever it left in the background. */
+  isHandedBack?: boolean
+  /** At its report the roster still held background work the worker owns: the row says it was left running. */
+  leftBackground?: boolean
+  /** The tool call the worker is in now, the call's id and when it began; cleared when the call returns. */
+  activity?: string
+  activityId?: string
+  activityAt?: number
   type: string
   description: string
   model: string

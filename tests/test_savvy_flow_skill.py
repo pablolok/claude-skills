@@ -175,6 +175,37 @@ class TestWorkers(unittest.TestCase):
                 self.assertIn("Name the skipped steps in your report.", body)
                 self.assertNotIn("whatever steps you merged or skipped", body)
 
+    def test_every_worker_reports_each_step_as_it_starts_and_before_each_long_command(self) -> None:
+        # A worker that reports only as a step finishes is silent for the whole of a long step: its row stayed at 0/7
+        # through twenty minutes of timed runs, and the user took it for a stuck agent.
+        for name in WORKERS:
+            with self.subTest(worker=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn("call it again at the start of each step", body)
+                self.assertIn("and before any command you expect to run longer than a minute, its `note` naming that "
+                              "command", body)
+                self.assertNotIn("never \"working\", as each step finishes", body)
+
+    def test_every_worker_leaves_no_background_command_running_after_its_report(self) -> None:
+        # The host moves a long foreground command to the background, and a polling loop with it; both outlive the
+        # report, and the host keeps a worker that owns live background work listed as waiting, not finished.
+        for name in WORKERS:
+            with self.subTest(worker=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn("is moved to the background by the host and keeps running", body)
+                self.assertIn("`run_in_background: true`", body)
+                self.assertIn("Never wait with an unbounded polling loop", body)
+                self.assertIn("stop every background command you started that is still running (`TaskStop`", body)
+        for name in (*LEAN_WORKERS, *RELAY_WORKERS):
+            with self.subTest(worker=name):
+                tools = _flow_list(frontmatter(_read(PUBLISHED / "agents" / f"{name}.md")).get("tools", ""))
+                self.assertIn("TaskStop", tools, "a lean worker stops its own background commands")
+
+    def test_the_orchestrator_neither_repeats_the_step_rule_nor_accepts_leftover_background_work(self) -> None:
+        body = _flat(_read(PUBLISHED / "SKILL.md"))
+        self.assertIn("a brief does not repeat the step rule", body)
+        self.assertIn("is waiting on its own background work", body)
+
     def test_the_plugin_root_brings_the_agents_with_it(self) -> None:
         # Claude Code finds `agents/` at the plugin root (savvy-flow:savvy-careful and so on) under the default
         # entry; declaring them too would register each worker twice, and an own manifest would conflict with it.

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.21.0] - 2026-11-18
+- A worker that delivered its report through SubagentHandback is finished at once, whatever its roster says: a command it left in the background no longer keeps it running as a ghost, and its row reads 'background work left running'. A running worker's row shows the tool call it has been in for 30 seconds or more, with its time, so a long command never leaves the row silent; the step tool asks for a call at the start of each step and before each long command.
+
+
 ## [1.20.0] - 2026-11-17
 - a family with no stored policy is on pace: nobody has to type /savvy-budget; within is the opt-in to be asked, and a stored within, full or pace still wins
 

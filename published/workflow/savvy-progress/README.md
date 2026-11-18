@@ -50,9 +50,17 @@ the mod needs.
   99%, until the roster confirms completion. This applies to every worker, including relays with no `codexStatus`.
   A waiting worker finishes when its roster becomes `idle` or `completed`, and fails if it becomes `failed` or
   `killed`; it need not issue another model request to update the panel.
+  A worker that delivered its report through the host's `SubagentHandback` tool is finished at once, whatever its
+  roster says: a command it left in the background keeps the roster at `waiting` for as long as that command lives,
+  so its row reads `background work left running` instead of running on. A later turn (a SendMessage, its background
+  work waking it) makes it a running row that has not reported yet.
   A resumed worker takes a new task title from SendMessage's `summary` and starts at round 1 for that title.
   This also works when SendMessage reuses an existing loop without `agent.spawn`: the queued title takes effect
   before that agent's next model turn, without renaming steps of its current turn.
+- **Live tool call**: a running worker's row shows the tool call it has been in for 30 seconds or more, with its
+  description (or a file's own name, a pattern, a command's program) and its time, in place of its step note
+  (`2/6 · Bash: Run the full test suite · 3:05`); the note comes back when the call returns. A long command never
+  leaves a row silent between the worker's own step calls.
 - **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`), follows `session.measure`, and is polled
   at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;
@@ -194,8 +202,9 @@ the mod needs.
   steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
   fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug),
   `effort` (the reasoning effort it passes to Codex), and `codexStatus` (the unique filename stem for this Codex
-  invocation, also unique on a resume). Declarations need no `done` and preserve the prior count and note. A note
-  names the actual action, such as "reading CreatureProbe.cs" or "running EditMode tests", never "working".
+  invocation, also unique on a resume). Declarations need no `done` and preserve the prior count and note. A worker
+  calls it at the start of each step and before any command it expects to run longer than a minute. A note names the
+  actual action, such as "reading CreatureProbe.cs" or "running EditMode tests", never "working".
 
 Both costs are estimates from token counts and built-in tables (`PRICES` for Claude, `GPT_PRICES` for Codex in
 `hooks/register.tsx`). GPT family rates use current Standard short-context API prices, verified on 2026-11-12 in
@@ -256,7 +265,9 @@ Confirmed stop contracts in the same installed engine:
   session-wide, not a list of work owned only by the stopping worker; the panel logs it but does not infer ownership.
 - `$.agent.list()` carries `id` and `status`. The engine maps a completed worker with live keepalives, or an idle
   worker with its own running background shell or monitor, to `status: "waiting"`. An answer is therefore held
-  pending while the roster is still `running`, and `waiting` keeps it live until a terminal roster observation.
+  pending while the roster is still `running`, and `waiting` keeps it live until a terminal roster observation,
+  unless the worker handed back its report: a polling loop it left in the background, moved there by the host's
+  cap on an async subagent's foreground commands, kept a delivered worker `waiting` for over an hour.
 
 The tests pair these contract-shaped stop and roster observations, including the possible asynchronous transition
 from `running` to `waiting`. No live session was observable from the sandbox: the reported worker's actual stop

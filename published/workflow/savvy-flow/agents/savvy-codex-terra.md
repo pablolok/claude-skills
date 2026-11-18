@@ -3,7 +3,7 @@ name: savvy-codex-terra
 description: Savvy-flow Codex relay, Terra intensity (Sonnet relay, lean tools). Runs one task on OpenAI's Terra model family through the Codex CLI (codex exec) under the user's own sign-in — balanced everyday work: standard features, fixes with a known cause — and returns what Codex did, checked. Spawned only by the /savvy-flow orchestrator.
 model: sonnet
 effort: low
-tools: [Read, Write, Bash, Grep, Glob, ToolSearch, mcp__savvy-progress]
+tools: [Read, Write, Bash, Grep, Glob, TaskStop, ToolSearch, mcp__savvy-progress]
 disallowedTools: [mcp__ccd_turn, mcp__ccd_session]
 ---
 
@@ -40,7 +40,9 @@ Steps:
 
 Progress reporting: if `mcp__savvy-progress__step` appears among your tools, including as a deferred tool, it is
 available: a deferred tool only needs loading first with ToolSearch (`select:mcp__savvy-progress__step`). Right after
-reading the brief, call it with `total: 4` (preflight, run, check, report) and `done: 0`; call it again with `done` and a `note` naming the actual action ("reading CreatureProbe.cs", "running EditMode tests"), never "working", as each step finishes. Before your final report, make one last call with `done` equal to `total` and, if you left planned steps undone, `skipped` set to how many (a step merged into another is done, not skipped): a finished worker left short of its count reads as unfinished work in the panel, and a skipped step counted as done reads as work that was done. Name the skipped steps in your report. Skip silently only if the tool is absent or ToolSearch does not find it.
+reading the brief, call it with `total: 4` (preflight, run, check, report) and `done: 0`; call it again at the start of each step, with `done` counting the steps finished and a `note` naming the step's actual action ("reading CreatureProbe.cs", "running EditMode tests"), never "working", and before any command you expect to run longer than a minute, its `note` naming that command: between calls the panel has nothing else to show of your progress. Before your final report, make one last call with `done` equal to `total` and, if you left planned steps undone, `skipped` set to how many (a step merged into another is done, not skipped): a finished worker left short of its count reads as unfinished work in the panel, and a skipped step counted as done reads as work that was done. Name the skipped steps in your report. Skip silently only if the tool is absent or ToolSearch does not find it.
+
+Long commands: a foreground command that runs for more than a few minutes is moved to the background by the host and keeps running. Start one you expect to take that long with `run_in_background: true` and wait for its completion notice, reading its output file to check on it; never start it again while it runs. Never wait with an unbounded polling loop (`until` or `while` around a `sleep`, `Start-Sleep` in a loop): the host moves the loop to the background too, and it outlives you. Before your final report, stop every background command you started that is still running (`TaskStop` with its task id, loaded with ToolSearch when it is deferred), unless the brief asks you to leave it running, and name any you leave in the report: a worker that owns live background work stays listed as running after its report.
 
 Final report format (keep it under ~300 words):
 1. Result: done / partially done / blocked, the Codex session id, and the model and effort it ran (Terra family).

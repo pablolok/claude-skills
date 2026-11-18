@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
 import { budgetGate, budgetSummary, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
-import { textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
+import { activityOf, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { codexBody, crabBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
@@ -2350,6 +2350,78 @@ test('another workers wait does not keep a genuinely completed worker running', 
   await start($)
   await $.turn.complete(WAITING_WORKER_STOP)
   expect(byId(state.agents(), 'worker')?.status).toBe('done')
+})
+
+// The worker's report delivered through the host's hand-back tool ends its run, while
+// a command it left in the background keeps the roster saying `waiting`.
+const HANDBACK = { tool: 'SubagentHandback', agentId: 'worker', message: 'Report.' } as unknown as Parameters<Engine['tool']['call']>[0]
+const handingBack = (on: On) =>
+  on('tool.call', (_, e, next) => ((e.tool as string) === 'SubagentHandback' ? { result: 'delivered' } : next(e)))
+
+test('a worker that handed back its report is done though the roster holds its background work', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [{ ...WAITING_WORKER_INFO, type: 'savvy-flow:savvy-medium' }] }, 0)
+  state.seed(AGENTS, [run('worker', { type: 'savvy-flow:savvy-medium', stepDone: 6, stepTotal: 6 })])
+  state.seed(FLOW, flowOf({ running: 1 }))
+  on('turn.complete', () => ({ text: '' }))
+  handingBack(on)
+  await start($)
+  await $.tool.call(HANDBACK)
+  await $.turn.complete(WAITING_WORKER_STOP)
+  await clock.advance(10_000)
+  expect(byId(state.agents(), 'worker')).toMatchObject({ status: 'done', isHandedBack: true, leftBackground: true })
+  expect(progressOf(byId(state.agents(), 'worker')!)).toBe(1)
+  expect(state.flow()?.running).toBe(0)
+  expect(await bar($)).toBe('Fix bug: Tasks 0/2, 0%')
+  expect((await panelOf($)).terminal).toContain('background work left running')
+})
+
+test('a reload leaves a handed-back worker finished while the roster still says waiting', async ($, on) => {
+  const { state } = engine(on, { infos: [WAITING_WORKER_INFO] })
+  state.seed(AGENTS, [run('worker', { status: 'done', endedAt: 1000, isHandedBack: true })])
+  await start($)
+  expect(byId(state.agents(), 'worker')).toMatchObject({ status: 'done', endedAt: 1000, leftBackground: true })
+})
+
+test('a handed-back worker the host wakes again runs again, as a run that has not reported', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  answering(on)
+  await start($)
+  await spawn($, 'w1')
+  state.seed(AGENTS, state.agents().map(a => ({ ...a, status: 'done' as const, isHandedBack: true, leftBackground: true })))
+  await stepOf($, 'w1', 0)
+  expect(byId(state.agents(), 'w1')).toMatchObject({ status: 'running' })
+  expect(byId(state.agents(), 'w1')?.isHandedBack).toBeUndefined()
+  expect(byId(state.agents(), 'w1')?.leftBackground).toBeUndefined()
+})
+
+test('the tool call a worker has been in for a while shows on its row with its time', async ($, on) => {
+  const { state, clock } = engine(on, { infos: [{ ...WAITING_WORKER_INFO, status: 'running' }] }, 0)
+  state.seed(AGENTS, [run('worker', { stepDone: 1, stepTotal: 4, stepNote: 'reading the config' })])
+  let release = (): void => undefined
+  on('tool.call', { tool: 'Bash' }, () => new Promise(resolve => {
+    release = () => resolve({ result: { stdout: '', stderr: '', interrupted: false } })
+  }))
+  await start($)
+  const call = $.tool.call({ tool: 'Bash', agentId: 'worker', command: 'npm test', description: 'Run the full test suite' })
+  await clock.advance(5000)
+  expect((await panelOf($)).terminal).toContain('1/4 · reading the config')
+  await clock.advance(40_000)
+  expect((await panelOf($)).terminal).toContain('1/4 · Bash: Run the full test suite · 0:45')
+  release()
+  await call
+  expect(byId(state.agents(), 'worker')?.activity).toBeUndefined()
+  // The panel redraws on its once-a-second tick.
+  await clock.advance(1000)
+  expect((await panelOf($)).terminal).toContain('1/4 · reading the config')
+})
+
+test('a tool call names the action, a file by its own name on any system', () => {
+  expect(activityOf({ tool: 'Bash', command: 'npm test -- --run', description: 'Run the unit tests' })).toBe('Bash: Run the unit tests')
+  expect(activityOf({ tool: 'Bash', command: '  pnpm   build' })).toBe('Bash: pnpm')
+  expect(activityOf({ tool: 'Read', file_path: 'C:\\repo\\src\\app.ts' })).toBe('Read: app.ts')
+  expect(activityOf({ tool: 'Edit', file_path: '/repo/src/app.ts' })).toBe('Edit: app.ts')
+  expect(activityOf({ tool: 'Grep', pattern: 'TODO' })).toBe('Grep: TODO')
+  expect(activityOf({ tool: 'mcp__tracker__get_issue' })).toBe('get_issue')
 })
 
 test('an aborted worker is not kept alive by an old waiting roster entry', async ($, on) => {

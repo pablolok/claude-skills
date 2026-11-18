@@ -27,6 +27,8 @@ const TOOL = 'mcp__savvy-progress__progress'
 const STEP_TOOL = 'mcp__savvy-progress__step'
 const BUDGET_TOOL = 'mcp__savvy-progress__budget'
 const DECIDE_TOOL = 'mcp__savvy-progress__decide'
+// The host's tool a subagent delivers its final report with; the call ends its run.
+const HANDBACK_TOOL = 'SubagentHandback'
 const PANE = 'savvy-agents'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
@@ -77,6 +79,7 @@ const STRINGS = {
     after: 'after',
     skippedOne: 'skipped',
     skipped: 'skipped',
+    leftBackground: 'background work left running',
     tokensWord: 'tokens',
     agentsCount: 'agents',
     isRunning: 'running',
@@ -158,6 +161,7 @@ const STRINGS = {
     after: 'dopo',
     skippedOne: 'saltato',
     skipped: 'saltati',
+    leftBackground: 'lavoro in background lasciato attivo',
     tokensWord: 'token',
     agentsCount: 'agenti',
     isRunning: 'in corso',
@@ -1527,6 +1531,32 @@ const headerHeight = (title: string, W: number, usage: UsageReadings): number =>
 const stepCount = (a: AgentRun): string =>
   a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${a.stepSkipped === 1 ? tr().skippedOne : tr().skipped}` : ''}` : ''
 
+// A tool call shows on its worker's row once it has lasted this long: a long command reads
+// as work under way, with its time, between the worker's own step calls.
+const ACTIVITY_AFTER_MS = 30_000
+const ACTIVITY_MAX = 60
+
+// What a tool call is doing, in a few words: its own description, a file by its name (a
+// Windows path too), a pattern, or a command's program; an MCP tool by its own name.
+export const activityOf = (e: Record<string, unknown>): string => {
+  const tool = typeof e.tool === 'string' ? e.tool : ''
+  const text = (value: unknown): string => (typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '')
+  const name = tool.startsWith('mcp__') ? tool.split('__').slice(2).join('__') || tool : tool
+  const file = text(e.file_path) || text(e.notebook_path)
+  const what = text(e.description) || (file ? file.split(/[\\/]/).filter(Boolean).pop() ?? file : '') ||
+    text(e.pattern) || text(e.command).split(' ')[0]
+  return (what ? `${name}: ${what}` : name).slice(0, ACTIVITY_MAX)
+}
+
+// The row's step line: the worker's count and its note, or the tool call it has been in
+// for a while with its time; a worker that reported with work still in the background says so.
+const stepLine = (a: AgentRun, at: number): string => {
+  const isLong = a.status === 'running' && !!a.activity && a.activityAt !== undefined && at - a.activityAt >= ACTIVITY_AFTER_MS
+  const note = isLong ? `${a.activity} · ${fmtTime(at - a.activityAt!)}` : a.stepNote
+  return [a.stepTotal ? stepCount(a) : '', note, a.isHandedBack && a.leftBackground ? tr().leftBackground : '']
+    .filter(Boolean).join(' · ')
+}
+
 export const progressOf = (a: AgentRun): number | null => {
   const waiting = a.codexState === 'running' || a.isWaiting || a.pendingCompletion
   if (a.stepTotal) return Math.min(waiting ? RUNNING_CAP : 1, (a.stepDone ?? 0) / a.stepTotal)
@@ -1548,7 +1578,7 @@ const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints, usage: 
   const barW = textW
   const progress = progressOf(a)
   const stats = rowStats(a, usage, at)
-  const steps = [a.stepTotal ? stepCount(a) : '', a.stepNote].filter(Boolean).join(' · ')
+  const steps = stepLine(a, at)
   const stepsW = Math.max(0, barW - textWidth(stats, 11) - 12)
   // Without reported steps the bar falls back to the context, drawn grey.
   const fillW = Math.round(barW * (progress ?? ctx / 100))
@@ -1666,9 +1696,13 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usag
   return [...unique.values()].map((a): AgentRun => {
     let relay = a.codexStatus ? { ...a, status: a.relayStatus ?? a.status, endedAt: a.relayEndedAt ?? a.endedAt } : a
     const listed = relay.agentId && statusOf.get(relay.agentId)
-    // A completed task notification is not necessarily a finished worker. The
-    // roster maps its own live shells/monitors and keepalives to `waiting`.
-    if (listed === 'waiting' && relay.status !== 'failed') {
+    // A worker that handed back its report is done, whatever the roster still holds
+    // for it: a command it left in the background keeps it `waiting` for as long as
+    // that command lives. The row says so instead of running on as a ghost.
+    if (relay.isHandedBack && relay.status !== 'failed') {
+      relay = { ...relay, status: 'done', endedAt: relay.endedAt ?? listedAt, isWaiting: undefined,
+        pendingCompletion: undefined, leftBackground: listed === 'waiting' || undefined }
+    } else if (listed === 'waiting' && relay.status !== 'failed') {
       relay = { ...relay, status: 'running', endedAt: undefined, isWaiting: true, pendingCompletion: undefined }
     } else if (relay.status === 'running') {
       const settled = (status: AgentRun['status']): AgentRun => ({ ...relay, status, endedAt: listedAt,
@@ -1981,7 +2015,7 @@ export const register: Register = (on, options) => {
       description:
         'For savvy-flow workers: report progress on your own task to the agents panel. ' +
         'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
-        'call it again as each step finishes with a note naming the actual action (reading CreatureProbe.cs, running EditMode tests), never working; close with `done` equal to `total` and `skipped` for the steps left undone. ' +
+        'call it again at the start of each step, and before any command expected to run longer than a minute, with a note naming the actual action (reading CreatureProbe.cs, running EditMode tests), never working; close with `done` equal to `total` and `skipped` for the steps left undone. ' +
         'Codex relays also declare their exact `model` slug, `effort`, and a unique `codexStatus` filename stem before piping Codex JSON through the status writer (declarations need no done). ' +
         'Cheap and silent: it only draws a bar.',
       inputSchema: {
@@ -2133,6 +2167,31 @@ export const register: Register = (on, options) => {
       })
     })
     return { result: isMatched ? 'ok' : tr().noRow(agentId) }
+  })
+
+  // A worker's tool calls feed its row: the call it is in now and since when, so a long
+  // command reads as work under way; SubagentHandback is its report delivered. Every call
+  // goes on to the tool, and a hook here never refuses one.
+  on('tool.call', async ($, e, next) => {
+    const agentId = e.agentId
+    if (!agentId || e.tool === STEP_TOOL) return next(e)
+    if (!(await read($, agents)).some(a => a.agentId === agentId && a.status === 'running')) return next(e)
+    if ((e.tool as string) === HANDBACK_TOOL) {
+      const result = await next(e)
+      if (!result.deny) await update($, agents, list => list.map(a => (a.agentId === agentId
+        ? { ...a, isHandedBack: true, activity: undefined, activityId: undefined, activityAt: undefined } : a)))
+      return result
+    }
+    const activityId = e.tool_use_id || `${agentId}:${await $.clock.now()}`
+    const activityAt = await $.clock.now()
+    const activity = activityOf(e as unknown as Record<string, unknown>)
+    await update($, agents, list => list.map(a => (a.agentId === agentId ? { ...a, activity, activityId, activityAt } : a)))
+    try {
+      return await next(e)
+    } finally {
+      await update($, agents, list => list.map(a => (a.agentId === agentId && a.activityId === activityId
+        ? { ...a, activity: undefined, activityId: undefined, activityAt: undefined } : a)))
+    }
   })
 
   on('session.measure', async ($, e, next) => {
@@ -2296,6 +2355,9 @@ export const register: Register = (on, options) => {
               effort: typeof e.effort === 'string' ? e.effort : a.effort,
               status: 'running',
               isCleared: undefined,
+              // Woken again after its report (a SendMessage, its background work ending):
+              // a run that has not reported yet.
+              ...(a.status !== 'running' ? { isHandedBack: undefined, leftBackground: undefined } : {}),
               ...(a.codexStatus ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
               endedAt: undefined,
               contextTokens:
@@ -2338,16 +2400,22 @@ export const register: Register = (on, options) => {
           if (a.agentId !== agentId) return a
           // A run whose steps went unseen still gets the turn's own sum.
           const fallback = a.steps === 0 && e.usage
+          // An answer ends a model turn, while the worker can still own live
+          // background work. Keep it live until the roster confirms a finish,
+          // unless the worker handed back its report: then its run is over.
+          const isAnswer = e.reason === 'answer'
+          const isOver = !isAnswer || a.isHandedBack === true
+          const status: AgentRun['status'] = !isAnswer ? 'failed' : isOver ? 'done' : 'running'
           return {
             ...a,
-            // An answer ends a model turn, while the worker can still own live
-            // background work. Keep it live until the roster confirms a finish.
-            status: e.reason === 'answer' ? 'running' : 'failed',
-            pendingCompletion: e.reason === 'answer' || undefined,
-            isWaiting: e.reason === 'answer' ? a.isWaiting : undefined,
-            endedAt: e.reason === 'answer' ? undefined : at,
-            ...(a.codexStatus ? { relayStatus: e.reason === 'answer' ? 'running' as const : 'failed' as const,
-              relayEndedAt: e.reason === 'answer' ? undefined : at } : {}),
+            status,
+            pendingCompletion: isOver ? undefined : true,
+            isWaiting: isOver ? undefined : a.isWaiting,
+            endedAt: isOver ? at : undefined,
+            activity: undefined,
+            activityId: undefined,
+            activityAt: undefined,
+            ...(a.codexStatus ? { relayStatus: status, relayEndedAt: isOver ? at : undefined } : {}),
             ...(fallback && e.usage
               ? {
                   model: e.usage.model || a.model,
@@ -2539,7 +2607,7 @@ export const register: Register = (on, options) => {
       const ctx = ctxOf(a)
       const progress = progressOf(a)
       const model = runModel(a, true, hints)
-      const note = [a.stepTotal ? stepCount(a) : '', a.stepNote].filter(Boolean).join(' · ')
+      const note = stepLine(a, at)
       const steps = note ? `${note} · ` : ''
       return (
         <Box key={a.id} flexDirection="column" marginBottom={1}>
