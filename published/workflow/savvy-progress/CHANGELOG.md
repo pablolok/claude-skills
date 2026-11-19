@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.21.2] - 2026-11-19
+- The agents panel never draws a copy that lacks a run the live list holds as running: the run ids are kept beside the copy, and a copy taken before a run started (after a session respawn, which empties the session state, or while the picker holds the panel) gives way to the live values, so a live worker no longer shows as 'No subagents yet' with no cost and no time.
+
+
 ## [1.21.1] - 2026-11-18
 - A worker parked on its own background work (a command it started there or one the host moved there) reads 'waiting on background work' with the time it has waited, until a model step shows it at work again; the README says the hand-back tool exists only in some permission modes (auto among them).
 

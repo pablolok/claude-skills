@@ -172,7 +172,9 @@ the mod needs.
   `/config` also leaves the session a note, so savvy-flow's chat follows it from its next message. The panel draws a
   copy of its values refreshed once a second, and while the picker has the focus the copy waits, so running agents do
   not redraw the open list back to its start, however often it is opened again and across the reload a pick causes; a
-  pick, or the focus moving on (Esc, a click elsewhere), lets it catch up, and five minutes at most.
+  pick, or the focus moving on (Esc, a click elsewhere), lets it catch up, and five minutes at most. A copy never hides
+  a live run: when it lacks a run the live list holds as running (taken before the run started and not refreshed
+  since, or held by the picker), the panel draws the live values instead, and a run starting or ending redraws it.
 - **Housekeeping**: every few seconds while a run is shown as running, the mod checks it against the engine's own list
   of agent loops, so a worker that was killed, or lost to a reload or a resume, ends as failed instead of running
   forever. A flow already finished when a session starts or the mod reloads leaves no bar; ✕ dismisses one by hand.

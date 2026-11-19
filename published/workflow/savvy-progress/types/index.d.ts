@@ -192,6 +192,8 @@ declare module 'claude-code' {
       theme: string
       /** What the agents panel shows; null until the first copy. */
       shown: PaneView | null
+      /** The ids of every run the live list holds as running, sorted: the panel never draws a copy that lacks one. */
+      runningIds: string[]
       /** When the theme picker took the panel's focus, in ms; 0 while it has not. No drawing reads it. */
       picking: number
     }

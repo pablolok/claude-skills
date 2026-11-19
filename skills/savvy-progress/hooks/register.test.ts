@@ -735,6 +735,47 @@ test('the panel draws a copy the tick refreshes, never the live values', { optio
   expect(await panelNow($)).toContain('90k')
 })
 
+// A respawned session starts from an empty store: its copy can predate the plan and the
+// runs that follow, as long as nothing refreshes it.
+const respawned = async ($: Engine, on: On) => {
+  const { clock } = engine(on, { infos: [] }, 0)
+  answering(on)
+  await start($)
+  await clock.advance(1000)
+  await $.tool.call({ tool: 'mcp__savvy-progress__progress', total: 2, done: 1, phase: 'delegate',
+    tasks: [{ title: 'first', tier: 'careful' }, { title: 'second', tier: 'careful' }] })
+  await spawn($, 'second')
+  await stepOf($, 'second', 0)
+}
+
+test('a run the live list holds as running is drawn even when the panel copy predates it', { options: { theme: 'classic' } }, async ($, on) => {
+  await respawned($, on)
+
+  const { terminal } = await panelOf($)
+
+  expect(terminal).not.toContain('No subagents yet.')
+  expect(terminal).toContain('"second"')
+  expect(terminal).toContain(`$${costOf('claude-opus-5-5', USAGE).toFixed(2)}`)
+})
+
+test('a run that starts while the theme picker holds the panel is drawn all the same', { options: { theme: 'classic' } }, async ($, on) => {
+  // The surface: the ring moves where it is asked.
+  on('ui.focus', () => ({}))
+  const { clock, state } = engine(on, { infos: [] }, 0)
+  await start($)
+  await clock.advance(1000)
+  await $.ui.focus(clicked('theme'))
+  const writes = state.written.length
+
+  // Not a savvy worker: its start opens no panel, which would end the hold.
+  await spawn($, 'w1', 'Explore')
+  await clock.advance(3000)
+
+  // The copy still waits; the drawing does not.
+  expect(state.written.slice(writes)).not.toContain('shown')
+  expect(await panelNow($)).toContain('"w1"')
+})
+
 test('the theme picker taking the focus holds the panel still, writing only what no drawing reads, so the open list stays put', { options: { theme: 'auto' } }, async ($, on) => {
   const { clock, state } = engine(on, { infos: [info('w1', 'running')] })
   // The surface: the ring moves where it is asked.

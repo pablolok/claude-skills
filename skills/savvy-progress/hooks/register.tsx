@@ -17,6 +17,7 @@ const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, {
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const picked = atom({ plugin: 'savvy-progress', key: 'theme' } as const, 'auto')
 const shown = atom({ plugin: 'savvy-progress', key: 'shown' } as const, null)
+const runningIds = atom({ plugin: 'savvy-progress', key: 'runningIds' } as const, [])
 const picking = atom({ plugin: 'savvy-progress', key: 'picking' } as const, 0)
 const EMPTY_MODELS: ModelHints = { codex: {}, claude: {} }
 const models = atom({ plugin: 'savvy-progress', key: 'models' } as const, EMPTY_MODELS)
@@ -1725,11 +1726,16 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usag
 
 // The bar's faint layer: the plan's workers running now, as the agents list says. A
 // savvy worker is one; so is an agent of any other type running a task of the plan.
+// Beside it, the ids of every run the list holds as running, of any type, written only
+// when that set changes: the panel reads them to never draw a copy that lacks one.
 async function syncRunning($: EngineInterface): Promise<void> {
   const f = await read($, flow)
   const tasks = new Set((f?.tasks ?? []).map(t => norm(t.title)))
-  const running = (await read($, agents)).filter(a => a.status === 'running' && (isSavvy(a.type) || tasks.has(norm(a.description)))).length
+  const list = await read($, agents)
+  const running = list.filter(a => a.status === 'running' && (isSavvy(a.type) || tasks.has(norm(a.description)))).length
   if (f && f.running !== running) await update($, flow, prev => (prev ? { ...prev, running } : prev))
+  const ids = list.filter(a => a.status === 'running').map(a => a.id).sort()
+  if (JSON.stringify(await read($, runningIds)) !== JSON.stringify(ids)) await update($, runningIds, () => ids)
 }
 
 // A run whose spawn answered no agentId is keyed on its Agent call's tool_use_id,
@@ -2508,8 +2514,12 @@ export const register: Register = (on, options) => {
         }}
       />
     )
-    // The copy once there is one, so the live values' changes do not redraw it.
-    const view = (await read($, shown)) ?? { flow: await read($, flow), agents: await read($, agents), now: await $.clock.now(), models: await read($, models), usage: await read($, usageReadings) }
+    // The copy once there is one, so the live values' changes do not redraw it. Never a
+    // copy that lacks a run the live list holds as running (one taken before the run
+    // started and not refreshed since, or held by the picker): the live values then.
+    const copy = await read($, shown)
+    const isBehind = copy !== null && (await read($, runningIds)).some(id => !copy.agents.some(a => a.id === id && a.status === 'running'))
+    const view = copy && !isBehind ? copy : { flow: await read($, flow), agents: await read($, agents), now: await $.clock.now(), models: await read($, models), usage: await read($, usageReadings) }
     const hints = view.models ?? EMPTY_MODELS
     const usage = view.usage ?? EMPTY_USAGE
     const list = view.agents
