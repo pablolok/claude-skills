@@ -107,10 +107,11 @@
       "name": "gamedev-hair",
       "source": "./published/gamedev/gamedev-hair",
       "description": "Hair and beard strand grooms, shaping and grooming review for game development.",
-      "version": "0.1.5",
+      "version": "0.2.0",
       "category": "gamedev",
       "strict": false,
       "skills": [
+        "./skills/groom-cards",
         "./skills/hair-reference-review",
         "./skills/strand-groom",
         "./skills/strand-rendering"

@@ -50,7 +50,7 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
 ## 1. The build order
 
 The order production groom tools are built around (XGen, Houdini, Blender's hair nodes): guides and clumps carry
-most of the look, noise and flyaways come last.
+most of the look, noise and flyaways come last. A short cut over a skin fade: references/short-cut-and-fade.md.
 
 1. **Parts and the design table.** One part per zone, each with its own roots, tables and seeds.
    [references/design-table.md](references/design-table.md)
@@ -166,7 +166,7 @@ Blender notes (one case each; check on your version):
   curves themselves; the exporter reads them from there.
 - Before using the stock curl node, check that its "frequency" is a wavelength along the strand and that it does not
   lengthen the strand (one version did neither); a helix of your own with wavelength and amplitude in mm is exact.
-- Alembic attributes for Unreal: see `strand-rendering`, references/engine-notes.md.
+- Alembic for Unreal (attributes, widths, saving from Python): see `strand-rendering`, references/engine-notes.md.
 
 ## 6. The loop
 
@@ -202,6 +202,6 @@ Blender notes (one case each; check on your version):
 - A moustache from constructed guides has no validated recipe yet; guides authored from the reference's traced
   locks (references/area-map-and-traces.md) are the route being tried.
 - Starting values for clump power, wave ratio, frizz share and the height-per-distance ratio come from one or two
-  grooms; contributors should replace them with ranges from more.
+  grooms (a short crop's density and caps: short-cut-and-fade.md); contributors should replace them with ranges.
 - Which DCC features (Blender's Interpolate Hair Curves with guide groups, Houdini Guide Advect, XGen region maps)
   cover each step without custom code, per current version.

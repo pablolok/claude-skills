@@ -177,7 +177,7 @@ change at a time before fixing anything.
    engine captures. A conflict a worker flags between the reference and a gauge goes to the art owner with the
    picture, never decided silently; when traced locks and a drawn mask disagree, the traces are the hair.
    Record each answer (region → view) where every later brief reads it, and report both numbers from then on.
-6. Before calling it done: the art owner's eye on stills and films at the shipped cameras.
+6. Before calling it done: the art owner's eye on stills and films at the shipped cameras; their marks: defects-list.md.
 
 ## 6. Traps
 

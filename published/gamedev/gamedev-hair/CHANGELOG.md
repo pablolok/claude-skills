@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.0] - 2026-11-21
+- groom-cards: hair cards generated from an approved groom by the engine's tool, shown in a forward renderer, with a painted base, rigid binding, motion in the material and coverage checks; strand-groom: a short cut over a skin fade; strand-rendering: cards as the game version, Unreal notes, Unity HDRP strand cost; hair-reference-review: checking a fix against the art owner's mark
+
+
 ## [0.1.5] - 2026-11-20
 - the review registers the reference in every fitted region, normalises value by the skin beside the hair, proves each new row three ways and judges every view; the groom builds an area map from traced locks, gates direction, shape and length together, lofts standing parts, and diagnoses strand shape from a census; the renderer lays tone by depth, cuts the shell by outside cover, and documents why a hair stack reads as one ribbon
 

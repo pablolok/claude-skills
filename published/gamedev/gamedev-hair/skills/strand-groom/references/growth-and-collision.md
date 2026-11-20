@@ -28,6 +28,10 @@ head skip the collision for every interpolated strand, which is where strands go
 - Per point, a margin = base clearance (about 0.5 mm) + the strand's radius + the layer standoff at its rank.
 - At every growth step, a point inside its margin moves along the field's gradient by the shortfall, **and the
   strand's direction is reset to that move**, so the strand slides along the skin instead of bouncing off it.
+- **Except for strands only a few steps long** (stubble, a fade, an under-coat): there the reset is the whole
+  strand's direction. A first step pushed out to the margin stood every stubble strand about 48 degrees off the scalp
+  in one case, a shelf beside rows lying at 15-17 degrees. Give such zones a base margin near zero and an explicit
+  lift angle instead (references/short-cut-and-fade.md).
 - After resampling: several push passes at radius + a little, let strands escape where they can, then a few more.
 - Drop strands with a jump (a segment over a few cm, or over a dozen mm and over four times the strand's median
   segment) and **count them**; a rising count is a collider or growth fault, not noise.
