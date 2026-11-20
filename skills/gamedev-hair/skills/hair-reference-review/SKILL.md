@@ -32,7 +32,7 @@ The review uses both, and the eye decides.
    they disagree well beyond the gauge, no groom and no multi-view method can satisfy them all. Then make a new set
    as **one image**: every view in one grid, painted in one pass over renders of the model's own head, so the
    generator holds one object; register each cell to its camera. Paint one view twice (a spare cell) to read its
-   repeatability directly. What still disagrees is decided once (§5).
+   repeatability directly. What still disagrees is put to the art owner, region by region (§5).
 6. **One pixel density.** Bring every picture (reference, DCC render, engine) to the same px/mm, the one a shipped
    shot uses. Judge only at a size that ships: at twice the density everything looks different, and a feature the
    shipped shot cannot resolve is not a defect. Know the reference's **real** detail, not its pixel count: a grid's
@@ -117,8 +117,10 @@ change at a time before fixing anything.
 4. Missed: diagnose from evidence (the defects list, a probe without a build). **Two failed attempts on the same
    piece stop it**: back to evidence, a new brief, or a question to the art owner.
 5. Conflicts left inside the reference after §1.5 (two views that still disagree in 3D, a painted feature off the
-   model) are decided once, by the art owner or a declared rule (which view wins that region), and both numbers are
-   reported from then on.
+   model) are the art owner's to decide, region by region: name the region, show the views side by side with both
+   numbers, and ask which view they prefer there. Never pick the winner yourself, even when one view seems
+   obviously right. A view that wins one region does not win the next. While the question is open, other pieces go on.
+   Record each answer (region → view) where every later brief reads it, and report both numbers from then on.
 6. Before calling it done: the art owner's eye on stills and films at the shipped cameras.
 
 ## 6. Traps

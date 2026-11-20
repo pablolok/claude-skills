@@ -33,8 +33,9 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
    every view; the groom built to the brief was 50-60 degrees off.
 5. **Check that the reference agrees with itself** before matching it (`hair-reference-review` §1.5): views painted
    one at a time need not agree in 3D, and no groom satisfies views that contradict each other. When they
-   contradict, make the set again as one multi-view image. Where views still disagree, declare which one wins for that region and report
-   both numbers.
+   contradict, make the set again as one multi-view image. Where views still disagree, the art owner picks the view
+   that wins each region (`hair-reference-review` §5): show them the views side by side, never decide it yourself,
+   and report both numbers.
 6. **Measure the mass before the texture.** Carve the reference's hull from its masks, carve the groom's own
    projections the same way (like with like), and read the volume per zone (cm3) and each zone's shortfall and
    excess in mm (p50 / p90) with its extents (reach, width, lowest tip). A groom far under the reference's volume is

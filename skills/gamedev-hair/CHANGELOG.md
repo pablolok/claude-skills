@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.4] - 2026-11-20
+- when the reference's views still disagree in a region, the art owner picks which view wins that region — hair-reference-review shows the views side by side and never decides it itself (§1.5, §5), and strand-groom waits for that choice (§0)
+
+
 ## [0.1.3] - 2026-11-16
 - corrections from re-reading 0.1.2 against its evidence — the tone-law lesson quotes the export's measured spread and says the narrower law reduced near-white tips rather than removed them; the rotation-minimizing frame is for interpolated offsets, while a flyaway's lift keeps its frame smoothed along the strand with a shorter lift; the guides' blend is a reach check, not a rule; the reference's mirrored views that disagree in value are handled as a declared choice; measures.md quotes the limits a self-consistent set actually gave
 
