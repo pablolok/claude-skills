@@ -67,3 +67,7 @@ cost about 1 of strand contrast in the close shot: read both.
 - Check it through the head's turn: a scatter term depends on the light's direction (one case varied by 12 L* over
   30 degrees and stayed under the strands).
 - Its density alternative, an under-coat of short strands, narrowed the gaps only a little; the material did more.
+  On a short head-hair crop it was the other way round: the gaps were partings between locks, and an under-coat
+  halved the scalp in line of sight in every view where more strands inside the tufts did not
+  (`strand-groom` references/short-cut-and-fade.md). Tell which gaps you have before choosing: partings between locks
+  take an under-coat, the grain between filaments takes the under-layer's material. Check this.

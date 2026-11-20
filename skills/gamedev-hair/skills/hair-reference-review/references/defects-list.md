@@ -55,3 +55,20 @@ For each group, the causes with their evidence:
 Expect the causes of a look group to lie outside what the rounds have been tuning (placement), and expect at
 least one fault of the method itself; counting which defects the gameplay camera can show at all often moves the
 work to the close shot.
+
+## Checking a fix against the art owner's mark
+
+When the art owner marks a defect on a screenshot (a circle, a cross, a drawn line), the fix is checked on that
+picture, not on a measure of the fixer's own making:
+1. **Re-create their view**: fit the screenshot's camera by silhouette against the model (report the outline's
+   residual), so their mark lands on the model.
+2. **Overlay the mark** on the before and after captures from that camera, enlarged where the mark is.
+3. **Show that the old result fails the same check** (paint, strands or cards under the mark before the fix): a check
+   the old result passes cannot prove the fix.
+4. **Look at the overlay yourself** before saying done, then send it with the numbers.
+
+A count defined by the author of the fix is not the check. In one case a temple patch was reported removed because
+the fixer's measure read 0 mm2, but that measure counted the patch's area as part of the fade; on the art owner's own
+view the paint was still under their mark. The next round was checked as above: 15,193 painted pixels outside their
+line or in front of the cards before, 0 after, and the enlarged overlay showed paint under their crosses before and
+none after.

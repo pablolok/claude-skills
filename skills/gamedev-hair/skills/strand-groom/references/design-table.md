@@ -40,7 +40,8 @@ for beards; the fields are the ones that groom needed, the values are yours.
 
 1. Roots for all zones: area-weighted blue noise inside the border line, plus the boost bands.
 2. One shared skin phase, combed along the skin; the height off the skin grows with the distance travelled.
-3. The zone from the exit point's coordinate (hard ranges).
+3. The zone from the exit point's coordinate (hard ranges). On a short cut, from the root's instead
+   (references/short-cut-and-fade.md).
 4. Level-1 locks: blue-noise seeds among the zone's exit points; nearest seed wins.
 5. Layer rank from the exit height (0 inner .. 1 outer).
 6. Per-strand values from the tables plus per-lock draws.

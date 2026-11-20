@@ -27,6 +27,18 @@
 - A profiler's per-pass GPU timer resolves arms the frame clock does not; use it and alternate arms over several
   rounds.
 
+## Measured, indicative (one short head-hair crop, Unity's strand package on HDRP, a high-end desktop GPU, 1080p, TAA)
+
+| what | strands | frame | over the head alone |
+|---|---|---|---|
+| the head alone | - | about 2.1 ms | - |
+| the crop, line shadow casters | ~138k | 7.0-7.1 ms | about +5 ms (camera GPU +4.3 ms) |
+| the crop with an under-coat | ~199k | 8.2-8.4 ms | about +6.2 ms (camera GPU +4.9 ms) |
+| cards made from the same groom, URP | 14.7k triangles + a 5.2k base | not measured | - |
+
+No run was clean (the GPU was sometimes busy with other work): read these as orders of magnitude. A managed per-frame
+writer of roots onto skinned skin cost about 11.7 ms per frame on top.
+
 ## Published anchors
 
 | source | what | numbers |
