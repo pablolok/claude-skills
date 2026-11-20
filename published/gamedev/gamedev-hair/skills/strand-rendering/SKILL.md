@@ -76,8 +76,19 @@ and read on the same tiles. What exceeds the control is aliasing. Also read ghos
 - Measure the median from the imported mesh, one sample per strand id, not from the DCC.
 - **Near-white tips over a dark mass: narrow the groom's per-strand tone law, keep the spread.** The cap is only as
   tight as the groom's own maximum; lowering the spread's contrast instead flattened the strands (one case).
+- **Lay the tone by depth before tuning occlusion**: when the dark strands sit evenly over depth (rank correlation
+  0.07 in one case) raising the occlusion darkens everything; with the tone ordered by depth (0.8) the gaps read as
+  dark hair. Dark slits that survive (occlusion 0.5 made deep chin strands near black) need a region mask: no look
+  value removes them.
+- **Hue: match the relative a* and b* with the flat colour**, not a grey term (it turned the hair cool; matching
+  relative chroma got the hue but read pink up close).
+- **The ribbon's width is mesh data.** A blended coverage of 0.7 thinned the strands without losing coverage; 0.5
+  stair-stepped.
 - When the engine's light is not the reference's, set value targets relative to the skin beside the hair, in views
-  lit alike (`hair-reference-review` §2).
+  lit alike, and normalise by the skin before tuning any term (`hair-reference-review` §2). The engine frame can read
+  10-28 L* brighter than the painting, skin included; judged in absolute values the hair looks pale while the front
+  is already within the floor relative to the skin.
+- A single hair that reads as a ribbon (parallel strands, deep stacks): `references/single-hair-read.md`.
   [references/strand-value.md](references/strand-value.md)
 
 ## 5. Occlusion, and what shows between strands
@@ -89,7 +100,9 @@ and read on the same tiles. What exceeds the control is aliasing. Also read ghos
 - **The under-layer between strands decides the grit.** Between one-pixel strands 30-40 % of pixels show what lies
   under them: the skin, or a shell (a base mesh under the hair that gives it coverage). A shell shaded as skin, lit from behind the cheek, read near black there: salt-and-pepper grit that
   is not the strands' fault. Give the shell under the strands its own close-shot material (lighter, a scatter term,
-  neutral colour) that never outshines the strands, and check it through the head's turn.
+  neutral colour) that never outshines the strands, and check it through the head's turn. **Cut the shell by outside
+  cover, not by distance to a root**: a band of shell texels that no strand covers from outside showed within 8 mm of
+  a root.
 - **Drop the cards the strands replace**, coverage cards included: dark cards left under the strands became black
   blotches.
 

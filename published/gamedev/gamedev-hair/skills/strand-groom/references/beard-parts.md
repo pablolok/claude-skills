@@ -18,13 +18,23 @@ reference flow and its failed builds broke. Treat each row as a starting design 
 
 ## The moustache
 
-- **Roots up to the nostrils.** Leave no band of skin under the nose unless the reference shows one.
+- **Roots up to the nostrils, unless the reference shows a bare band.** Where it does, gate that band at every
+  strand point, not only at the roots: a strand rooted below can rise over the nostrils.
 - **The lower edge is an arch, not a level curtain.** It falls toward the mouth's corners (about 30 degrees in one
   reference); a level edge reads as a curtain. Strands straight down in narrow columns read as a comb.
 - **It stands off the lip and overhangs it.** Read the standoff by layer rank off the profile and 3/4; a moustache
   lying on the lip is a thin dark fringe in profile.
 - **The wings hang past the corners**, standing off the face, so the side views see them over the lip's side while
-  the front still sees the mouth.
+  the front still sees the mouth. How far down they run is read from the traced locks in every view, not from a
+  drawn outline: where the traces run the drapes down to the chin, the outline follows them.
+- **A moustache whose visible strokes run down while its front stands out is two layers**: an under-coat for the
+  volume and an outer layer for the flow (Standing parts, below). Count every strand drawing there first, kept old
+  strands included.
+- **A corner drape is the moustache's outer mass turning down**, not wing strands flaring out and given tails
+  (Standing parts, reach without mass).
+- **Compare the bare model with the reference's anatomy before gating how much lip shows** (lip thickness, mouth
+  open or closed): a reference that changed the face is an art-owner decision, change the head or accept it, not a
+  groom target (one case: four builds chased a lip-visibility share the head's thin closed lips could not reach).
 - **Give sub-locks a role at the mouth:** some cross over the upper lip, the rest stop above it, staggered. A single
   cut row reads as a stencil.
 - Fit the mouth window to the model's lip vertices, never to a mask carved from a painting: a painted mouth can sit
@@ -35,6 +45,22 @@ reference flow and its failed builds broke. Treat each row as a starting design 
   attempts in one case even with the root region cut and the lengths bounded (SKILL.md §3): blended across columns whose
   fronts differ, rooted at the corners where the collider counts them behind the lips, tips set under an edge that
   lies on the lip seam. Read those three before a fourth construction.
+
+## Standing parts (a drape, a point)
+
+- **A section loft on the masks** (front width by profile depth per section) is the default shape: in one case it put
+  a point's tip within 6 mm where the hull fell 14-58 mm short, and streamlines of the 2D flow read only the drape's
+  vertical outer surface, so the strands hugged the lip.
+- **Measure the part's standoff from the masks before choosing a growth law**, and let the strand's first leg reach
+  it (a forward leg capped at 15 mm could not reach a front 36-43 mm ahead of the root).
+- **If its visible strokes run one way while its silhouette stands out another, it is two layers**: an under-coat
+  that carries the volume, unseen, and an outer layer that shows the direction. One layer of guides can be forward or
+  vertical, never both (one case: the profile heading error grew from 0.4 to 17-22 degrees with the forward run).
+  Gate the flow on the outer layer only, per part in every view, spread and coherence included.
+- **Reach without mass makes stripes**: tails appended to existing strands met the reach (the corner drapes ended
+  25-52 px short) and read as thin stripes. Find what draws the band in the reference (which mass, how wide) and
+  census the strands that end where that shape begins: re-routing 987 strands that ended at the band's top along
+  constructed band guides beat the tails by eye in four of five views. A band is the mass that turns into it.
 
 ## Under the lower lip
 

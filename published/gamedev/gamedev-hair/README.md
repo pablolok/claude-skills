@@ -56,9 +56,10 @@ reference images + cameras + masks
 gamedev-hair/
   skills/
     strand-groom/            SKILL.md, references/{design-table, growth-and-collision, orientation-field,
-                                                   beard-parts, audit}.md
+                                                   beard-parts, audit, area-map-and-traces,
+                                                   strand-shape-diagnosis}.md
     strand-rendering/        SKILL.md, references/{ribbons-and-coverage, strand-value, sweep-method,
-                                                   cost, engine-notes}.md
+                                                   cost, engine-notes, single-hair-read}.md
     hair-reference-review/   SKILL.md, references/{measures, defects-list}.md
 ```
 

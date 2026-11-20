@@ -53,8 +53,23 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 that was a coherence ratio of 0.90, 4 degrees of spread and 6 degrees of direction. Gate the flow rows at about
 twice the floor (one floor for each of the two reads compared); the shape rows at the floor itself (SKILL.md §2).
 
+Gate flow for every area at every round, per view, profile included: the angle error against the reference's flow,
+the share of strands far off, and the spread and coherence, not only the mean direction (one case: 13 flow cells
+passed a moustache whose profile fanned to 105 degrees; "strays" were the part's own strands fanned out, spread
+113-117 degrees against 69-77). A count of strands out of the mass outline is a second row, with the reference's own
+count as its target. Read flow on the outer layer only for a part with an under-coat.
+
 Once a groom's direction is grown from an orientation field read off the same pictures, the flow rows are circular:
-report them, judge by the other rows and by eye.
+report them, judge by the other rows (mass and length first) and by eye.
+
+## Density and shape rows added by regrows
+
+| row | definition | notes |
+|---|---|---|
+| density map | per zone and view, hair coverage against skin showing, at the reference's pixel, ours against the reference | sparse patches (under the lip, a cheek fade) are part of the shape |
+| hull mass | the hull's volume per zone, ours against the reference's, and height off the skin | direction can pass while the mass is lost |
+| length per area | tip line per area along the flow | checked after every grow |
+| strays | share of an area's strands outside the part's own outline | the reference read 0.4-2.9 % |
 
 ## Engine-only rows
 

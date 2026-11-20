@@ -48,7 +48,11 @@ the method to probe, with the go/no-go below.
   apart). Where the prediction misses by more than your direction gate, declare the winning view or accept the
   compromise, and record which.
 - **The checks become circular.** Once the field drives growth, flow rows read from the same pictures are no longer
-  evidence: judge by eye and the non-flow rows.
+  evidence that the field is right: they only show a part followed it. Prove the field on the reference itself
+  (leave one view out), and judge the groom by eye and the non-flow rows, mass and length first: a regrow passed every
+  flow cell while it lost its mass.
+- **Carry the field across faces only where they differ.** Read the flow on the reference directly where the
+  registration was measured; a field carried over doubled the left-right difference in one case.
 
 ## A first probe (go / no-go before any growth)
 

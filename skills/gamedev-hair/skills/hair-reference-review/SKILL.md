@@ -22,17 +22,32 @@ The review uses both, and the eye decides.
 1. **The reference in force:** the exact image files, one per view; name them in every sheet and report.
 2. **A calibrated camera per view** that sees the model as the image does (tune once on the silhouettes).
 3. **A hair mask per view** drawn on the reference; for the engine region, the mask eroded a few px (6 at about
-   1 px/mm) so edges do not leak background into the rows.
+   1 px/mm) so edges do not leak background into the rows. **Overlay each class mask on the reference before it
+   gates anything**: straight edges where the hair has none make a box, not an outline (one case: every moustache
+   gate measured a rectangle). Split head hair from beard by connectivity and flow, never by an image row: give
+   side hair its own class.
 4. **Register the reference through the model's landmarks** (mouth, nose, eyes, ears, jaw) and check the overlay
    before reading anything around them. Measure what a feature is (a lip line, a moustache's edge) before calling
-   the reference and the model in conflict.
+   the reference and the model in conflict. **Measure it in every region being fitted, not only where the camera
+   was fitted**, and before the first target is traced: a reference registered on the upper face to 1-3 mm can sit
+   3-6 mm off at a mouth under hair (12-25 mm at the corners in the 3/4 view: a drooping band, not a shift). Overlay
+   the bald render's edges on the reference around the feature (50 % blend plus edges, 3x crops) and read the
+   offset per view. A local offset is handled by mapping that area's targets through the model's own landmarks
+   (a per-view piecewise map fitted on hand-marked pairs, feathered to zero away from the feature): it keeps the
+   hair-to-feature relation, which is what is copied. Do not map masks already projected from the model.
 5. **Check that the reference agrees with itself before anything is matched to it.** Read each feature's 3D extent
    from every view that sees it (a tip's height and depth, a width at the mouth, the forward reach in profile
    against the 3/4) and left against mirrored right. Views painted one at a time need not describe one object; when
    they disagree well beyond the gauge, no groom and no multi-view method can satisfy them all. Then make a new set
    as **one image**: every view in one grid, painted in one pass over renders of the model's own head, so the
    generator holds one object; register each cell to its camera. Paint one view twice (a spare cell) to read its
-   repeatability directly. What still disagrees is put to the art owner, region by region (§5).
+   repeatability directly. What still disagrees is put to the art owner, region by region (§5). This is for views
+   that contradict each other; a reference that merely repainted one local feature against the model (§1.4) is not
+   made again, since the new set drifts elsewhere and costs the calibration again. When left and mirrored right
+   disagree, aim mirrored tables at the mean of both sides and gate only where both agree (14-20 mm apart in places
+   in one set); beyond the floor it is the art owner's pick (§5). **Compare the bare model with the reference's
+   anatomy** (lip thickness, mouth open or closed) before gating a feature's visibility: a reference that changed
+   the face is the art owner's decision, not a groom target.
 6. **One pixel density.** Bring every picture (reference, DCC render, engine) to the same px/mm, the one a shipped
    shot uses. Judge only at a size that ships: at twice the density everything looks different, and a feature the
    shipped shot cannot resolve is not a defect. Know the reference's **real** detail, not its pixel count: a grid's
@@ -72,11 +87,29 @@ Rules for the rows:
   keep one side in the value targets and declare it; a kept view's limit is then declared, not measured, and the
   report says so. An absolute value
   gate needs the groom rendered in the reference's light: one colour gain fitted on skin anchors does not carry a
-  picture into another light set-up (its anchors disagreed by about 12 L* in one case).
+  picture into another light set-up (its anchors disagreed by about 12 L* in one case). **Normalise each view by the
+  skin beside the hair before reading the hair's value or tuning any look term**: in one case the beard read bright
+  and beige only because the skin beside it was 13-28 L* brighter than the reference's, and two arms that darkened
+  the beard pushed the views away. Separate the white streaks (top-percentile L*, local contrast) from the overall
+  value: different terms, different levers.
 - **Validate a new measure on the reference and on a known-wrong case before it gates anything.** A row that reads
   the reference poorly (one "cover by depth" row read 0.5-0.6 deep inside the reference's own beard) will also pass a
   visible wall; a row that cannot separate the reference from a build the eye rejected (or that build with the effect
-  set to zero) measures another property.
+  set to zero) measures another property. Prove a new row three ways: the reference passes it, the defective round
+  fails it, the base reads as expected (one case: a lip window's cover share passed while one plumb lock split the
+  lip; the max per-column cover over the window's middle 80 % read 0.26 for the reference and 1.0 for the build).
+- **A row must measure what the eye objects to.** Judge each section on shape, direction and length together (length
+  is the tip line per region along the flow; a tip reader that needs air on the matte reads nothing where the base
+  has none, so forecast length from the grown strands' own tips). Gate every bare-skin border the reference shows
+  from the first round, and add a density row per zone (hair against skin showing): sparse patches are shape.
+- **A cheap proxy (a numpy picture of the groom) is trusted per row, after calibrating it against engine captures.**
+  In one case it was reliable for notch air, lip share, edge and outline, and unreliable (slope near 0.2 or
+  negative) for heading and coherence, which are read on captures only. Depth-test hidden strands in the proxy:
+  plain projection drew far-side strands over the mouth. A gate between two failure sides is a band, not a limit
+  (one case: notch air 0 for the base, 871 for one build, 358 for the reference; a one-sided limit passed the very
+  base it was to fix).
+- **Read the groom's holds at several seeds**: run ladder rounds at one seed, confirm the pick at three, judge the
+  mean and report the worst (a seed change moved a row by more than its margin).
 - **Know what each row is blind to.** Aliasing reads as strand contrast; a median over the mask reads the backdrop
   where hair is missing (read value only on pixels with hair in both); the wave tracer has a floor of about a pixel
   of amplitude; the followed-strand length moves with the matte it is read through (use the fixed reference
@@ -91,6 +124,21 @@ Before quoting a row, write the list of what differs in the pictures, worst firs
   curly perm beside the reference's long loose arcs.
 - A card beard passed every numeric target (coverage, lip, colour mean, budget) and read as straw.
 - Strand contrast once rose into the reference's band only because the strands sparkled.
+- A part passed its direction rows and was offered as right while its silhouette (a horseshoe against one arch) did
+  not match: never present a part as correct on its rows alone.
+
+**Look at an engine capture of the base before the first proxy ladder** and name the visible difference in the
+reference's terms (one case: ours jutted forward as a shelf where the reference dropped over the lip; nine ladders
+chased cover and notch proxies instead). A proxy gate that moves while the capture does not measures the wrong thing.
+
+**Trace comparison is the first review row**: trace the reference's locks (position, size, path) and ours the same
+way, view by view, and compare trace against trace (`strand-groom` references/area-map-and-traces.md).
+
+**Judge every view, each one fully**: front, both 3/4 and both profiles are gated and looked at. No view becomes
+report-only to make a row pass; the view the art owner named is looked at first and never alone (swinging to "the
+named view governs" repeats the mistake the other way). Where views contradict, report it (§5). When a word of the
+brief is ambiguous ("lateral": a side view or a lateral part), take the meaning that matches their earlier
+complaint, or ask.
 
 **The sheets:** reference | before | after, one row per view, at the shared density; the same crops enlarged 2-4x
 for the places defects live (a cheek, the mouth, the chin, the border, the point); the mattes over the reference's
@@ -108,18 +156,26 @@ change at a time before fixing anything.
 
 ## 5. The loop
 
-1. Fix the checks of the next piece before building it: the rows, their limits, the views, and the by-eye question.
+1. Fix the checks of the next piece before building it: the rows, their limits, the views, and the by-eye question;
+   freeze them in a file before the first output (limits set after looking at old arms are tuned to them).
    A sweep that picks a value by rule ranks by the trait the art owner named first, and an arm that leaves that trait
    worse than the baseline is not eligible; the chosen arm goes on the sheet beside the reference, and the eye can
    veto it (a loss led by value and hue picked an arm that flattened the named strand contrast).
 2. Build one piece; read the gauge; make the sheets; write the differences seen.
 3. Met: the piece is done; state what it cost elsewhere (a row that got worse).
 4. Missed: diagnose from evidence (the defects list, a probe without a build). **Two failed attempts on the same
-   piece stop it**: back to evidence, a new brief, or a question to the art owner.
+   piece stop it**: back to evidence, a new brief, or a question to the art owner. A proxy-gated fit counts too: when
+   its gates move and the engine capture barely does, or each fix breaks another view, that is the stop; change the
+   method (author against the reference's views, judge on captures) instead of adding scalars. A row that trades
+   monotonically against another across tunes points to the target, not the knob.
 5. Conflicts left inside the reference after §1.5 (two views that still disagree in 3D, a painted feature off the
    model) are the art owner's to decide, region by region: name the region, show the views side by side with both
    numbers, and ask which view they prefer there. Never pick the winner yourself, even when one view seems
    obviously right. A view that wins one region does not win the next. While the question is open, other pieces go on.
+   Past two failed pieces on contradicting views, read who owns each failing pixel (trace its flow into the area
+   map); if the owners demand incompatible 3D, build candidates that favour each view and let the art owner choose on
+   engine captures. A conflict a worker flags between the reference and a gauge goes to the art owner with the
+   picture, never decided silently; when traced locks and a drawn mask disagree, the traces are the hair.
    Record each answer (region → view) where every later brief reads it, and report both numbers from then on.
 6. Before calling it done: the art owner's eye on stills and films at the shipped cameras.
 

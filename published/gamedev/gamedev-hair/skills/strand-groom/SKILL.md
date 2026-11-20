@@ -26,8 +26,9 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
    that sees the model as the image does, a hair mask per view. Below the reference's own pixel the target is
    realistic hair made by professional technique, not a stroke-for-stroke copy of the painting.
 3. **Register the reference through the model's landmarks** (mouth corners, lip lines, nostrils, ear, jaw angle)
-   before calling anything a conflict. Reason: a moustache's edge misread as the mouth line once made a false
-   20 mm "conflict" that drove a design decision.
+   in every region the groom will be fitted to, under the hair included, before calling anything a conflict
+   (`hair-reference-review` §1.4). Reason: a moustache's edge misread as the mouth line once made a false 20 mm
+   "conflict" that drove a design decision.
 4. **Read the reference's flow before setting any direction.** A structure tensor per zone and per view, drawn as
    segments over the picture. Reason: a brief said "down and forward" for a cheek whose hair runs down and back in
    every view; the groom built to the brief was 50-60 degrees off.
@@ -40,7 +41,11 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
    projections the same way (like with like), and read the volume per zone (cm3) and each zone's shortfall and
    excess in mm (p50 / p90) with its extents (reach, width, lowest tip). A groom far under the reference's volume is
    a smaller beard: no reshaping, texture or shading recovers it. Grow it into the reference's hull first (one groom
-   at about half the volume covered under 0.6 of the masks; grown into the hull, about 0.9).
+   at about half the volume covered under 0.6 of the masks; grown into the hull, about 0.9). Direction can pass
+   every flow row while the mass is lost: gate direction, shape and length together from the first regrow.
+7. **Build the area map and trace the reference's locks** (two maps with the same named areas, the bare features
+   beside each area, each area's owner part and root polygon, every view's traced locks), and grow every area along
+   the traced flow from the first build. [references/area-map-and-traces.md](references/area-map-and-traces.md)
 
 ## 1. The build order
 
@@ -133,6 +138,11 @@ A section loft (each guide keeps its normalised place across and front to back i
 hull) gave a point its mass to the tip in one case; arcs from apex to tip did not make a moustache in three attempts.
 [references/beard-parts.md](references/beard-parts.md)
 
+A part that stands off the skin (a drape, a point) takes its shape from a section loft on the masks (front width by
+profile depth per section), not from the 2D flow or the hull; measure its standoff first so the strand's first leg
+can reach it; if its strokes run one way and its silhouette another, build two layers (an under-coat for the volume,
+an outer layer for the flow); reach without mass makes stripes. Details in beard-parts.md, "Standing parts".
+
 ## 4. Beards
 
 A beard is several parts with different jobs: moustache, under-lip, chin and point, cheeks, sideburn, jaw and
@@ -160,39 +170,37 @@ Blender notes (one case each; check on your version):
 
 ## 6. The loop
 
-- **One piece at a time**, its checks written before the build, judged by `hair-reference-review`.
+- **One piece at a time**, its checks written before the build, judged by `hair-reference-review`: one section
+  (moustache, then chin and lower beard, then cheeks), each ending on the art owner's yes.
+- **Shape before look**: a wave laid on a wrong outline reads as crimp and is rejected. Fix the outline, length and
+  mass, then the waves, then the tone.
 - **Change one structural thing per build** while diagnosing, and log each build per aspect (what changed, which
-  rows moved).
+  rows moved). A ladder changes one variable, and round 0 is the base.
 - **Two failed attempts on a piece send it back to evidence**: stop building, probe the cause without a build
-  (read the volume, the roots, the catchment, the reference itself), then brief the next attempt.
-- **Curl, loops and hooks: read the strands' 3D shape per part before changing anything** (swing of the tangent
-  over about 20 mm, residual from a copy smoothed over about 40 mm, coil = arc / chord, self-crossing in the front
-  and side projections, net turn for spirals), on the build and on the same build's guides with no wave.
-  - The guides' own bend is the floor a texture target sits on: set swing and residual targets as the guides' value
-    plus a few degrees, never as an absolute the march alone already exceeds.
-  - Two grooms grown differently that read the same swing have it from the strand-shape table (wave, sweep,
-    frizz), not from the growth; loops that come with a new growth are the march's.
-  - A lock that orbits a pocket of the volume (net turn of hundreds of degrees, its end near its root) is chasing a
-    target height the pocket lacks. **Trace the suspected trigger on the march before writing a fix** (the first
-    one written fired on none of the coiled locks), prove the cause by a probe that removes the term for every lock,
-    then fix only where it fires: removing it everywhere lost fill. A trigger on the volume's height against the
-    planned height caught most of a throat's orbits; at a cheek's upper border, where the same chase made locks climb
-    and hook back, only a rule narrow by place did (the lock's target stops rising after a few mm of run).
-  - Hooks that sit where a strand swings through its root normal are the frame's (§2), not the growth's.
+  (read the volume, the roots, the catchment, the reference itself), then brief the next attempt. The same stop
+  applies to a fit steered by a proxy gauge (`hair-reference-review` §5).
+- **A fix that moves a defect without removing it names the wrong cause.** If a change turns a defect's angle or
+  place but not its strength, stop and census the strands that draw it (by part and lock) before a second try; the
+  guessed second cause was also wrong in one case, and 480 of 646 "crossing" strands belonged to another part.
+- **No build on a forecast that passes nothing**: if the table's forecast fails the reliable rows at every setting,
+  refit the forecast (single-variable ladders) before spending a grow attempt.
+- **Curl, loops, hooks and combed ribbons: read the strands' 3D shape per part before changing anything.**
+  [references/strand-shape-diagnosis.md](references/strand-shape-diagnosis.md)
 - **Judge the groom in the renderer that ships** before trusting an offline render's look: offline renders
   integrate sub-pixel coverage and cast card-to-card shadows the engine does not.
 
 ## Open
 
-- The orientation-field growth is published method, adapted but not yet run on a groom here: its go/no-go probe and
-  the gain over hand-set flows are unproven.
+- The orientation-field growth is published method, adapted and run on one beard's regrow: direction came out right
+  and the mass wrong, and a flow field carried across to another face doubled its left-right difference. Its gain
+  over hand-set flows is unproven.
 - The per-zone design-table pipeline is taken from one working head-hair groom; on a beard (tufts assigned at the
   root, the under-lip boost band, the cheek's height ramp) it is proposed, not built.
 - A long tapering point (goatee, beard tip, ponytail end): a section loft gives its mass to the tip; separate
   pointed tufts side by side have no validated recipe yet (pulling strands to tuft curves moved them off their
   guides).
-- A moustache from constructed guides has no validated recipe yet; guides drawn by hand on the reference's views
-  are the untried alternative.
+- A moustache from constructed guides has no validated recipe yet; guides authored from the reference's traced
+  locks (references/area-map-and-traces.md) are the route being tried.
 - Starting values for clump power, wave ratio, frizz share and the height-per-distance ratio come from one or two
   grooms; contributors should replace them with ranges from more.
 - Which DCC features (Blender's Interpolate Hair Curves with guide groups, Houdini Guide Advect, XGen region maps)

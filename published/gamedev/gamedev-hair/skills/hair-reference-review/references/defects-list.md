@@ -35,6 +35,17 @@ Rules:
 For each group, the causes with their evidence:
 - **One change at a time** on a fixed scene: the same view with one variable switched (shadows cast or not, alpha
   as coverage, a material term off, a layer hidden). A variant table shows what moves which defect.
+- **A census of who draws the defect** before any trim or second try: the strands that cover the defect's pixels,
+  by part and lock, kept old strands included. A fix that moves a defect's angle or place but not its strength named
+  the wrong cause (one case: a slope cap turned a streak from 15 to 27.5 degrees at the same strength; the next guess
+  was also wrong, and 480 of 646 "crossing" strands belonged to the point).
+- **Map a line on the still to its strands before choosing the lever.** Measure where the line sits against the
+  roots (one case: it lay 4-10 rows below the top roots, so the "top root border" was the wrong reading). Read roots
+  per mm2 under the bare pixels first: the cheapest number, and it names the lever (0.024-0.054 against 0.20-0.25 for
+  a covered neighbour: a sparse field, fixed by adding roots, not by lifting them). Write each arm's thresholds
+  before shooting and take the gauge's noise from the control against itself.
+- **Name what each measurement was taken on** and check it on the frames being judged (a cover share read from masks
+  shot before the look was applied described another frame).
 - **Which camera shows it.** At the gameplay distance most close-shot defects vanish; mark which defects only close
   shots can show.
 - **Is the judge itself wrong?** An offline sheet at a density that never ships, or a render that integrates what

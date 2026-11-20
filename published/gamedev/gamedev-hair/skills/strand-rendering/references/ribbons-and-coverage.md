@@ -62,6 +62,14 @@ Both settings at 0 must draw exactly as before; keep that as a regression.
 - Put blended strands in the transparent queue with the material's "fringe" state (blend, no depth write, back
   faces kept).
 - An importer can reorder polygons: sort the triangles by rank after import or keep the order on import.
+- **Check the draw order where the skin's outline ends.** A straight tone step across a blended groom that follows a
+  skin outline or a fixed height, or a dark streak in profile, had one cause in one case: 662 strands rooted on a
+  chin's underside, 40-60 mm behind the front strands, drew after them (rank 0.28 against 0.36) and blended over them
+  wherever the skin's lower edge stopped hiding them. Probe the order first (draw nothing, draw one part at a time,
+  emulate a re-rank) before touching the groom or the shading; re-ranking those strands before the first front strand
+  they overlap (export only) cut the step from 15.8 to 6.8 and the streak from 16-18 to 10, where occlusion floors,
+  slope caps and shadow bias had moved nothing. A rank fix is per export: rerun it on every new groom and read every
+  other strand's rank shift.
 - Cast no shadow from the strands to start; a shadow map cannot draw millimetre wedges. Casting is one variant to
   test, receiving another.
 

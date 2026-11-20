@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.5] - 2026-11-20
+- the review registers the reference in every fitted region, normalises value by the skin beside the hair, proves each new row three ways and judges every view; the groom builds an area map from traced locks, gates direction, shape and length together, lofts standing parts, and diagnoses strand shape from a census; the renderer lays tone by depth, cuts the shell by outside cover, and documents why a hair stack reads as one ribbon
+
+
 ## [0.1.4] - 2026-11-20
 - when the reference's views still disagree in a region, the art owner picks which view wins that region — hair-reference-review shows the views side by side and never decides it itself (§1.5, §5), and strand-groom waits for that choice (§0)
 

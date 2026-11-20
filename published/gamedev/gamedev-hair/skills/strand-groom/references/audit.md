@@ -10,6 +10,8 @@ for faces, not yet run: roots, moving bands, seams, the per-part budget.
 |---|---|---|
 | penetration | every point but the root: clearance = signed distance - radius >= -0.05 mm, exact distance within ~25 mm of the skin | a strand through the skin shows in every close shot |
 | roots | every root within +-0.5 mm of the skin | interpolated or blended roots sink or float; on a face it shows |
+| roots in the outline | every root inside the reference's hair outline in each trusted view; no strand point over a bare feature the reference shows | a root outside the outline disarms the tip rules (its strand runs to maximum length) |
+| areas not empty | after a regrow or a deletion, every area still holds strands and its length meets its tip line | a regrow can pass direction rows and empty an area |
 | moving bands | clearance near a moving feature (the lower lip, an eyelid) >= that feature's largest move in the animation clips | a strand that clears the rest pose can pierce the open mouth |
 | dropped strands | the count dropped for a jump, per part | a rising count is a collider or growth fault |
 | seams | no strand rooted in another part's border band | doubled density along a seam |
