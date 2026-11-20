@@ -1,8 +1,8 @@
 # The painted base under the cards
 
 One case: a short crop over a skin fade, generated cards over a base mesh lifted about 1 mm off the skin (5,200
-triangles, a 4096 x 2048 texture, a texel of about 0.13 mm on the fade). The rules marked as the art owner's came from
-one art owner: confirm them on yours before painting. Every number: check this.
+triangles, a 4096 x 2048 texture, a texel of about 0.13 mm on the fade). The rules below held in that case: confirm
+them with the art owner before painting. Every number: check this.
 
 ## Why a base, and how it goes wrong
 
@@ -45,9 +45,9 @@ one art owner: confirm them on yours before painting. Every number: check this.
   right side at the mirrored angle (binning mirrored points shifted them by up to 3 mm on steep parts).
 - Where a drawn stroke splits into two loops (a sideburn), ask which one holds; one case took the lower.
 - Check the paint's end against the line at several points per side: within about +-1.3 mm in one case.
-- A low line is the art owner's design for that character, not a fixed rule of fades.
+- The line's height is a design choice per character, not a rule of fades.
 
-## Rules (one art owner's; keep them as the defaults to confirm)
+## Rules (defaults; confirm them with the art owner)
 
 1. **Never painted in front of the cards at the temples.** Above the line's top end, nothing visible in front of
    that end's angle around the head (softened over 1.5 degrees). Offsets from the nearest card point (1-2.5 mm,
@@ -62,7 +62,7 @@ one art owner: confirm them on yours before painting. Every number: check this.
    - **Measure the gap in the side view, against the silhouette**, with the views registered to the screenshot (best
      of a few turns and elevations, outline residual under 1 mm median). A 3D distance alone passed while hairs still
      sat on the ear: a fade-out 1.5-3 mm from the ear's vertices took the painted texels near the ear to zero, and the
-     side view still showed paint 0.13-0.29 mm inside the outline above both ears.
+     side views still showed paint touching the outline above both ears (504 and 1,207 px on or inside it).
    - In one case: a keep-out 5 mm from the outline in the side view and 6 mm from the ear's surface, both ears built
      on one side and mirrored, a soft band of 2 mm, strokes reaching into it dropped whole (not cut).
    - When the art owner's own line around the ear is tighter than the gap, and the gap would take most of a painted
@@ -79,7 +79,7 @@ one art owner: confirm them on yours before painting. Every number: check this.
   the nape, the back 3/4 and over the ear, against the groom's own step there (the groom: -5 to -13 levels; cards on a
   thin cut base: up to -79; with the upper fade carded and the strokes, about -20).
 - A base cut thin under the lowest cards shows the skin as a light band: un-cut it there.
-- The step left after that is the art owner's to accept or not; one accepted it.
+- The step left after that is the art owner's call; paint only softens it.
 
 ## Checks
 

@@ -15,8 +15,9 @@ On the long cards only (zero on the edge, fade and base cards and on the base), 
 | card.x | a random value per card: its wind phase |
 | card.y | a flag for the cards over the forehead (kept for a fringe rule; not used in the final build) |
 
-Read the shader's inputs for these channels only when motion is on: the extra inputs alone changed a few edge pixels
-of the static look in one build.
+Read the shader's inputs for these channels only when motion is on, so the static look compiles as before. Compare
+the re-exported mesh with the old one under the new shader: in one build about 100 single edge pixels of the static
+look changed, all from the re-export (the old mesh under the new shader matched within 4 px).
 
 ## The delayed head (the script)
 
@@ -68,11 +69,10 @@ Ship a scene with the presets on keys and let the art owner choose; the numbers 
 ## The side effect: what the fringe uncovers
 
 A fringe that moves uncovers the skin under it, and whatever is painted there (a dark border, an old skin texture)
-shows. In one case a front wind on the fringe made the forehead box the art owner had marked darker; keeping the
-fringe out of the wind fixed the number, and the art owner then asked for the fringe in the wind anyway, accepting
-to repaint the skin if it shows. That last build was not measured. Check the skin under every moving part at the
-largest swing and the strongest wind, and repaint the skin further rather than freeze the hair, if that is the art
-owner's choice.
+shows. In one case a front wind on the fringe darkened a marked area of the forehead; keeping the fringe out of the
+wind fixed the number. Whether the fringe moves is the art owner's choice, not the check's: if it moves, repaint the
+skin under it further rather than freeze the hair. The build with the fringe in the wind was not measured in that
+case. Check the skin under every moving part at the largest swing and the strongest wind.
 
 ## Gates
 

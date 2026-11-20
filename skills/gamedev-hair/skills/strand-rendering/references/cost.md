@@ -37,7 +37,7 @@
 | cards made from the same groom, URP | 14.7k triangles + a 5.2k base | not measured | - |
 
 No run was clean (the GPU was sometimes busy with other work): read these as orders of magnitude. A managed per-frame
-writer of roots onto skinned skin added about 11.7 ms of CPU on top.
+writer of roots onto skinned skin cost about 11.7 ms per frame on top.
 
 ## Published anchors
 

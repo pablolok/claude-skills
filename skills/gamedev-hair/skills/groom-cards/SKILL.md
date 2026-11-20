@@ -23,9 +23,9 @@ short head-hair cut (a textured crop over a skin fade), one Unreal version's car
 ## 0. Before generating
 
 1. **The groom is approved first.** Cards copy it; a card round never fixes the groom's shape.
-2. **Write the art owner's acceptance rules before the first card**, as checks. One art owner's set, worth asking
-   about every time: no grey veil over the hair; the head's shape never readable through it; coverage judged with
-   any base under the hair hidden.
+2. **Write the acceptance rules before the first card**, as checks, and confirm them with the art owner. Defaults
+   (check this): no grey veil over the hair; the head's shape never readable through it; coverage judged with any
+   base under the hair hidden, because a dark base passes a coverage gate the cards fail.
 3. **Read the groom's own coverage** in each shot as the target: the share of skin in sight over the hair's region
    (the groom's zones in the shot, closed a few px). In one case the groom itself showed 6.5 % at the close face
    shot; the cards' gate was that plus 2 points.
@@ -74,7 +74,7 @@ A thin mesh just off the skin under the cards hides what the cards leave open; p
 
 - **One root colour under all long hair** (the cards' root colour in shadow), its edge soft at the forehead.
 - **The short fade drawn as strokes** along the groom's fade directions, thinning to the line the art owner drew.
-- **Rules to keep** (one art owner's, as defaults to confirm): never painted in front of the cards at the temples;
+- **Rules** (defaults to confirm with the art owner; check this): never painted in front of the cards at the temples;
   both sides identical (the right side is the left mirrored); a visible gap of skin around the ears, measured
   against the ear's silhouette in the side view; nothing dark from the base or the skin's own texture on skin
   outside the hair at the hairline.

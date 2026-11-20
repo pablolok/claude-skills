@@ -19,9 +19,9 @@ where the groom showed 6.5 %, although the DCC's flat render with blended alpha 
 
 - **The recipe:** opaque, depth written, both faces drawn, alpha-to-coverage on the coverage **sharpened at a
   threshold t** by its screen-space derivative,
-  `saturate((c - t) / max(fwidth(c), 1e-4) + 0.5)`, with **mips that keep coverage at the same t** (a mip chain kept
-  at another reference thinned the cards: 10.5 % at t 0.25 with mips kept at 0.25, 9.4 % with mips kept at 0.5,
-  so measure the pair together).
+  `saturate((c - t) / max(fwidth(c), 1e-4) + 0.5)`, with **mips that keep coverage at a reference**, the same t in
+  the build that was kept. The mips' reference moves the number on its own (at t 0.25: 9.4 % with mips kept at 0.5,
+  10.5 % with mips kept at 0.25), so sweep the threshold and the mips' reference together.
 - **Sweep t on the coverage gate, then look:** 0.25 / 0.20 / 0.15 gave 10.5 / 8.1 / 6.2 % at the face. 0.20 was
   picked (the gate was the groom plus 2 points); the fine detail fell only slowly with t, with no sign of the strands
   thickening into plates.

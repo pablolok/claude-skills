@@ -34,14 +34,15 @@
   graph and colour tuned per renderer are yours; it is unsupported, so its fixes are yours too.
   - **Binding:** attaching roots to a skinned mesh needs a further package; parented to the head bone, the zones on
     the head followed it within a micron while the nape's fade roots, on neck-driven skin, missed it by up to
-    0.46 mm. A managed script that wrote the roots onto the skinned skin each frame cost about 11.7 ms of CPU; a
+    0.46 mm. A managed script that wrote the roots onto the skinned skin each frame cost about 11.7 ms per frame; a
     compiled version was written and never run.
   - **Cost** (1080p, face close shot, TAA, a high-end desktop GPU; indicative: the GPU was sometimes busy and no clean
     measurement was made): head alone about 2.1 ms a frame; with the strands about 6.2-7.7 ms (140k) and 7.1-9.2 ms
     (200k) depending on the shadow casters; the camera's GPU time +4.3 to +4.9 ms; the under-coat alone about +1.2 ms.
-  - **Why it was set aside:** a few ms of GPU and an unsupported package for one character's hair, a pipeline choice
-    for the whole game, and a skin binding still to build; cards made from the same groom were chosen as the game
-    version (`groom-cards`), the strands kept as the look reference.
+  - **Why it was set aside:** cards made from the same groom were chosen as the game version to save resources
+    (`groom-cards`), the strands kept as the look reference. What the strand route would still have needed: a few ms
+    of GPU per close shot, the whole game on HDRP, an unsupported package to maintain, a skin binding, a hair
+    material, and a clean cost measurement (none was made).
 
 ## Unreal Engine
 
@@ -75,7 +76,8 @@
   - a fringe close above the forehead cast a near-black, speckled band (the voxel shadow at the default density). The
     renderer setting `r.HairStrands.Voxelization.DensityScale.Shadow=0.25` in the project's config made it a soft
     shadow and kept the self-shadowing; voxelization off removed the band and all self-shadowing (flat, light hair).
-    Constant jitter, deep shadows off on the lights, a finer voxel size or a lower global density did not;
+    Constant jitter, a finer voxel size or a lower global density did not (turning deep shadows off on the lights
+    was never picked up by the render, so it is untested);
   - overrides set on the groom component from Python (stable rasterization, deep shadow on lights) were not picked
     up by an offscreen render; material overrides and console variables were;
   - capture with a long lens from far away rather than a true orthographic camera, which drew the strands sparse.

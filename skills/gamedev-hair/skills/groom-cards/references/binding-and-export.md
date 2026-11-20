@@ -25,8 +25,8 @@ face driven by ARKit-style shape keys, exported as FBX to Unity. Each pitfall be
   jaw open); under the painted texels themselves no shape moved the skin more than 0.41 mm, the big moves lay under
   transparent base. A second binding with every shape over 0.05 mm (29) was started to fix a pale line under the
   fringe at an expression's peak and not finished: its effect is unknown.
-- **The engine copies shapes, not drivers**: bake the drivers into animation curves on the base's keys at export, or
-  copy the face's weights to them every frame at run time.
+- **The engine copies shapes, not drivers**: bake the drivers into animation curves on the base's keys at export
+  (below), or copy the face's weights to them every frame at run time.
 - Gates that failed by a hair and were reported, not softened: the base's distance to the skin at an extreme frame
   0.04-0.07 mm past its band; paint over the nape's card footprint +2-3 % at a full turn.
 
@@ -43,8 +43,11 @@ face driven by ARKit-style shape keys, exported as FBX to Unity. Each pitfall be
 ## Export pitfalls (one case each)
 
 - **Face-shape curves frozen at their first value.** The exporter's own triangulation wrote a copy of the mesh that
-  no shape-key animation reached, so every face curve came out constant. After every export, check on the imported
-  file that the face curves move; one candidate fix is a mesh already triangulated in the DCC (check this).
+  no shape-key animation reached, so every face curve came out constant. Triangulate the meshes in the DCC before the
+  export and turn the exporter's own triangulation off; then check on the imported file that the face curves move.
+- **Driven keys exported as constant curves.** Keys that follow other keys through drivers (the base's, the lashes',
+  the teeth's) came out flat: sample every exported key at every frame into its own action and remove the drivers
+  before the export.
 - **A subdivided body must keep its shape keys.** The game body was the skin subdivided once; its face shapes had to
   be rebuilt at that level, and the cards' and base's weights were taken on that subdivided skin.
 - **Check animation away from time 0.** A clip's first frame can equal the rest; check a frame well inside each clip
