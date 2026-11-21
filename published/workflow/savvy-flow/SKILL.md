@@ -244,6 +244,9 @@ asked for it or set it as their default, never on your own.
   section 2); a read-only audit driven by a script or a checklist (search for patterns, run checkers, compare files)
   fits Medium. Keep your own reading to the diffs and the verdicts.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
+- **A piece that reuses another piece's scripts works on copies.** The brief tells the worker to copy them into its
+  own work folder, repoint every output there, and make its runner refuse to run when a module loads from outside
+  that folder: a script run from where it lives writes to its own output paths, over the other piece's results.
 - Workers report their own progress: their definitions call the step tool at the start of each step and before
   each command expected to run over a minute, and the panel shows the command a worker has been in for a while
   with its elapsed time, so a brief does not repeat the step rule. A completion notice saying that a worker which
@@ -316,7 +319,10 @@ For each returned task:
 2. Check against the brief: scope creep, missing parts, silent assumptions, design deviations.
 3. Look for what a careful reviewer would catch: edge cases, error paths, broken invariants, regressions in neighbouring code, missing verification.
 4. Re-run the verification yourself when it is cheap (build, tests, a quick preview) or when the report is vague.
-5. Outcome per task:
+5. **A conflict the worker flags** (the reference against a gauge, two sources, two views), and any other choice that
+   is the user's, goes to the user with the evidence: the picture and both readings. Never settle it yourself, even
+   when one side looks right: a conflict settled silently is built on until the user finds it in the result.
+6. Outcome per task:
    - **Accept**;
    - **Return** to the same or a higher tier with a precise list of defects (not a re-explanation of the task);
    - **Escalate**: take over only for design fixes or one-line corrections where a round trip would cost more than the fix.

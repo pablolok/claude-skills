@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.2] - 2026-11-21
+- a brief that reuses another piece's scripts has the worker copy them into its own folder, repoint every output and make its runner refuse modules loaded from outside it; a conflict a worker flags (the reference against a gauge, two sources, two views) or any choice that is the user's goes to the user with the evidence, never settled by the orchestrator
+
+
 ## [1.19.1] - 2026-11-18
 - The worker rules and the skill no longer say a worker with background work stays listed as running after its report: the panel finishes a handed-back worker and flags what it left; between step calls the panel shows only the tool the worker is in.
 
