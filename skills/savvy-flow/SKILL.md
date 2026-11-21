@@ -246,6 +246,9 @@ asked for it or set it as their default, never on your own.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected. Spell out any word that has two
   readings in the task's domain (a view or a part, a field or a column) in words that have only one: the worker
   cannot ask what you meant and takes the reading nearest to hand.
+- A task that drives an editor or app through an MCP server (Unity, Blender, a browser) goes to Heavy or Careful,
+  whose tools include MCP servers, never Light or Medium: their lean tools have no MCP servers, so they cannot finish
+  the task. Check the agent type's tool list before launching.
 - **A piece that reuses another piece's scripts works on copies.** The brief tells the worker to copy them into its
   own work folder, repoint every output there, and make its runner refuse to run when a module loads from outside
   that folder: a script run from where it lives writes to its own output paths, over the other piece's results.

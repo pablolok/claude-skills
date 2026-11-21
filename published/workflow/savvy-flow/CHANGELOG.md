@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.4] - 2026-11-21
+- tasks that drive an editor or app through an MCP server go to Heavy or Careful, never Light or Medium; check the agent type's tool list before launching
+
+
 ## [1.19.3] - 2026-11-21
 - briefs name the domain skills the worker loads before starting, and spell out any word with two readings in the domain
 
