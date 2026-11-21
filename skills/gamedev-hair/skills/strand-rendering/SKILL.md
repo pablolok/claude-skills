@@ -55,6 +55,9 @@ depth-normals, shadow) uses the same layout so the depth matches the colour.
   changed nothing (it finds no edge on a one-pixel line). A 1 px clamp plus a 1 px box, blended, brought the crawl
   to the cards' level, cost about 0.2 ms of GPU, and needed no engine change. A 2 px box blurred. The clamp alone
   still crawled; the box is what resolves it.
+- **Test nearest-strand visibility with its coverage resolve**, not opaque depth writes alone. In one case opaque
+  sub-pixel ribbons without an MSAA or per-sample resolve made one-pixel grit and stair-stepped outlines; the higher
+  single-strand share was aliasing, not separated hairs.
 - **The price:** the box softens strand contrast and the wave's crests. Every value sweep after it starts there.
 - **TAA** resolves it too, softer and slightly darker; check your camera setup allows it during held shots.
   **MSAA with alpha to coverage** works with MSAA on the whole pipeline, grainier, with four coverage levels.

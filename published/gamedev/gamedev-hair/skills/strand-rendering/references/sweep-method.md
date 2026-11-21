@@ -5,6 +5,11 @@ Hand-tuning by eye drifts and cannot be repeated.
 
 ## Before rendering
 
+**Check a probe's selection census against what the method needs**: count, visible run length and angle to the flow.
+In one case a method needed about 1,800 strands crossing their locks for 10-15 mm, but the selection had 564, about
+4 mm long and parallel to the locks. A null result then says too few and too short, not that the method fails; fix the
+selection or rename what the probe tests before shooting.
+
 1. **Reproduce the baseline.** Fresh stills of the current look and of every other look the change could touch
    (the cards, the bare skin, earlier patches) must be byte-identical to the saved ones. If not, find out why before
    anything else; numbers from two sessions that differ on the baseline do not compare.
