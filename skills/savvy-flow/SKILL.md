@@ -243,7 +243,9 @@ asked for it or set it as their default, never on your own.
   your checklist in text, and you open the images where the report leaves a doubt (the verdict stays yours,
   section 2); a read-only audit driven by a script or a checklist (search for patterns, run checkers, compare files)
   fits Medium. Keep your own reading to the diffs and the verdicts.
-- Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected.
+- Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected. Spell out any word that has two
+  readings in the task's domain (a view or a part, a field or a column) in words that have only one: the worker
+  cannot ask what you meant and takes the reading nearest to hand.
 - **A piece that reuses another piece's scripts works on copies.** The brief tells the worker to copy them into its
   own work folder, repoint every output there, and make its runner refuse to run when a module loads from outside
   that folder: a script run from where it lives writes to its own output paths, over the other piece's results.
@@ -257,7 +259,9 @@ asked for it or set it as their default, never on your own.
   that you save: the host refuses a subagent's Write of a new report, analysis or summary file.
 - Keep briefs tight. Do not paste the whole plan; paste this task. Name the files (and the lines, when known) to read
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded
-  skill stays in the worker's context for the rest of its life.
+  skill stays in the worker's context for the rest of its life. Do name the domain skills the task does need, loaded
+  before the first step (a lean tier gets their rule in a few lines, Codex the `SKILL.md` path): a rule a skill
+  already holds goes unapplied in a piece that never loaded it.
 - Before delegating a task, check that nobody else already holds it — other people's open pull requests, branches and
   coordination notes when the work is shared; a duplicate is found only after both copies are done.
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each

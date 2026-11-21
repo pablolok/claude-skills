@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.19.3] - 2026-11-21
+- briefs name the domain skills the worker loads before starting, and spell out any word with two readings in the domain
+
+
 ## [1.19.2] - 2026-11-21
 - a brief that reuses another piece's scripts has the worker copy them into its own folder, repoint every output and make its runner refuse modules loaded from outside it; a conflict a worker flags (the reference against a gauge, two sources, two views) or any choice that is the user's goes to the user with the evidence, never settled by the orchestrator
 
