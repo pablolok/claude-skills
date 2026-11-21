@@ -53,6 +53,14 @@ cost about 1 of strand contrast in the close shot: read both.
   lower lip). A floor before the power was swept once and not chosen; it is an option, not a rule.
 - Do not reuse a card material's occlusion values on strands: sweep the strand material on its own.
 
+## Which term carries the value
+
+Before changing a part's direction, render it as it is with each term switched off in turn (the highlight lobes,
+received shadow, occlusion, cover) and read the part's value each time. In one case a re-route that fanned a light
+centre downward cut its mean value by about a quarter; received shadow and cover explained little, and the highlight lobes
+switched off on the old direction gave the re-routed value: only near-level tangents caught the key. A light lock that
+must point down is light in its own tone, so the direction and the per-strand tone are one piece of work.
+
 ## Hue
 
 - Read a* and b* (or C* and h) against the reference in the same gauge. In one case every arm that did not touch the
@@ -71,3 +79,25 @@ cost about 1 of strand contrast in the close shot: read both.
   halved the scalp in line of sight in every view where more strands inside the tufts did not
   (`strand-groom` references/short-cut-and-fade.md). Tell which gaps you have before choosing: partings between locks
   take an under-coat, the grain between filaments takes the under-layer's material. Check this.
+
+### The under-layer at a border
+
+- **Probe the layers first.** A border that stays hard while the strands change is first an under-layer's edge: an
+  alpha-clip line in its map, or its mesh's own boundary (straight facets). Hide each layer on its own, with a control
+  that is byte-identical otherwise, and look at every view. Under the hidden layer the strands alone may still end in
+  an abrupt comb of tips: that part is the groom's (`strand-groom`, soft borders).
+- **What does not fade it:** a smooth alpha ramp under a clip (it moves the line), and a stochastic or dithered cut
+  ramped across the border on a flat dark layer (it reads as salt up close and as a dotted shadow at the shipped
+  size). Its outer edge also still lands on the mesh's boundary, so a mesh that stops short of the fade cannot reach
+  it. Such a cut hides only when its dots are close to the skin's value or smaller than a pixel.
+- **What did:** the layer's edge pulled back inside the dense strands, and a multiply on a copy of the skin material
+  following the fade profile, blended, with no clip. The tint shows no edge of its own; the strands' density and
+  length ramp carry the border. This is an under-tone beneath sparse strands, not a painted base under cards
+  (`groom-cards` paints that as strokes).
+- **The tint's strength** is read inside the reference: the band under the border against the reference's own bare
+  skin, pixel by pixel. A skin-to-skin ratio across the reference and the render says nothing when their lights
+  differ (the bare-cheek ratios can differ by a third).
+- **Check the pulled-back edge on its own**: one take without the tint. An edge hidden only by the tint is still
+  there when the tint changes.
+- **The plain take is a candidate.** Show the art owner the layer-off take beside any replacement: bare skin under
+  sparse strands can read better than any painted under-tone, and then the first probe was the answer.

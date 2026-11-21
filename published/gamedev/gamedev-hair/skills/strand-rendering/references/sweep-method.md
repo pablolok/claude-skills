@@ -12,7 +12,9 @@ Hand-tuning by eye drifts and cannot be repeated.
 3. **Write the arms** (a factorial grid over the knobs, plus the baseline as a control and any diagnostic arms) to a
    file, and hash it.
 4. **Write the gauge**: the region (the reference's mask eroded a few px), the rows (from `hair-reference-review`),
-   and the same code for the reference, the DCC render and the engine.
+   and the same code for the reference, the DCC render and the engine. A cheap proxy that pre-screens arms is gated
+   on its difference from a control rendered both ways, and a row it cannot judge goes to the engine
+   (`hair-reference-review` §2).
 5. **Write the rule**: hard limits per row per view (for example p50 within 2 L*, p90 at most the reference's + 2,
    dark share within 0.05, a* and b* within 1.5, clump contrast inside the reference's band), then a ranking for
    the eligible arms, then a diagnostic ranking for when none is eligible. Put the ranking in a small pure module

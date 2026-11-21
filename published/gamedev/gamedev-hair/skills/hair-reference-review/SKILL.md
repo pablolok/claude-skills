@@ -90,8 +90,10 @@ Rules for the rows:
   picture into another light set-up (its anchors disagreed by about 12 L* in one case). **Normalise each view by the
   skin beside the hair before reading the hair's value or tuning any look term**: in one case the beard read bright
   and beige only because the skin beside it was 13-28 L* brighter than the reference's, and two arms that darkened
-  the beard pushed the views away. Separate the white streaks (top-percentile L*, local contrast) from the overall
-  value: different terms, different levers.
+  the beard pushed the views away. The same holds for a layer's target (to darken an under-layer, say): read which
+  way it must move relative to the skin before planning it (one under-layer to be darkened was already darker than the
+  reference's in every view). Separate the white streaks (top-percentile L*, local contrast) from the overall value:
+  different terms, different levers.
 - **Validate a new measure on the reference and on a known-wrong case before it gates anything.** A row that reads
   the reference poorly (one "cover by depth" row read 0.5-0.6 deep inside the reference's own beard) will also pass a
   visible wall; a row that cannot separate the reference from a build the eye rejected (or that build with the effect
@@ -103,11 +105,10 @@ Rules for the rows:
   has none, so forecast length from the grown strands' own tips). Gate every bare-skin border the reference shows
   from the first round, and add a density row per zone (hair against skin showing): sparse patches are shape.
 - **A cheap proxy (a numpy picture of the groom) is trusted per row, after calibrating it against engine captures.**
-  In one case it was reliable for notch air, lip share, edge and outline, and unreliable (slope near 0.2 or
-  negative) for heading and coherence, which are read on captures only. Depth-test hidden strands in the proxy:
-  plain projection drew far-side strands over the mouth. A gate between two failure sides is a band, not a limit
-  (one case: notch air 0 for the base, 871 for one build, 358 for the reference; a one-sided limit passed the very
-  base it was to fix).
+  Gate it on its difference from a control rendered both ways, never on absolute values (its offset from the engine
+  can be near constant). A row whose miss is smaller than the proxy's own error on the control cannot judge: send it
+  to the engine. A proxy that leaves out a shading term (root shade, highlight) cannot gate a defect where that term
+  acts. Which rows held in one case, depth-testing, and band gates: measures.md, Proxies.
 - **Read the groom's holds at several seeds**: run ladder rounds at one seed, confirm the pick at three, judge the
   mean and report the worst (a seed change moved a row by more than its margin).
 - **Know what each row is blind to.** Aliasing reads as strand contrast; a median over the mask reads the backdrop
@@ -167,7 +168,8 @@ change at a time before fixing anything.
    piece stop it**: back to evidence, a new brief, or a question to the art owner. A proxy-gated fit counts too: when
    its gates move and the engine capture barely does, or each fix breaks another view, that is the stop; change the
    method (author against the reference's views, judge on captures) instead of adding scalars. A row that trades
-   monotonically against another across tunes points to the target, not the knob.
+   monotonically against another across tunes points to the target, not the knob. A probe's take (a layer switched
+   off) goes to the art owner as a candidate in its own right before any replacement for that layer is built.
 5. Conflicts left inside the reference after §1.5 (two views that still disagree in 3D, a painted feature off the
    model) are the art owner's to decide, region by region: name the region, show the views side by side with both
    numbers, and ask which view they prefer there. Never pick the winner yourself, even when one view seems

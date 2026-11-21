@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - 2026-11-21
+- strand-rendering reads which shading term carries a part's value before re-routing it (the highlight follows the tangent); hair-reference-review reads a layer's value target relative to the skin and gates a proxy on its difference from a control, sending rows under the proxy's own error to the engine; a hard border that strand edits do not move is probed by switching each layer off before editing the groom; an alpha-clipped under-layer cannot fade, so the under-tone becomes a blended skin tint read inside the reference, and the layer-off take goes to the art owner as a candidate first
+
+
 ## [0.2.0] - 2026-11-21
 - groom-cards: hair cards generated from an approved groom by the engine's tool, shown in a forward renderer, with a painted base, rigid binding, motion in the material and coverage checks; strand-groom: a short cut over a skin fade; strand-rendering: cards as the game version, Unreal notes, Unity HDRP strand cost; hair-reference-review: checking a fix against the art owner's mark
 

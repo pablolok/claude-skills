@@ -35,6 +35,10 @@ Rules:
 For each group, the causes with their evidence:
 - **One change at a time** on a fixed scene: the same view with one variable switched (shadows cast or not, alpha
   as coverage, a material term off, a layer hidden). A variant table shows what moves which defect.
+- **A hard border that strand edits do not move: hide each layer on its own first** (an under-layer shell, cards,
+  strands), the control byte-identical, every view. A line with straight facets or stair steps is a mask's clip edge
+  or a mesh's boundary, not a density wall; fade arms built before this probe are judged against a line they cannot
+  touch (`strand-rendering` §5).
 - **A census of who draws the defect** before any trim or second try: the strands that cover the defect's pixels,
   by part and lock, kept old strands included. A fix that moves a defect's angle or place but not its strength named
   the wrong cause (one case: a slope cap turned a streak from 15 to 27.5 degrees at the same strength; the next guess

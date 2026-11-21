@@ -26,6 +26,7 @@ definitions below are one implementation; keep yours fixed once chosen, or no tw
 | hue | a* and b* medians, or C* and h | |
 | on hair only | the value rows on pixels where both pictures have hair | a median over the mask reads the backdrop where hair is missing |
 | relative to skin | each value row minus the median of fixed skin patches beside the hair (a forehead and a cheek patch, outside the hair grown a few px), per picture | for a reference painted or rendered in another light; cancels exposure and grade, not the light's direction (read the mirrored views first) |
+| under-tone strength | the band under a border against bare skin beside it in the same picture, pixel by pixel | sets a skin tint under sparse strands; a skin-to-skin ratio across two pictures in different light reads nothing |
 
 ## Hair look
 
@@ -70,6 +71,22 @@ report them, judge by the other rows (mass and length first) and by eye.
 | hull mass | the hull's volume per zone, ours against the reference's, and height off the skin | direction can pass while the mass is lost |
 | length per area | tip line per area along the flow | checked after every grow |
 | strays | share of an area's strands outside the part's own outline | the reference read 0.4-2.9 % |
+
+## Proxies
+
+A proxy is a cheap picture of the groom made outside the engine (a numpy projection of the strands with a simple
+shade). It speeds up ladders; it never replaces the capture.
+- **Calibrate per row** against engine captures of the same builds. In one case it was reliable for notch air, lip
+  share, edge and outline, and unreliable (slope near 0.2 or negative) for heading and coherence, which were read on
+  captures only.
+- **Gate on the difference from a control** (the base build through the proxy and in the engine): in one case the
+  proxy read about 10-12 luma above the engine on every build, and the gap between two builds held to 2. The proxy's
+  error on that control is the row's floor; a miss under it (3.0 against 5.8 in one case) is not a result.
+- **Name the terms it leaves out.** A proxy without the root shade cannot judge specks in the strands' first
+  millimetres; one without the highlight cannot judge a value change from a re-route.
+- **Depth-test hidden strands**: plain projection drew far-side strands over the mouth.
+- **A gate between two failure sides is a band, not a limit** (one case: notch air 0 for the base, 871 for one
+  build, 358 for the reference; a one-sided limit passed the very base it was to fix).
 
 ## Engine-only rows
 

@@ -94,6 +94,9 @@ reference flow and its failed builds broke. Treat each row as a starting design 
 - Read the cheek's flow first; give the cheek's top border a skin phase (strands leave flat, height grows with
   distance travelled) and a density and length ramp straddling the line, sparse and short at the border.
 - A fade only outside the line leaves the inside at full density and height to the last millimetre: a wall.
+- **When the line stays hard and straight after strand edits, run the layer-off probe before building fade arms**
+  (`strand-rendering` §5): an under-layer's clip or mesh edge draws a faceted line no strand change can touch. With
+  the layer off, read what the strands alone do there (often an abrupt comb of tips): that is the fade still to build.
 - A classifier that measures "cover by depth inside the border" must be validated on the reference itself before it
   gates anything (one such row passed a visible wall).
 

@@ -85,7 +85,7 @@ most of the look, noise and flyaways come last. A short cut over a skin fade: re
 - **Soft borders from height, not only density.** Height off the skin grows with the distance travelled from the
   root (a small ratio, around a tenth of a millimetre per millimetre), so border roots lie flat and the mass builds
   behind them; add a density and length ramp that straddles the border line. A fade only outside the line leaves
-  a wall inside it.
+  a wall inside it. A border that stays hard after strand edits: switch each layer off first (`strand-rendering` §5).
 - **Never gather strands after growth** to make a shape (a tuft, a point, a ponytail's end). Feed it from the
   roots: give it its own roots, lengths and direction from the root. Reason: a gather pulls in whatever crosses a
   row, smears what it catches and cannot add mass where no strand passes.
@@ -173,7 +173,8 @@ Blender notes (one case each; check on your version):
 - **One piece at a time**, its checks written before the build, judged by `hair-reference-review`: one section
   (moustache, then chin and lower beard, then cheeks), each ending on the art owner's yes.
 - **Shape before look**: a wave laid on a wrong outline reads as crimp and is rejected. Fix the outline, length and
-  mass, then the waves, then the tone.
+  mass, then the waves, then the tone. Except where the highlight carries a part's light: it follows the tangent, so
+  a re-route changes the value too; plan the strands' tone in the same piece (`strand-rendering` §4).
 - **Change one structural thing per build** while diagnosing, and log each build per aspect (what changed, which
   rows moved). A ladder changes one variable, and round 0 is the base.
 - **Two failed attempts on a piece send it back to evidence**: stop building, probe the cause without a build

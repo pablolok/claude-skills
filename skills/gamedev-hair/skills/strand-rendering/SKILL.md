@@ -85,6 +85,11 @@ and read on the same tiles. What exceeds the control is aliasing. Also read ghos
   value removes them.
 - **Hue: match the relative a* and b* with the flat colour**, not a grey term (it turned the hair cool; matching
   relative chroma got the hue but read pink up close).
+- **Before re-routing a part, read which shading term carries its value**: switch each term off on its current
+  render (highlight lobes, received shadow, occlusion) and read the change. A strand's highlight follows its tangent,
+  so under a fixed key turning lit locks vertical can take their light away with it. If the highlight carries the
+  value, a direction change is a value change: plan the strands' own tone (light locks over a darker under-layer) in
+  the same piece (strand-value.md, Which term carries the value).
 - **The ribbon's width is mesh data.** A blended coverage of 0.7 thinned the strands without losing coverage; 0.5
   stair-stepped.
 - When the engine's light is not the reference's, set value targets relative to the skin beside the hair, in views
@@ -102,10 +107,18 @@ and read on the same tiles. What exceeds the control is aliasing. Also read ghos
   reference. Card occlusion values reused on strands darkened them by ~20 L*: sweep the strand material on its own.
 - **The under-layer between strands decides the grit.** Between one-pixel strands 30-40 % of pixels show what lies
   under them: the skin, or a shell (a base mesh under the hair that gives it coverage). A shell shaded as skin, lit from behind the cheek, read near black there: salt-and-pepper grit that
-  is not the strands' fault. Give the shell under the strands its own close-shot material (lighter, a scatter term,
+  is not the strands' fault. If the shell stays (take one with it off first, below), give it its own close-shot material (lighter, a scatter term,
   neutral colour) that never outshines the strands, and check it through the head's turn. **Cut the shell by outside
   cover, not by distance to a root**: a band of shell texels that no strand covers from outside showed within 8 mm of
   a root.
+- **A hard border that strand edits do not move: switch each layer off on its own** (shell, cards, strands; all
+  else byte-identical) and look before editing the groom. Straight facets or stair steps are a mask's or a mesh's
+  edge, not a strand density wall. Show the layer-off take to the art owner as a candidate before building a
+  replacement: bare skin under sparse strands can beat any painted under-tone.
+- **An alpha-clipped under-layer cannot fade.** A smooth alpha ramp only moves the line, and a dithered cut of a flat
+  dark layer reads as a halftone screen unless its dots are near the skin's value or under a pixel. Where an under-tone
+  is wanted at a border, pull the layer's edge back inside the dense strands, tint the skin there smoothly (blended,
+  not clipped), and let the strands' density and length ramp carry the edge (strand-value.md, The under-layer).
 - **Drop the cards the strands replace**, coverage cards included: dark cards left under the strands became black
   blotches.
 
