@@ -116,6 +116,13 @@ Rules for the rows:
   of amplitude; the followed-strand length moves with the matte it is read through (use the fixed reference
   numbers).
 - **Report every miss** with its number and limit; never loosen a limit after seeing the result.
+- **A texture row is a band around the reference, never a one-sided limit.** In one case a moustache passed its
+  coherence and piece-length rows by overshooting them: coherence .55-.63 against the reference's .74-.77, pieces
+  5-7 mm against 9-10. It read as a netted mat. Write each look row as the reference ± its floor.
+- **A shape gate compares against the reference's hull, not the previous build's envelope.** A shelf row measured
+  against the old groom's outline, loose forward drapes included, passed a dense box jutting ahead of the lip. The
+  next fix, scored only "better than the last build", overshot into a curtain over both lips. Score every round of a
+  shape fix on the same reference rows (hull IoU per profile, fringe recall, lips left visible).
 
 ## 3. Look, do not trust the number
 

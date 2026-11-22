@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - 2026-11-22
+- hair-reference-review: texture rows are two-sided bands around the reference (a build passed one-sided rows by overshooting); shape gates score against the reference's hull, never the previous build's envelope
+
+
 ## [0.2.2] - 2026-11-21
 - Test nearest-strand visibility with its coverage resolve and check probe selection censuses before rendering
 
