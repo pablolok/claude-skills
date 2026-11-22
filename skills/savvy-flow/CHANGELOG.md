@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.20.1] - 2026-11-22
+- first observed run of the Tools tier (claude-sonnet-5-5): a 13-step editor recipe ran as written at about a quarter of a Careful capture's cost; expected outputs in a recipe come from a previous run of the same take
+
+
 ## [1.20.0] - 2026-11-22
 - new Tools tier (savvy-tools, Sonnet with the session's connected tools) for mechanical work through an MCP server or app from a recipe; section Connected tools: route by kind of work, recipes for cheaper tiers and goals for capable ones, repeated recipes become scripts, a new recipe's first run is a trial, observations recorded with exact model ids so a model change triggers a new trial; Codex reaches only the MCP servers its own CLI config declares
 
