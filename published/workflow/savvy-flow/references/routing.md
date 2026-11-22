@@ -59,8 +59,14 @@ At the tier the task needs:
 
 ## Observed in use
 
-Each line: what was seen, when, and what to do about it. Add to it at the close of a flow; delete a line a newer
-observation contradicts.
+Each line: what was seen, when, on which exact model ids (the agent files' aliases move to new models), and what to do
+about it. Add to it at the close of a flow; delete a line a newer observation contradicts, and re-check a line whose
+models have since changed before relying on it.
+
+- 2026-11 (claude-opus-5-5 as Careful; claude-sonnet-5-5 not yet tried): captures through an editor's MCP server (a
+  scripted take, then the comparison sheets) ran right on Careful but cost about 5 USD each for work that was a
+  recipe. The Tools tier (`savvy-tools`, Sonnet with the session's connected tools) was added for such recipes: record
+  its first runs here, with the model id and whether the recipe needed extra lines.
 
 - 2026-11: Codex Terra implemented standard engine-editor work correctly, but two of three tasks came back with
   breaches of the named code standards (logic in static classes, the same order kept in three places by position).

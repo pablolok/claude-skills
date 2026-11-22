@@ -144,6 +144,7 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Careful | `savvy-careful` | Opus / high | "Do it right": the approach is clear but execution is delicate. Multi-file refactors, fixes that must preserve invariants, logic with many edge cases, concurrency |
 | Medium | `savvy-medium` | Sonnet / medium, lean tools | Standard feature work, bug fixes with a known cause, changes confined to a few files with clear requirements |
 | Light | `savvy-light` | Sonnet / low, lean tools | Mechanical edits, renames, boilerplate, config, small isolated fixes, running builds/tests and reporting |
+| Tools | `savvy-tools` | Sonnet / medium, the session's connected tools | Mechanical work through a connected tool or app (an editor, a browser, a design or 3D tool) from a recipe in the brief: a ready capture, export or check. Section "Connected tools" |
 | Codex Luna | `savvy-codex-luna` | OpenAI's Luna family through the Codex CLI, effort low; a Sonnet relay | Only when Codex is signed in (section 0), as below: Light-sized work |
 | Codex Terra | `savvy-codex-terra` | Terra family, effort medium | Medium-sized work |
 | Codex Sol | `savvy-codex-sol` | Sol family, effort high | Careful- or Heavy-sized work; the default for a **second opinion** from another model family (a review of a risky diff, a second diagnosis of a hard bug) |
@@ -151,8 +152,9 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 
 Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
-lean, it starts at a fraction of that, and the cheaper model halves what is left. A task that needs a browser, a
-simulator, the web or a skill goes to Careful or above, or its brief states the rule it needs in a few lines.
+lean, it starts at a fraction of that, and the cheaper model halves what is left. A task that needs a skill or the
+web goes to Careful or above, or its brief states the rule it needs in a few lines; a task that needs a connected
+tool (an MCP server, an app the session drives) follows section "Connected tools".
 
 Heuristics:
 - Uncertain between two tiers → take the higher one. Exception: Fable and Codex Astra are for plans only and never picked alone (section "Models"): ask, and Heavy (or Sol) takes anything else.
@@ -189,6 +191,47 @@ asked for it or set it as their default, never on your own.
   does a `CLAUDE.md` the task depends on. Named that way, Codex follows it; left out, it is silently ignored.
 - Its report ends with the Codex plan usage when the logs show it (the 5-hour and weekly windows). Pass it on in your close report.
 - Its work gets the same adversarial review as any other tier.
+- **Codex has its own connected tools.** It reaches an MCP server only when the Codex CLI's own configuration
+  declares it (`codex mcp list` shows it enabled), whatever the Claude session has. Check before routing a
+  connected-tool task to a relay; a server Codex lacks is added there on the user's yes, never by a worker.
+
+### Connected tools
+
+A connected tool is anything the session drives beyond files and the shell: an MCP server for an editor, a browser, a
+design or 3D tool, a device. Which ones exist depends on the user's setup; the rules below hold for any of them.
+
+**Route by the kind of work, not by the tool.**
+- *Mechanical*: run a ready recipe and return what it produces (a capture, an export, a check, a set of screenshots).
+  It goes to Tools (`savvy-tools`), or to Codex Luna or Terra when Codex has that tool (above).
+- *Investigation or repair inside the tool*: find why it renders wrong, fix a broken scene or page, write a new
+  recipe. It goes to Careful or Heavy (or Sol).
+- *Judgment from what the tool shows*: does it match the reference, does it look right. It stays with you (section
+  5); the worker returns the artefacts.
+- Light and Medium cannot take any of these: their lean tools have no connected tools. Check the agent type's tool
+  list before launching.
+
+**Write the brief for the model that runs it.**
+- *A capable tier* (Heavy, Careful, Sol) gets the goal, the constraints, the guards and the checks; it plans the steps
+  itself and recovers from surprises.
+- *A cheaper tier* (Tools, Luna, Terra) gets a recipe, because it follows what is written and improvises badly when a
+  step surprises it:
+  - the exact steps, in order: which calls or which script, with their arguments;
+  - for each step, the output it must give, so a different one is recognised as a stop;
+  - how a long job is started (from the app's own scheduler or a script, never one blocking call longer than the
+    tool's timeout) and the end signal it is waited on (a log line, a file), with one background wait;
+  - the resource guards (free memory, one instance, what to close and how) and what to do when one trips: stop and
+    report, never work around it;
+  - the artefacts to return (paths, numbers, logs), and no verdicts.
+- **A recipe that repeats becomes a script in the project.** Once the same steps have run twice, have a capable tier
+  turn them into one command (a script or the tool's own batch mode). Then any tier, even Light, runs it with the
+  shell, and the connected tool is used only for what a script cannot reach.
+- The first run of a new recipe on a cheaper tier is a trial: read its report against the recipe, step by step, before
+  giving it the next one. A step it got wrong is a line the recipe lacked: add it there.
+- **This split holds for the models it was observed on.** The agent files name model aliases (`sonnet`, `opus`), and
+  an alias moves to a new model by itself. Record each observation of how a tier handled a recipe in
+  `references/routing.md`, "Observed in use", with the exact model ids it ran on. When a tier's model changes, its next
+  recipe is a trial again, and an observation made on the old model is checked before you rely on it: a newer model
+  may need less recipe, or a different one.
 
 ## 4. Delegate
 
@@ -246,9 +289,9 @@ asked for it or set it as their default, never on your own.
 - Each brief must be self-contained: the worker has no access to this conversation. Include file paths, the decided design specs, constraints from CLAUDE.md that matter, and the exact verification expected. Spell out any word that has two
   readings in the task's domain (a view or a part, a field or a column) in words that have only one: the worker
   cannot ask what you meant and takes the reading nearest to hand.
-- A task that drives an editor or app through an MCP server (Unity, Blender, a browser) goes to Heavy or Careful,
-  whose tools include MCP servers, never Light or Medium: their lean tools have no MCP servers, so they cannot finish
-  the task. Check the agent type's tool list before launching.
+- A task that drives a connected tool (an MCP server, an app) is routed and briefed by section "Connected tools":
+  mechanical work from a recipe to Tools (or Codex Luna/Terra when Codex has the tool), investigation to Careful or
+  Heavy, never Light or Medium, whose lean tools have none.
 - **A piece that reuses another piece's scripts works on copies.** The brief tells the worker to copy them into its
   own work folder, repoint every output there, and make its runner refuse to run when a module loads from outside
   that folder: a script run from where it lives writes to its own output paths, over the other piece's results.

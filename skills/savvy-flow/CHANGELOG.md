@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.20.0] - 2026-11-22
+- new Tools tier (savvy-tools, Sonnet with the session's connected tools) for mechanical work through an MCP server or app from a recipe; section Connected tools: route by kind of work, recipes for cheaper tiers and goals for capable ones, repeated recipes become scripts, a new recipe's first run is a trial, observations recorded with exact model ids so a model change triggers a new trial; Codex reaches only the MCP servers its own CLI config declares
+
+
 ## [1.19.4] - 2026-11-21
 - tasks that drive an editor or app through an MCP server go to Heavy or Careful, never Light or Medium; check the agent type's tool list before launching
 

@@ -29,6 +29,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `agents/savvy-careful.md` | Opus / high: delicate but well-understood changes. |
 | `agents/savvy-medium.md` | Sonnet / medium, lean tools: standard feature work. |
 | `agents/savvy-light.md` | Sonnet / low, lean tools: mechanical edits, builds, tests. |
+| `agents/savvy-tools.md` | Sonnet / medium with the session's connected tools (MCP servers, apps): mechanical work through them from a recipe in the brief. |
 | `agents/savvy-codex-luna.md` … `savvy-codex-astra.md` | Sonnet / low relays for the Codex CLI, one per OpenAI intensity (Luna, Terra, Sol, Astra): each picks the newest model of its family from Codex's model list, runs one task with `codex exec` (sandboxed), checks the diff and the tests, reports the Codex usage. |
 | `LICENSE` | The upstream MIT licence. |
 

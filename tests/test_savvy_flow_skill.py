@@ -21,7 +21,7 @@ SOURCE = REPO / "skills" / SKILL
 PUBLISHED = REPO / "published" / "workflow" / SKILL
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 CODEX_RELAYS = ("savvy-codex-astra", "savvy-codex-luna", "savvy-codex-sol", "savvy-codex-terra")
-WORKERS = ("savvy-careful", *CODEX_RELAYS, "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium")
+WORKERS = ("savvy-careful", *CODEX_RELAYS, "savvy-fable", "savvy-heavy", "savvy-light", "savvy-medium", "savvy-tools")
 #: The tiers that run with a tool allowlist rather than every tool the parent has.
 LEAN_WORKERS = ("savvy-light", "savvy-medium")
 #: The relay that runs Codex: lean too, and it edits no project file itself.
