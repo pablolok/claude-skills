@@ -25,7 +25,11 @@ The review uses both, and the eye decides.
    1 px/mm) so edges do not leak background into the rows. **Overlay each class mask on the reference before it
    gates anything**: straight edges where the hair has none make a box, not an outline (one case: every moustache
    gate measured a rectangle). Split head hair from beard by connectivity and flow, never by an image row: give
-   side hair its own class.
+   side hair its own class. **Read all the parts' masks before calling an area missing**: it may be hair carrying
+   another part's label. **A groom's own mass mask is built from density, not from single strands**: accumulate the
+   strand pixels, blur (1.5 px in one case), and keep where several strands overlap (6 or more there). Drawing every
+   strand 1 px wide and closing the gaps turned loose, invisible strands into mass: an outline that crossed the lips
+   and ran into the background.
 4. **Register the reference through the model's landmarks** (mouth, nose, eyes, ears, jaw) and check the overlay
    before reading anything around them. Measure what a feature is (a lip line, a moustache's edge) before calling
    the reference and the model in conflict. **Measure it in every region being fitted, not only where the camera
@@ -103,10 +107,15 @@ Rules for the rows:
 - **A row must measure what the eye objects to.** Judge each section on shape, direction and length together (length
   is the tip line per region along the flow; a tip reader that needs air on the matte reads nothing where the base
   has none, so forecast length from the grown strands' own tips). Gate every bare-skin border the reference shows
-  from the first round, and add a density row per zone (hair against skin showing): sparse patches are shape.
+  from the first round, and add a density row per zone (hair against skin showing): sparse patches are shape. **A
+  relative pass line ("as covered as the neighbouring part + 5 points") needs a baseline that itself passes**: one
+  passed a region at 31-45 % visible skin because the neighbour was itself about half see-through. Read the baseline
+  against the reference before gating on it.
 - **A cheap proxy (a numpy picture of the groom) is trusted per row, after calibrating it against engine captures.**
   Gate it on its difference from a control rendered both ways, never on absolute values (its offset from the engine
-  can be near constant). A row whose miss is smaller than the proxy's own error on the control cannot judge: send it
+  can be near constant). **A gate read on a projection of the strands does not stand in for the render**: read the
+  direction, form and coverage gates again on the rendered picture before a build is called better (one build's
+  direction error read 18.6° -> 6.5° on the projection and 23.6° -> 18.6° on the render; by eye it was not closer). A row whose miss is smaller than the proxy's own error on the control cannot judge: send it
   to the engine. A proxy that leaves out a shading term (root shade, highlight) cannot gate a defect where that term
   acts. Which rows held in one case, depth-testing, and band gates: measures.md, Proxies.
 - **Read the groom's holds at several seeds**: run ladder rounds at one seed, confirm the pick at three, judge the
@@ -138,6 +147,10 @@ Before quoting a row, write the list of what differs in the pictures, worst firs
 **Look at an engine capture of the base before the first proxy ladder** and name the visible difference in the
 reference's terms (one case: ours jutted forward as a shelf where the reference dropped over the lip; nine ladders
 chased cover and notch proxies instead). A proxy gate that moves while the capture does not measures the wrong thing.
+**Before a coverage or density piece, look at the same groom in the renderer that ships**: an offline render at real
+hair width shows bareness the engine's wider strands do not (one under-layer was built and rendered twice for skin
+that the engine's capture, already on disk, mostly did not show). Compare the two crops first; if they disagree, the
+shipping one decides.
 
 **Trace comparison is the first review row**: trace the reference's locks (position, size, path) and ours the same
 way, view by view, and compare trace against trace (`strand-groom` references/area-map-and-traces.md).

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.4] - 2026-11-23
+- hair-reference-review: a groom's mass mask from density; projection gates re-read on the render; look at the shipping renderer before a coverage piece; a relative pass line needs a passing baseline; read all parts' masks before calling an area missing
+
+
 ## [0.2.3] - 2026-11-22
 - hair-reference-review: texture rows are two-sided bands around the reference (a build passed one-sided rows by overshooting); shape gates score against the reference's hull, never the previous build's envelope
 
