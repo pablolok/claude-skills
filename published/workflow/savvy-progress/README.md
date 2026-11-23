@@ -17,6 +17,9 @@ Restart the session afterwards. The mod is built on function hooks (`hooks/regis
 API that may change between releases. It works only as a plugin: a managed copy leaves out `.claude-plugin/`, which
 the mod needs.
 
+In Google Antigravity (`agy`) the plugin installs with its manifest only: the progress bar, the agents panel and the
+tools are a Claude Code mod with no Antigravity equivalent, and Antigravity's own `/agents` lists its subagents.
+
 ## What it draws
 
 - **Progress bar**: the flow's title, phase, accepted tasks out of planned, and a button with the crew size (the
@@ -41,10 +44,15 @@ the mod needs.
   unreadable cache leaves the bare intensity (`Codex · Sol`); a re-read that finds the same models redraws nothing.
   A run awaiting its declaration predicts the effort too: Luna low, Terra medium, Sol high and Astra high. A planned
   Codex task names no effort (`Codex · Sol 6.1`): the user's effort for Codex is in its brief, which the bar never
-  sees. Codex rows show their own session's cumulative tokens and estimated cost once the relay declares its
+  sees. Gemini relays (`savvy-gemini-flash`, `-argon`, `-hydrogen`, `-carbon`) declare theirs the same way
+  (`Argon 4 · medium`); with no models cache to predict from, a planned Gemini task or a run awaiting its declaration
+  shows the bare intensity (`Argon`), and a declared slug with no effort takes the tier's: Flash low, Argon medium,
+  Hydrogen high and Carbon high.
+  Codex rows show their own session's cumulative tokens and estimated cost once the relay declares its
   `codexStatus` filename stem; an unavailable snapshot or price reads as `—`. The row uses the snapshot's concrete
   action as its step note. A fresh snapshot saying `running` keeps the row running after its Claude relay stops;
-  once its heartbeat is older than 15 seconds, the next poll uses the relay's own state instead.
+  once its heartbeat is older than 15 seconds, the next poll uses the relay's own state instead. A Gemini row does the
+  same with its `geminiStatus` file, and shows its tokens with no cost.
   A finished worker with declared but unfinished steps keeps its steps' ratio; it does not jump to a full bar.
   An answered turn whose engine roster still reports `running` or `waiting` stays live, with its bar capped at
   99%, until the roster confirms completion. This applies to every worker, including relays with no `codexStatus`.
@@ -64,26 +72,29 @@ the mod needs.
   (`2/6 · Bash: Run the full test suite · 3:05`); the note comes back when the call returns. A worker parked on its
   own background work (a command it started there, or one the host moved there) reads `waiting on background work`
   with the time it has waited, until a model step shows it at work again.
-- **Panel header**: plan usage appears at the top, with Claude and Codex side by side. Claude comes from the
+- **Panel header**: plan usage appears at the top, with Claude and Codex side by side and Gemini, when read, on a
+  row of its own beneath them. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`), follows `session.measure`, and is polled
   at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;
   the age is time since the panel last read the figures. Failed reads retain the last reading and its age. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
-  is omitted, and a family read alone takes the whole row. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
+  is omitted, and a family read alone takes the whole row. Gemini comes from the newest small
+  `~/.gemini/savvy-status/<name>.json` file's `rateLimits`: agy's `/usage` data, of which only the `Gemini Models`
+  group counts, each window used as `round((1 - remaining_fraction) * 100)` %. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
   weekly uses a short weekday and time (`↻ Thu 02:00`). Resets more than six days away use a short date instead (`↻ 20 Nov 02:00`),
   avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows
-  percentages, for example `Claude 41/94%  Codex 2/9%`, with one `!` after a family that is projected to exceed
+  percentages, for example `Claude 41/94%  Codex 2/9%  Gemini 1/0%`, with one `!` after a family that is projected to exceed
   either window under `within`, and truncates at smaller widths.
 - **Usage projection**: each family's 5-hour and weekly windows estimate whether the current pace fits before
   reset. The start is the reset minus 300 or 10080 minutes. Average pace is used percentage divided by elapsed time;
   recent pace uses the first-to-last observation slope within the last 30 minutes (5h) or six hours (7d), once
   observations cover at least half that span. Otherwise it falls back to average pace. The usage atom keeps at most
-  one observation per minute, pruned to each span (at most 361 samples per window); Codex observations use the
+  one observation per minute, pruned to each span (at most 361 samples per window); Codex and Gemini observations use the
   status file's timestamp, so rereading an unchanged file adds nothing. A changed reset or a percentage drop clears
   that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
   before the reset when space is tight.
-- **Budget policy**: `/savvy-budget <claude|codex> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists both.
+- **Budget policy**: `/savvy-budget <claude|codex|gemini> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists all three.
   A family nobody set is on `pace`, so nobody has to type the command: the orchestrator keeps the family inside its
   windows by re-tiering, without asking. The gate never refuses for the budget, a projection over 100 % has verdict
   `retier` with an `advice`, a weekly one under 90 % with the reset under two days away has verdict `spend`. The
@@ -93,17 +104,19 @@ the mod needs.
   the user changes it. The Fable and Astra gate is unchanged. Only set `within` or `full` when the user says so. Policies persist in the mod's state across reloads, independently per family. The tile
   title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
 - **Budget gate**: while a family's verdict is `ask`, the Agent tool refuses its costly tiers (`savvy-fable`,
-  `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex) with a message that
+  `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex;
+  `savvy-gemini-hydrogen`, `savvy-gemini-carbon` for Gemini) with a message that
   gives the projection, the reset and the way out. Cheaper tiers, other agents and the other family pass, and so
   does a family with no projection yet. The user's yes opens it until the family's soonest reset: they type
   `/savvy-budget <family> once`, or the orchestrator records their answer, quoted, with the `decide` tool (main
   session only; the record is the orchestrator's word for it). The policy stays as it was.
-- **Top-tier gate**: `savvy-fable` and `savvy-codex-astra` (plain or `savvy-flow:`-prefixed) are for plans only, and
-  the Agent tool refuses them whatever the budget verdict, until the user's yes is recorded with `decide` and `tier`
-  (`fable` or `astra`) plus their words. A yes covers one launch by default; `uses` sets a number or `"session"` when
+- **Top-tier gate**: `savvy-fable`, `savvy-codex-astra` and `savvy-gemini-carbon` (plain or `savvy-flow:`-prefixed) are
+  for plans only, and the Agent tool refuses them whatever the budget verdict, until the user's yes is recorded with
+  `decide` and `tier` (`fable`, `astra` or `carbon`) plus their words. A yes covers one launch by default; `uses` sets a number or `"session"` when
   the user's words allow more. A SendMessage resume of a worker the panel knows as one of those tiers is gated the
   same way and spends a use; a resume the panel cannot match to a row (an unknown id or name) is not seen. The
-  refusal says Fable is for plans and offers Heavy (Sol for Astra). The tier yes does not open the budget gate.
+  refusal says Fable is for plans and offers Heavy (Sol for Astra, Hydrogen for Carbon). The tier yes does not open the
+  budget gate.
 - **Tier estimates**: every model step of the session, the main session's included, adds its estimated price to a
   running Claude spend, stored with each plan reading. Over a window's recent history, the percent it moved per
   dollar spent turns a tier's mean finished run (savvy Claude tiers, runs with a measured cost) into a share of the
@@ -120,9 +133,14 @@ the mod needs.
   pwsh/powershell, cmd or bash wrappers; pre-turn errors and warnings are ignored as actions. The panel lists only the flat `savvy-status` directory, polls running
   snapshots at most once every three seconds and rereads finished snapshots only when their modification time
   changes. It never reads Codex rollouts: the engine's `$.fs.read` rejects files larger than 4 MiB.
-- **Family totals**: cost reads `Claude $x · Codex $y`, and tokens split the same way; the Codex part appears only
-  when Codex is in use (a Codex worker in the list or a Codex plan reading), so a session without Codex shows Claude
-  alone. Claude totals include all
+  Gemini relays pipe `agy --output-format stream-json` through savvy-flow's `scripts/gemini-status.mjs` into
+  `~/.gemini/savvy-status/<name>.json`, read the same way: conversation id, model, state, action, cumulative
+  `input_tokens`, `output_tokens`, `cache_read_tokens` (apart from the input), optional `thinking_tokens` and
+  `total_tokens`, and agy's `/usage` data as `rateLimits`; a plan-only `snapshot.json` works as Codex's does.
+- **Family totals**: cost reads `Claude $x · Codex $y · Gemini —`, and tokens split the same way; the Codex part
+  appears only when Codex is in use (a Codex worker in the list or a Codex plan reading), the Gemini part likewise, so
+  a session without them shows Claude alone. Gemini tokens are input, cache reads and output, the largest cumulative
+  snapshot once per conversation; with no verified Gemini price table its cost stays `—`. Claude totals include all
   engine-reported subagent requests, including Codex's Claude relays. Claude cache reads contribute to cost and
   context but not to the token total. A writer adds each completed turn's `usage` to prior instrumented snapshots of
   the same session, including resumes under a new status name. The panel counts the largest cumulative snapshot
@@ -185,7 +203,7 @@ the mod needs.
   task waits at its tier's model and effort, or at the `effort` and `model` the plan declares for it (what its Agent
   call will pass); an agent that is no savvy worker is planned with `tier: "other"` and `agent`, its type. A run
   shows the effort its Agent call asked for, then the one the engine reports for each request. Its result is a
-  string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude` and `codex`,
+  string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude`, `codex` and `gemini`,
   each with observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
   `pace` (`recent` or `average`), `policy`, and `verdict`: `ok` when it fits or has no projection yet, `over` when it
   does not fit under `full`, `ask` when it does not fit under `within`; under `pace`, `retier` (with an `advice`
@@ -198,7 +216,7 @@ the mod needs.
   (`null` until observed).
 - `mcp__savvy-progress__decide`: records the user's yes (`family`, `answer` quoting their words) to costly work on a
   family whose verdict is `ask`, opening the budget gate until that family's next reset. Ignored from a worker.
-  With `tier` (`fable` or `astra`) and optional `uses` (`1` by default, a number, or `"session"`) it records the yes
+  With `tier` (`fable`, `astra` or `carbon`) and optional `uses` (`1` by default, a number, or `"session"`) it records the yes
   to a launch of that plans-only top tier instead.
   Both tools use the latest observations already taken by the panel. The flow reads this summary on progress
   updates and before long work; an `ask` calls for the user's decision with the projection and reset, or moving
@@ -207,7 +225,8 @@ the mod needs.
   steps it left undone, shown beside its count (`6/6 · 1 skipped`). A worker that does not report shows its context
   fill in grey instead. A Codex relay may also send optional string fields `model` (the exact Codex slug),
   `effort` (the reasoning effort it passes to Codex), and `codexStatus` (the unique filename stem for this Codex
-  invocation, also unique on a resume). Declarations need no `done` and preserve the prior count and note. A worker
+  invocation, also unique on a resume). A Gemini relay sends `model` and `effort` as it passes them to `agy`, and
+  `geminiStatus` in place of `codexStatus`. Declarations need no `done` and preserve the prior count and note. A worker
   calls it at the start of each step and before any command it expects to run longer than a minute. A note names the
   actual action, such as "reading CreatureProbe.cs" or "running EditMode tests", never "working".
 

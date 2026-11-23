@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.4] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.1.3] - 2026-11-13
 - A red called expected is read before it is dismissed: a test asserting content the change rewrote is a real failure among the expected ones
 

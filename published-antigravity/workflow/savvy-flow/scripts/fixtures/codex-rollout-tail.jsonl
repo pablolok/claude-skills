@@ -1,0 +1,6 @@
+partial tool output from before the positioned tail
+{"type":"turn_context","payload":{"model":"gpt-6-sol"}}
+{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":7,"window_minutes":300,"resets_at":1794536454},"secondary":{"used_percent":50,"window_minutes":10080,"resets_at":1795033876}}}}
+{"type":"turn_context","payload":{"model":"gpt-6.1-sol"}}
+{"type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":8,"window_minutes":300,"resets_at":1794536454},"secondary":{"used_percent":51,"window_minutes":10080,"resets_at":1795033876}}}}
+{"type":"turn_context","payload":{"model":"incomplete

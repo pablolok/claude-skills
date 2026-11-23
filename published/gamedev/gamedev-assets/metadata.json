@@ -1,6 +1,6 @@
 {
   "name": "gamedev-assets",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "3D assets from concept art and the iteration loop that matches assets to their concepts.",
   "kind": "bundle"
 }

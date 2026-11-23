@@ -35,7 +35,7 @@ ledger lines, the close line, doc titles, commit messages — in the project's l
 are the defaults for a project that declares none, never a correction to one that does.
 
 The scripts live in this skill's `scripts` folder: run them as `node <this skill's base directory>/scripts/<name>.mjs`
-from anywhere in the project (they find the project from `CLAUDE_PROJECT_DIR` or the git work tree). Node is the
+from anywhere in the project (they find the project from `CLAUDE_PROJECT_DIR` when the agent sets it, or the git work tree). Node is the
 only requirement.
 
 ## The entry format
@@ -136,8 +136,8 @@ bare id in a project that declares `"citation": "bare"`.
   adopted it** — its preamble says so, or `backlog` issues already exist; never create it for a project that hasn't.
   When it is on, read `references/github-mirror.md` before the first backlog change of the session: it runs after
   every `add` / `process` / `done` / Status change. A `gh` failure warns and never blocks the file update.
-- **The dashboard** is read-only: the user types `/backlog-dashboard` (Claude cannot open the pane), or Claude starts
-  the browser page in the background. Read `references/dashboard.md` when asked for it, or when a table or ledger must
+- **The dashboard** is read-only: in Claude Code the user types `/backlog-dashboard` (the agent cannot open the pane); in
+  any agent (the only way in Antigravity), the agent starts the browser page in the background. Read `references/dashboard.md` when asked for it, or when a table or ledger must
   show there — it counts only the register's own forms.
 
 ## The gates

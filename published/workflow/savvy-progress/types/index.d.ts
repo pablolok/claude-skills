@@ -58,7 +58,12 @@ export type AgentRun = {
   codexEffort?: string
   codexStatus?: string
   codexState?: AgentStatus
-  /** The relay's own state, while an independently running Codex keeps the row live. */
+  /** Gemini's model, effort and status filename stem, declared by its Claude relay (`agy`). */
+  geminiModel?: string
+  geminiEffort?: string
+  geminiStatus?: string
+  geminiState?: AgentStatus
+  /** The relay's own state, while an independently running Codex or Gemini keeps the row live. */
   relayStatus?: AgentStatus
   relayEndedAt?: number
   status: AgentStatus
@@ -95,7 +100,7 @@ export type ModelHints = {
 
 export type PlanWindow = { percentUsed: number; resetsAt?: string }
 export type PlanUsage = { fiveHour?: PlanWindow; week?: PlanWindow }
-export type PlanFamily = 'claude' | 'codex'
+export type PlanFamily = 'claude' | 'codex' | 'gemini'
 export type PlanWindowKey = keyof PlanUsage
 export type BudgetPolicy = 'within' | 'full' | 'pace'
 /** spentUsd: the family's estimated session spend when the reading was taken, when known. */
@@ -122,7 +127,7 @@ export type WindowBudget = {
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
 /** The user's yes to costly work despite an ask verdict, until the family's soonest reset. */
-/** The user's recorded yes to a top tier (fable, codex-astra), which is for plans only: launches and resumes left, or the session. */
+/** The user's recorded yes to a top tier (fable, codex-astra, gemini-carbon), which is for plans only: launches and resumes left, or the session. */
 export type TopTierPermit = { at: number; words: string; uses: number | 'session' }
 /** The gate's latest refusal: when, and how many user messages the transcript held, so a yes must come after them. */
 export type GateRefusal = { at: number; userMessages: number }
@@ -143,6 +148,25 @@ export type CodexStatus = {
   state: AgentStatus
   action: string
   totalTokenUsage: CodexTokens
+  rateLimits?: PlanUsage
+  updatedAt: number
+}
+/** Gemini's token counters, as `agy --output-format stream-json` reports them in `result.usage`. */
+export type GeminiTokens = {
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  thinking_tokens: number | null
+  total_tokens: number | null
+}
+/** A Gemini relay's snapshot in ~/.gemini/savvy-status/<name>.json; sessionId is agy's conversation_id. */
+export type GeminiStatus = {
+  version: 1
+  sessionId: string | null
+  model: string | null
+  state: AgentStatus
+  action: string
+  totalTokenUsage: GeminiTokens
   rateLimits?: PlanUsage
   updatedAt: number
 }
@@ -167,6 +191,15 @@ export type UsageReadings = {
   statuses: Record<string, CodexStatus>
   statusMtimes?: Record<string, number>
   cacheReadAt?: number
+  gemini?: PlanUsage
+  /** Last valid Gemini plan observation, retained when status files disappear. */
+  geminiReadAt?: number
+  geminiUpdatedAt?: number
+  geminiSource?: { name: string; mtimeMs: number }
+  /** Gemini relays' snapshots, by status name; absent until one is read. */
+  geminiStatuses?: Record<string, GeminiStatus>
+  geminiStatusMtimes?: Record<string, number>
+  geminiCacheReadAt?: number
 }
 
 // What the agents panel shows, copied from the live values once a second: the

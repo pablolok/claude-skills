@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.2] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.1.1] - 2026-10-07
 - Labels and captions in the document's language: accented letters parse and render (measured), the rule is plain text, no entities, no tags; bootstrap VERSION 1.1.1
 

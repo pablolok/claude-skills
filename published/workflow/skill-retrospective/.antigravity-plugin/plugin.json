@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "skill-retrospective",
+  "displayName": "Skill Retrospective",
+  "version": "2.3.1",
+  "description": "Use at the close of tracked work or an accepted/rejected deliverable, or after a user correction of the method. Start with a brief evidence check; investigate and revise only skills implicated by an observed problem. No automatic rewrite or publication.",
+  "homepage": "https://github.com/pablolok/claude-skills",
+  "repository": "https://github.com/pablolok/claude-skills",
+  "category": "workflow",
+  "skills": [
+    "./"
+  ]
+}

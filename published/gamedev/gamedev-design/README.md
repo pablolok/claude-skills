@@ -1,12 +1,14 @@
 # Game development — design
 
-`gamedev-design` bundles generic Claude Code skills to set a presentation quality bar, review playable design from
+`gamedev-design` bundles generic skills to set a presentation quality bar, review playable design from
 evidence, and design UI from purpose through a selected concept. Apply them across genres and engines; adapt targets
 to the player, platform, accessibility needs, production stage, and chosen style.
 
 ```bash
 claude plugin install gamedev-design@pablolok-skills --scope project
 ```
+
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
 
 Inside a session the skills are `gamedev-design:quality-bar`, `gamedev-design:game-design-review` and
 `gamedev-design:ui-screen-design`.

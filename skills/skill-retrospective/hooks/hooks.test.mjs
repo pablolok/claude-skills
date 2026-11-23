@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -128,7 +128,7 @@ test("the state folder keeps itself out of git", () => {
 
 function run(hook, payload, root, extraEnv = {}) {
   // the machine's own SKILL_RETRO_* settings must not leak into the hook under test
-  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("SKILL_RETRO_")));
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("SKILL_RETRO_") && key !== "SAVVY_RELAY"));
   try {
     const stdout = execFileSync("node", [join(HOOKS, hook)], {
       input: JSON.stringify(payload), env: { ...inherited, CLAUDE_PROJECT_DIR: root, ...extraEnv }, encoding: "utf8",
@@ -257,4 +257,148 @@ test("a hook started through a symbolic link still runs; an imported module neve
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// ---- Antigravity mode (--antigravity): camelCase payloads modelled on real ones, paths anonymised ----
+
+function runAg(hook, payload, { cwd, env = {} } = {}) {
+  const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("SKILL_RETRO_") && !key.startsWith("CLAUDE_") && key !== "SAVVY_RELAY"));
+  try {
+    return execFileSync("node", [join(HOOKS, hook), "--antigravity"], {
+      input: JSON.stringify(payload), env: { ...inherited, ...env }, cwd, encoding: "utf8",
+    });
+  } catch (error) {
+    assert.fail(`${hook} --antigravity must exit 0: ${error.message}`);
+  }
+}
+
+const agPost = (workspace, toolCall) => ({
+  artifactDirectoryPath: "/home/u/.gemini/antigravity-cli/brain/c1", conversationId: "c1", cwd: workspace,
+  hookEventName: "PostToolUse", lastUserInput: "Use the probe-skill skill", modelName: "gemini-3.8-flash-medium", stepIdx: 3,
+  toolCall, transcriptPath: "/home/u/.gemini/antigravity-cli/brain/c1/.system_generated/logs/transcript_full.jsonl",
+  workspacePaths: [workspace],
+});
+const agStop = (workspace, extra = {}) => ({
+  continuationActive: false, conversationId: "c1", cwd: workspace, error: "", executionNum: 1, fullyIdle: true,
+  hookEventName: "Stop", lastUserInput: "x", modelName: "gemini-3.8-flash-medium", terminationReason: "model_stop",
+  transcriptPath: "/home/u/t.jsonl", workspacePaths: [workspace], ...extra,
+});
+
+test("antigravity: frontmatter name, folder fallback, and only read_file of a SKILL.md counts", async () => {
+  const { antigravitySkillName, frontmatterName } = await import("./log-skill-use.mjs");
+  assert.equal(frontmatterName("---\nname: \"probe-skill\"\ndescription: x\n---\nbody"), "probe-skill");
+  assert.equal(frontmatterName("no frontmatter"), "");
+  const call = (name, Path) => ({ name, args: { Path } });
+  assert.equal(antigravitySkillName(call("read_file", "/w/skills/probe/SKILL.md"), () => "---\nname: real-name\n---\n"), "real-name");
+  assert.equal(antigravitySkillName(call("read_file", "/w/skills/probe/SKILL.md"), () => "no frontmatter"), "probe");
+  assert.equal(antigravitySkillName(call("read_file", "/w/skills/probe/SKILL.md"), () => { throw new Error("gone"); }), "probe");
+  assert.equal(antigravitySkillName(call("read_file", "/w/skills/probe/README.md")), "");
+  assert.equal(antigravitySkillName(call("run_command", "/w/skills/probe/SKILL.md")), "");
+  assert.equal(antigravitySkillName(undefined), "");
+});
+
+test("antigravity: the root is workspacePaths[0], else the cwd's git root, else the cwd; never process.cwd()", async () => {
+  const { antigravityRoot } = await import("./state.mjs");
+  assert.equal(antigravityRoot({ workspacePaths: ["/w"], cwd: "/c" }), "/w");
+  const plain = mkdtempSync(join(tmpdir(), "retro-ag-plain-"));
+  assert.equal(antigravityRoot({ workspacePaths: [], cwd: plain }), plain);
+  const repo = mkdtempSync(join(tmpdir(), "retro-ag-repo-"));
+  execFileSync("git", ["init", "-q"], { cwd: repo });
+  mkdirSync(join(repo, "sub"));
+  assert.equal(realpathSync(antigravityRoot({ cwd: join(repo, "sub") })), realpathSync(repo));
+  assert.equal(antigravityRoot({}), null);
+  assert.equal(antigravityRoot(undefined), null);
+});
+
+test("antigravity: PostToolUse logs the skill once in the workspace's state, prints {}, ignores CLAUDE_PROJECT_DIR", () => {
+  const ws = mkdtempSync(join(tmpdir(), "retro-ag-post-"));
+  const decoy = mkdtempSync(join(tmpdir(), "retro-ag-decoy-"));
+  const pluginRoot = mkdtempSync(join(tmpdir(), "retro-ag-plugin-"));
+  mkdirSync(join(ws, "skills/probe"), { recursive: true });
+  writeFileSync(join(ws, "skills/probe/SKILL.md"), "---\nname: probe-skill\n---\nbody\n");
+  const read = { name: "read_file", id: "call_1", args: { Path: join(ws, "skills/probe/SKILL.md") } };
+  const env = { CLAUDE_PROJECT_DIR: decoy, PLUGIN_ROOT: pluginRoot };
+  for (let i = 0; i < 2; i++) assert.equal(runAg("log-skill-use.mjs", agPost(ws, read), { cwd: pluginRoot, env }), "{}");
+  assert.equal(readFileSync(join(ws, ".claude/.state/skills-used.txt"), "utf8"), "probe-skill\n");
+  // not a skill file, or not read_file: nothing logged, still {}
+  const other = { name: "read_file", id: "c2", args: { Path: join(ws, "README.md") } };
+  assert.equal(runAg("log-skill-use.mjs", agPost(ws, other), { cwd: pluginRoot, env }), "{}");
+  assert.equal(runAg("log-skill-use.mjs", agPost(ws, { ...read, name: "view_file" }), { cwd: pluginRoot, env }), "{}");
+  assert.equal(readFileSync(join(ws, ".claude/.state/skills-used.txt"), "utf8"), "probe-skill\n");
+  assert.equal(existsSync(join(decoy, ".claude")), false, "CLAUDE_PROJECT_DIR must not be used");
+  assert.equal(existsSync(join(pluginRoot, ".claude")), false, "process.cwd() must not be used");
+});
+
+test("antigravity: malformed input is fail-open and still prints {} for PostToolUse", () => {
+  const stdout = execFileSync("node", [join(HOOKS, "log-skill-use.mjs"), "--antigravity"], { input: "not json", encoding: "utf8" });
+  assert.equal(stdout, "{}");
+});
+
+test("antigravity: Stop is silent first, then continues with the reason after an archive, released when continuationActive", () => {
+  const ws = mkdtempSync(join(tmpdir(), "retro-ag-stop-"));
+  const pluginRoot = mkdtempSync(join(tmpdir(), "retro-ag-plugin-"));
+  const git = (...args) => execFileSync("git", args, { cwd: ws, encoding: "utf8" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  mkdirSync(join(ws, "docs/implementations/features/x"), { recursive: true });
+  writeFileSync(join(ws, "docs/implementations/features/x/spec.md"), "a\n");
+  git("add", "-A");
+  git("commit", "-qm", "init");
+  const skill = { name: "read_file", id: "c", args: { Path: join(ws, "s/backlog/SKILL.md") } };
+  runAg("log-skill-use.mjs", agPost(ws, skill), { cwd: pluginRoot });
+  assert.equal(runAg("retrospective-hint.mjs", agStop(ws), { cwd: pluginRoot }), "");
+  assert.ok(existsSync(join(ws, ".claude/.state/last-retrospective")), "same state files as the Claude mode");
+
+  mkdirSync(join(ws, "docs/implementations/archive"), { recursive: true });
+  git("mv", "docs/implementations/features/x", "docs/implementations/archive/x");
+  git("commit", "-qm", "close");
+  const held = JSON.parse(runAg("retrospective-hint.mjs", agStop(ws), { cwd: pluginRoot }));
+  assert.equal(held.decision, "continue");
+  assert.match(held.reason, /skill-retrospective skill on: backlog/);
+  assert.equal(runAg("retrospective-hint.mjs", agStop(ws, { continuationActive: true }), { cwd: pluginRoot }), "");
+});
+
+test("antigravity: a relay's run (SAVVY_RELAY set) gets no hold and writes no state; Claude mode ignores the variable", async () => {
+  const { isRelayRun } = await import("./retrospective-hint.mjs");
+  assert.equal(isRelayRun({ SAVVY_RELAY: "1" }), true);
+  assert.equal(isRelayRun({ SAVVY_RELAY: "" }), false);
+  assert.equal(isRelayRun({}), false);
+  assert.equal(isRelayRun(undefined), false);
+
+  const ws = mkdtempSync(join(tmpdir(), "retro-ag-relay-"));
+  const pluginRoot = mkdtempSync(join(tmpdir(), "retro-ag-plugin-"));
+  const git = (...args) => execFileSync("git", args, { cwd: ws, encoding: "utf8" });
+  git("init", "-q");
+  git("config", "user.email", "t@t");
+  git("config", "user.name", "t");
+  git("commit", "-q", "--allow-empty", "-m", "init");
+  const relay = { cwd: pluginRoot, env: { SAVVY_RELAY: "1", SKILL_RETRO_COMMITS: "1" } };
+  assert.equal(runAg("retrospective-hint.mjs", agStop(ws), relay), "");
+  assert.equal(existsSync(join(ws, ".claude")), false, "a relay's run writes no baseline either");
+
+  assert.equal(runAg("retrospective-hint.mjs", agStop(ws), { cwd: pluginRoot, env: { SKILL_RETRO_COMMITS: "1" } }), "");
+  git("commit", "-q", "--allow-empty", "-m", "work");
+  assert.equal(runAg("retrospective-hint.mjs", agStop(ws), relay), "", "the condition holds, the relay's run stays silent");
+  const held = JSON.parse(runAg("retrospective-hint.mjs", agStop(ws), { cwd: pluginRoot, env: { SKILL_RETRO_COMMITS: "1" } }));
+  assert.equal(held.decision, "continue", "the same condition holds an interactive run");
+
+  const claude = JSON.parse(run("retrospective-hint.mjs", { hook_event_name: "Stop" }, ws, { SAVVY_RELAY: "1", SKILL_RETRO_COMMITS: "1" }));
+  assert.equal(claude.decision, "block", "the Claude Code mode is unchanged");
+});
+
+test("antigravity: Stop with no usable project or outside git stays silent and writes nothing", () => {
+  const empty = mkdtempSync(join(tmpdir(), "retro-ag-empty-"));
+  assert.equal(runAg("retrospective-hint.mjs", { hookEventName: "Stop" }, { cwd: empty, env: { CLAUDE_PROJECT_DIR: empty } }), "");
+  assert.equal(existsSync(join(empty, ".claude")), false);
+  const nogit = mkdtempSync(join(tmpdir(), "retro-ag-nogit-"));
+  assert.equal(runAg("retrospective-hint.mjs", agStop(nogit)), "");
+});
+
+test("the Antigravity hooks.json sits at the skill root, names both hooks, and uses only PostToolUse and Stop", () => {
+  const file = JSON.parse(readFileSync(join(HOOKS, "..", "hooks.json"), "utf8"));
+  assert.deepEqual(Object.keys(file).sort(), ["skill-retrospective-hint", "skill-retrospective-log-skill-use"]);
+  assert.equal(file["skill-retrospective-log-skill-use"].PostToolUse[0].matcher, "read_file");
+  assert.match(file["skill-retrospective-hint"].Stop[0].command, /retrospective-hint\.mjs --antigravity/);
+  assert.equal(JSON.stringify(file).includes("PreToolUse"), false, "a PreToolUse hook printing {} would deny the tool");
 });

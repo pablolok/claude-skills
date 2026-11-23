@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.0] - 2026-11-24
+- Antigravity manifest and install line; the browser dashboard is the Antigravity route for the Claude-only panel.
+
+
 ## [1.12.0] - 2026-11-12
 - Dashboard language: English by default, never guessed from the locale; Italian on request — the pane's l key (kept in the new language plugin option), the page's header button (kept by the browser). A pane the plugin reloaded under reads the register again
 

@@ -20,7 +20,7 @@ Run `check-doc-refs` and `backlog-coherence` after every `add` and `done`; all t
 A legitimate reference to something that is not a file of the repo goes in `pathExceptions` **with its reason** —
 never by weakening a rule. The gates are git-aware: they judge what git keeps, as a CI checkout would.
 
-Outside a Claude session (CI, git hooks, package scripts) a project copies `bootstrap/backlog-gate.mjs` into its
+Outside an agent session (CI, git hooks, package scripts) a project copies `bootstrap/backlog-gate.mjs` into its
 repository: `node scripts/backlog-gate.mjs check-doc-refs` fetches this skill once at the version it pins and runs
 the gate on the project.
 

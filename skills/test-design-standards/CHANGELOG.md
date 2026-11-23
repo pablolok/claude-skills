@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.3] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.0.2] - 2026-11-01
 - Si verifica il valore dove l'unità lo decide: se un passo dopo può cambiarlo (riduzione a un budget, arrotondamento, tetto), del risultato finale solo i limiti che quel passo mantiene
 

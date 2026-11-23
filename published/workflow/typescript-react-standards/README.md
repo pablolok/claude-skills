@@ -22,6 +22,8 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 skill sees the name `typescript-react-standards:typescript-react-standards` when it runs from the plugin: match the
 part after the last colon.
 
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
+
 ## Conditional detail and verification
 
 React-specific detail lives in `references/react-conventions.md`; load it for components, hooks or state, not for TypeScript-only scripts.

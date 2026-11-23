@@ -1,0 +1,13 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "python-standards",
+  "displayName": "Python Standards",
+  "version": "1.0.1",
+  "description": "The Python-specific layer on top of clean-code-standards. Use whenever writing, refactoring, or reviewing Python — scripts, packages, services, tests. Assumes the language-agnostic core and adds only the Python idioms — injection without import-time side effects, type hints with Protocol/Enum/dataclass, narrow exceptions, no mutable defaults, pathlib and explicit encodings, safe subprocess, logging, and the project's own runner, minimum version and checkers — never tools it does not use.",
+  "homepage": "https://github.com/pablolok/claude-skills",
+  "repository": "https://github.com/pablolok/claude-skills",
+  "category": "workflow",
+  "skills": [
+    "./"
+  ]
+}

@@ -21,6 +21,21 @@ The plugin wires its two hooks itself (declared in `plugin-entry.json`): nothing
 settings file is edited. The hooks run from the plugin cache and take the project from `CLAUDE_PROJECT_DIR`, which
 Claude Code sets for every hook; without it they do nothing.
 
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs`
+(on macOS, double-click `bootstrap/install-antigravity.command`); it lists the plugins in
+`~/.gemini/config/plugins.json`, and a rerun updates them. The plugin's root `hooks.json` wires the same two hooks
+there, run with `--antigravity`:
+
+- `PostToolUse` with matcher `read_file`: `hooks/log-skill-use.mjs` counts a read of a `SKILL.md` as a skill use
+  (Antigravity has no `Skill` tool) and adds it to the same `.claude/.state/skills-used.txt`.
+- `Stop`: `hooks/retrospective-hint.mjs` asks for the retrospective once, as in Claude Code (Antigravity's
+  `continuationActive` plays the part of `stop_hook_active`, and it answers `continue` where Claude Code answers
+  `block`). A run with `SAVVY_RELAY` set (a relay's headless `agy -p`; hooks inherit its environment) gets no hold:
+  `continue` would drag the relay's task into a retrospective.
+
+There the project root comes from the payload's `workspacePaths[0]`, since `CLAUDE_PROJECT_DIR` is not set. Both
+hooks stay fail-open.
+
 ## What it holds
 
 | File | Role |

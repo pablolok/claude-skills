@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.12] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.0.11] - 2026-11-07
 - Act 1 elenca il controllo phase-tables della skill backlog
 

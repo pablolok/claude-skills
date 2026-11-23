@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.22.0] - 2026-11-24
+- A third model family, gemini, beside claude and codex, for savvy-flow's Gemini relays (savvy-gemini-flash, -argon, -hydrogen, -carbon on agy): each relay figure wears its tier's costume on a sparkle body with its badge (bolt, bulb, drop, gem) in a color of its own; the step tool takes geminiStatus with the model and effort passed to agy, and the panel reads ~/.gemini/savvy-status/<name>.json (and a plan-only snapshot.json) for the row's state, action and tokens (no cost: no verified price table) and for the Gemini Models group of agy's /usage, used as round((1 - remaining_fraction) * 100) % per 5-hour and weekly window; the plan tile, the compact line, the budget summary, /savvy-budget gemini, decide with family gemini, and the budget gate on savvy-gemini-hydrogen and savvy-gemini-carbon follow; savvy-gemini-carbon is for plans only, gated like Fable and Astra until decide records tier carbon, at launch and on a SendMessage resume.
+
+
 ## [1.21.2] - 2026-11-19
 - The agents panel never draws a copy that lacks a run the live list holds as running: the run ids are kept beside the copy, and a copy taken before a run started (after a session respawn, which empties the session state, or while the picker holds the panel) gives way to the live values, so a live worker no longer shows as 'No subagents yet' with no cost and no time.
 

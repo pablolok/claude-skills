@@ -25,3 +25,5 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 `claude plugin install diff-self-review@pablolok-skills --scope user` (every project) or `--scope project`.
 A hook that gates on this skill sees the name `diff-self-review:diff-self-review` when it runs from the plugin:
 match the part after the last colon.
+
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".

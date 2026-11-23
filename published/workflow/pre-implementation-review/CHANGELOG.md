@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.14] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.2.13] - 2026-11-01
 - Un piano che altri costruiscono si rilegge una volta contro il codice prima dell'approvazione: scelte aperte che cambiano il risultato decise nel piano, firme cambiate con tutti i chiamanti nello stesso compito
 

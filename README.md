@@ -125,6 +125,32 @@ nothing from it):
 }
 ```
 
+## Antigravity (Gemini)
+
+The plugins also load in Google Antigravity (`agy`). It has no custom marketplace, so there is no
+`marketplace add`: it reads the plugin folders listed in `~/.gemini/config/plugins.json`, and this repository ships the
+installer that keeps that list. Needs a clone of the repository and Node 20 or later:
+
+```bash
+git clone https://github.com/pablolok/claude-skills.git && cd claude-skills
+node bootstrap/antigravity-plugins.mjs            # on macOS you can double-click bootstrap/install-antigravity.command instead
+node bootstrap/antigravity-plugins.mjs --dry-run  # prints the resulting plugins.json, writes nothing
+```
+
+- **What it does**: `git pull --ff-only` when the clone is clean and on its default branch (`--no-pull` skips it), then
+  merges one entry per `published/<category>/` and per `published-antigravity/<category>/` into `plugins.json`. Entries
+  that point elsewhere are kept; the old file is copied to `plugins.json.bak`, and nothing is written when nothing
+  changes. It never runs `agy plugin install`, `import` or `link`.
+- **What loads**: every published plugin, each with its `.antigravity-plugin/plugin.json`. `skill-retrospective` brings
+  its two hooks (a `read_file` of a `SKILL.md` and Stop). The panels are Claude Code only and do not load:
+  `backlog`'s `/backlog-dashboard` (in Antigravity use the browser dashboard,
+  `node <skill>/scripts/dashboard.mjs`) and `savvy-progress` (its progress bar and agents panel).
+- **`published-antigravity/`**: a plugin that ships Claude-format agents (today `savvy-flow`) cannot load in
+  Antigravity as published, which rejects those agents' models. Its Claude folder stays exactly as Claude Code loads
+  it, and the publish flow writes a copy without `agents/` here; the installer excludes the original so it loads once.
+  Like `published/`, it is written only by the publish flow.
+- **Updating**: run the installer again (it pulls and rewrites the entries); restart `agy` to see the new versions.
+
 ## Publish
 
 `skills/<plugin>/` is the source; `published/<category>/<plugin>/` is what each plugin installs, written only by the
@@ -136,6 +162,7 @@ python automate_publish.py <skill> <category> "<summary>" --bump <patch|minor|ma
 python -m unittest discover -s tests -p "test_*.py"
 python build_marketplace.py --check
 claude plugin validate .
+agy plugin validate published/<category>/<plugin>   # non-strict; skipped when agy is missing
 git commit ... && git push origin HEAD
 python tag_published.py --push   # tags <skill>@<version>, pushes every tag origin lacks
 ```

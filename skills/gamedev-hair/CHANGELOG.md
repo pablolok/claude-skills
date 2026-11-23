@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.5] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [0.2.4] - 2026-11-23
 - hair-reference-review: a groom's mass mask from density; projection gates re-read on the render; look at the shipping renderer before a coverage piece; a relative pass line needs a passing baseline; read all parts' masks before calling an area missing
 

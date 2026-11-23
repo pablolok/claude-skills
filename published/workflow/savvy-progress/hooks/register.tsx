@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
-import type { AgentRun, BudgetPolicy, GateRefusal, BudgetSummary, CodexStatus, CodexTokens, Flow, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
-import { CLAY, INK, codexBadge, codexBody, crabBody, pixels, stamp, withBody } from './sprite'
+import type { AgentRun, BudgetPolicy, GateRefusal, BudgetSummary, CodexStatus, CodexTokens, Flow, GeminiStatus, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
+import { CLAY, INK, codexBadge, codexBody, crabBody, geminiBadge, geminiBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
 import type { Dress, Theme } from './themes'
@@ -111,7 +111,7 @@ const STRINGS = {
     windowReset: 'reset',
     ago: (minutes: number) => minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`,
     budget: 'Budget',
-    budgetUsage: 'Usage: /savvy-budget <claude|codex> <within|full|pace|once>',
+    budgetUsage: 'Usage: /savvy-budget <claude|codex|gemini> <within|full|pace|once>',
     goUntil: (family: string, time: string) => `${family}: go until ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} go until ${until}`,
     pacing: (family: string) => `ok: ${family} pace`,
@@ -120,24 +120,25 @@ const STRINGS = {
     savvyTheme: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
     themeHint: '[theme|auto]',
     savvyBudget: 'Set a family budget policy: within the rolling windows, full when you accept using a reset, pace to keep working by re-tiering without asking, once for costly work until the next reset; no arguments lists policies',
-    budgetHint: '[claude|codex] [within|full|pace|once]',
+    budgetHint: '[claude|codex|gemini] [within|full|pace|once]',
     themeNote: (theme: string, id: string) => `savvy-progress: the theme is now ${theme} (\`${id}\`); savvy-flow's chat follows it from the next message.`,
     ignoredFlow: 'ignored: only the main session reports the flow',
     ignoredSteps: 'ignored: only subagents report steps',
     noRow: (agentId: string) => `ignored: no panel row for agent ${agentId}`,
     ignoredDecision: "ignored: only the main session records the user's decision",
-    badFamily: 'family must be claude or codex',
+    badFamily: 'family must be claude, codex or gemini',
     badAnswer: "answer must quote the user's own words",
     staleAnswer: "Not recorded: those words are not a reply to this gate's refusal (the user said them earlier, or never). Ask the user now, and quote their reply.",
     badModel: 'model and effort must be strings',
     badStatus: 'codexStatus must be a safe filename stem',
-    badTier: 'tier must be fable or astra, and match the family when one is given',
+    badGeminiStatus: 'geminiStatus must be a safe filename stem',
+    badTier: 'tier must be fable, astra or carbon, and match the family when one is given',
     badUses: 'uses must be 1, a positive whole number or "session"',
     topDecided: (tier: string, uses: string) => `ok: ${tier} allowed for ${uses}`,
     topUsesOne: '1 launch', topUsesMany: (n: number) => `${n} launches`, topUsesSession: 'the session',
     topGate: (t: TopGateText) =>
       `Top-tier gate: savvy-${t.tier} (${t.name}) is for PLANS only (writing a plan or a design-decision document), and each ${t.action} needs the user's explicit yes, whatever the budget says. ` +
-      `${t.spent ? 'The yes recorded for it is used up. ' : ''}Ask the user in chat; on their yes, record their words with the decide tool (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, or "session" if they said so for more). ` +
+      `${t.spent ? 'The yes recorded for it is used up. ' : ''}Ask the user in chat; on their yes, record their words with the decide tool (tier ${t.key}, uses 1, or "session" if they said so for more). ` +
       `For anything that is not a plan, offer ${t.alternative} instead.`,
     planGate: (description: string, title: string) =>
       `Plan gate: '${description}' is not a task of the current plan '${title}'. Update the plan first: call progress with the new title, tasks and total (the new plan replaces the old one), then launch with description = the task's title.`,
@@ -194,7 +195,7 @@ const STRINGS = {
     windowReset: 'azzerata',
     ago: (minutes: number) => minutes < 60 ? `${minutes} min fa` : minutes < 1440 ? `${Math.floor(minutes / 60)} h fa` : `${Math.floor(minutes / 1440)} g fa`,
     budget: 'Budget',
-    budgetUsage: 'Uso: /savvy-budget <claude|codex> <entro|pieno|ritmo|una-volta>',
+    budgetUsage: 'Uso: /savvy-budget <claude|codex|gemini> <entro|pieno|ritmo|una-volta>',
     goUntil: (family: string, time: string) => `${family}: via libera fino a ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} via libera fino a ${until}`,
     pacing: (family: string) => `ok: ${family} ritmo`,
@@ -203,24 +204,25 @@ const STRINGS = {
     savvyTheme: 'Sceglie il tema delle figure (una festa, un periodo, una stagione, classico) o auto per il calendario; senza nome li elenca',
     themeHint: '[tema|auto]',
     savvyBudget: 'Imposta il budget di una famiglia: entro le finestre, pieno se accetti di usare un azzeramento, una-volta per il lavoro costoso fino al prossimo azzeramento; senza argomenti li elenca',
-    budgetHint: '[claude|codex] [entro|pieno|una-volta]',
+    budgetHint: '[claude|codex|gemini] [entro|pieno|una-volta]',
     themeNote: (theme: string, id: string) => `savvy-progress: il tema ora è ${theme} (\`${id}\`); la chat di savvy-flow lo segue dal prossimo messaggio.`,
     ignoredFlow: 'ignorato: solo la sessione principale riporta il flusso',
     ignoredSteps: 'ignorato: solo i sottoagenti riportano i passi',
     noRow: (agentId: string) => `ignorato: nessuna riga del pannello per l'agente ${agentId}`,
     ignoredDecision: "ignorato: solo la sessione principale registra la decisione dell'utente",
-    badFamily: 'family deve essere claude o codex',
+    badFamily: 'family deve essere claude, codex o gemini',
     badAnswer: "answer deve riportare le parole dell'utente",
     staleAnswer: "Non registrato: quelle parole non sono una risposta al blocco appena avvenuto (l'utente le ha dette prima, o mai). Chiedi ora all'utente, e riporta la sua risposta.",
     badModel: 'model ed effort devono essere stringhe',
     badStatus: 'codexStatus deve essere un nome di file sicuro',
-    badTier: 'tier deve essere fable o astra, coerente con la famiglia se indicata',
+    badGeminiStatus: 'geminiStatus deve essere un nome di file sicuro',
+    badTier: 'tier deve essere fable, astra o carbon, coerente con la famiglia se indicata',
     badUses: 'uses deve essere 1, un intero positivo o "session"',
     topDecided: (tier: string, uses: string) => `ok: ${tier} consentito per ${uses}`,
     topUsesOne: '1 avvio', topUsesMany: (n: number) => `${n} avvii`, topUsesSession: 'la sessione',
     topGate: (t: TopGateText) =>
       `Blocco del livello massimo: savvy-${t.tier} (${t.name}) è solo per i PIANI (scrivere un piano o un documento di decisioni di progetto), e ogni ${t.action} vuole il sì esplicito dell'utente, qualunque cosa dica il budget. ` +
-      `${t.spent ? 'Il sì registrato per lui è esaurito. ' : ''}Chiedi all'utente in chat; se dice sì, registra le sue parole con lo strumento decide (tier ${t.tier === 'fable' ? 'fable' : 'astra'}, uses 1, o "session" se ne ha autorizzati di più). ` +
+      `${t.spent ? 'Il sì registrato per lui è esaurito. ' : ''}Chiedi all'utente in chat; se dice sì, registra le sue parole con lo strumento decide (tier ${t.key}, uses 1, o "session" se ne ha autorizzati di più). ` +
       `Per tutto ciò che non è un piano, proponi ${t.alternative}.`,
     planGate: (description: string, title: string) =>
       `Blocco del piano: '${description}' non è un compito del piano attuale '${title}'. Aggiorna prima il piano: chiama progress con il nuovo titolo, i compiti e il totale (il nuovo piano sostituisce il vecchio), poi avvia con description = il titolo del compito.`,
@@ -233,7 +235,7 @@ const STRINGS = {
 } as const
 
 // What the gate's refusal says, before it is put in words.
-type TopGateText = { tier: string; name: string; action: string; spent: boolean; alternative: string }
+type TopGateText = { tier: string; key: string; name: string; action: string; spent: boolean; alternative: string }
 type GateText = {
   family: string
   key: PlanFamily
@@ -389,7 +391,7 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, ...usage } = await read($, usageReadings)
+  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, geminiCacheReadAt: _g, geminiStatusMtimes: _gm, ...usage } = await read($, usageReadings)
   const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlans(usage) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
@@ -604,6 +606,11 @@ const TIER_COLOR: Record<string, string> = {
   'codex-terra': '#6E9B4A',
   'codex-sol': '#E0A526',
   'codex-astra': '#9B7BE0',
+  // The Gemini relays, one per intensity: bolt, bulb, drop, gem.
+  'gemini-flash': '#D4B21C',
+  'gemini-argon': '#D2559A',
+  'gemini-hydrogen': '#2BA6C6',
+  'gemini-carbon': '#3F51B5',
   other: '#888780',
 }
 
@@ -620,6 +627,10 @@ const TIER_MODEL: Record<string, string> = {
   'codex-terra': 'Codex · Terra',
   'codex-sol': 'Codex · Sol',
   'codex-astra': 'Codex · Astra',
+  'gemini-flash': 'Gemini · Flash',
+  'gemini-argon': 'Gemini · Argon',
+  'gemini-hydrogen': 'Gemini · Hydrogen',
+  'gemini-carbon': 'Gemini · Carbon',
 }
 
 // A Codex figure wears the costume of a Claude tier, on its own body, with its badge.
@@ -636,6 +647,26 @@ export const codexModelName = (slug: string): string => {
   const m = /^gpt-(\d+(?:\.\d+)*?)-(luna|terra|sol|astra)$/.exec(slug)
   return m?.[2] ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
 }
+
+// A Gemini figure, likewise, wears the costume of the Claude tier its intensity matches.
+const GEMINI_WEARS: Record<string, string> = {
+  'gemini-carbon': 'fable',
+  'gemini-hydrogen': 'careful',
+  'gemini-argon': 'medium',
+  'gemini-flash': 'light',
+}
+
+// What each Gemini relay passes to `agy --effort`.
+const GEMINI_EFFORT: Record<string, string> = { flash: 'low', argon: 'medium', hydrogen: 'high', carbon: 'high' }
+
+// `gemini-4-argon` → `Argon 4`, `gemini-3.8-flash` → `Flash 3.8`; any other slug as given.
+export const geminiModelName = (slug: string): string => {
+  const m = /^gemini-(\d+(?:\.\d+)*?)-(flash|argon|hydrogen|carbon)$/.exec(slug)
+  return m?.[2] ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
+}
+
+// A relay tier of either family: the Claude tier its figure wears, or undefined.
+const wornBy = (tier: string): string | undefined => CODEX_WEARS[tier] ?? GEMINI_WEARS[tier]
 
 // Same rule as the relays: the lowest priority among visible models of the family.
 export const codexModelsFrom = (cache: unknown): Record<string, string> => {
@@ -660,6 +691,13 @@ const codexModel = (tier: string, hints: ModelHints, declared?: string, effort?:
   // With no cache and no declaration, keep today's bare intensity label.
   const label = slug ? codexModelName(slug) : family.charAt(0).toUpperCase() + family.slice(1)
   return `${label}${withEffort && (slug || effort) ? ` · ${effort || CODEX_EFFORT[family]}` : ''}`
+}
+
+// Gemini has no models cache to predict from: a run names its declared slug, else the bare intensity.
+const geminiModel = (tier: string, declared?: string, effort?: string, withEffort = true): string => {
+  const family = tier.replace(/^gemini-/, '')
+  const label = declared ? geminiModelName(declared) : family.charAt(0).toUpperCase() + family.slice(1)
+  return `${label}${withEffort && (declared || effort) ? ` · ${effort || GEMINI_EFFORT[family]}` : ''}`
 }
 
 // Cache attempts, including failures, are limited across ticks and module reloads.
@@ -722,7 +760,7 @@ const PROJECTION_MIN_ELAPSED_MS = 5 * MINUTE_MS
 const HISTORY_BUCKET_MS = MINUTE_MS
 const HISTORY_MAX_SAMPLES = RECENT_SPAN_MS.week / HISTORY_BUCKET_MS + 1
 const PLAN_WINDOWS: readonly PlanWindowKey[] = ['fiveHour', 'week']
-const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex']
+const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex', 'gemini']
 const BUDGET_RED = '#D0453F'
 const BUDGET_AMBER = '#E0A526'
 const PLAN_TEXT_SIZE = 11
@@ -742,6 +780,10 @@ const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, ke
   return { resetsAt: value.resetsAt, samples: [...(sameMinute ? samples.slice(0, -1) : samples), sample].slice(-HISTORY_MAX_SAMPLES) }
 }
 
+const READ_AT: Readonly<Record<PlanFamily, 'claudeReadAt' | 'codexReadAt' | 'geminiReadAt'>> = {
+  claude: 'claudeReadAt', codex: 'codexReadAt', gemini: 'geminiReadAt',
+}
+
 // Pure: all histories live in the existing usage atom, never module-level mutable state.
 export const recordPlanUsage = (usage: UsageReadings, family: PlanFamily, plan: PlanUsage, at: number): UsageReadings => {
   const history: PlanHistory = {}
@@ -749,7 +791,7 @@ export const recordPlanUsage = (usage: UsageReadings, family: PlanFamily, plan: 
     const value = plan[key]
     if (value) history[key] = recordWindow(usage.history?.[family]?.[key], value, key, at, usage.spentUsd?.[family])
   }
-  return { ...usage, [family]: plan, [family === 'claude' ? 'claudeReadAt' : 'codexReadAt']: at,
+  return { ...usage, [family]: plan, [READ_AT[family]]: at,
     history: { ...usage.history, [family]: history } }
 }
 
@@ -796,7 +838,7 @@ const windowVerdict = (policy: BudgetPolicy, key: PlanWindowKey, value: PlanWind
 }
 
 export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary => {
-  const summary: BudgetSummary = { claude: {}, codex: {} }
+  const summary: BudgetSummary = { claude: {}, codex: {}, gemini: {} }
   for (const family of PLAN_FAMILIES) {
     const policy = budgetPolicy(usage, family)
     for (const key of PLAN_WINDOWS) {
@@ -820,8 +862,9 @@ const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 
 // The costly tiers each family's ask verdict holds back until the user decides.
 const GATED_TIERS: Readonly<Record<string, PlanFamily>> = {
   fable: 'claude', heavy: 'claude', careful: 'claude', 'codex-sol': 'codex', 'codex-astra': 'codex',
+  'gemini-hydrogen': 'gemini', 'gemini-carbon': 'gemini',
 }
-const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex' }
+const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini' }
 const WINDOW_NAME: Readonly<Record<PlanWindowKey, string>> = { fiveHour: '5h', week: 'week' }
 const roundTo = (n: number, digits: number): number => Math.round(n * 10 ** digits) / 10 ** digits
 
@@ -866,12 +909,16 @@ export const decideBudget = (usage: UsageReadings, family: PlanFamily, at: numbe
     [family]: { until: soonestReset(usage, family, at), at, by, ...(said ? { words: said } : {}) } } }
 }
 
-// Fable and Codex Astra are for plans only: each launch, and each resume, needs the user's recorded yes.
-const TOP_TIERS: Readonly<Record<string, { family: PlanFamily; name: string; alternative: string }>> = {
-  fable: { family: 'claude', name: 'Claude Fable', alternative: 'Heavy (Claude)' },
-  'codex-astra': { family: 'codex', name: 'Codex Astra', alternative: 'Sol (Codex)' },
+// Fable, Codex Astra and Gemini Carbon are for plans only: each launch, and each resume, needs the user's recorded yes.
+// `key` is the decide tool's name for the tier.
+const TOP_TIERS: Readonly<Record<string, { family: PlanFamily; name: string; alternative: string; key: string }>> = {
+  fable: { family: 'claude', name: 'Claude Fable', alternative: 'Heavy (Claude)', key: 'fable' },
+  'codex-astra': { family: 'codex', name: 'Codex Astra', alternative: 'Sol (Codex)', key: 'astra' },
+  'gemini-carbon': { family: 'gemini', name: 'Gemini Carbon', alternative: 'Hydrogen (Gemini)', key: 'carbon' },
 }
-const TOP_TIER_NAMES: Readonly<Record<string, string>> = { fable: 'fable', astra: 'codex-astra', 'codex-astra': 'codex-astra' }
+const TOP_TIER_NAMES: Readonly<Record<string, string>> = {
+  fable: 'fable', astra: 'codex-astra', 'codex-astra': 'codex-astra', carbon: 'gemini-carbon', 'gemini-carbon': 'gemini-carbon',
+}
 
 // An Agent launch or a SendMessage resume of a top tier, refused unless a recorded yes still has uses left.
 // The top tier a call or a worker is: its savvy type, or any type run on a Fable model (`model: "FABLE"`, a model id).
@@ -886,7 +933,7 @@ export const topTierGate = (subagentType: string, usage: UsageReadings, resume =
   const permit = usage.topTiers?.[tier]
   if (permit && (permit.uses === 'session' || permit.uses > 0)) return undefined
   const it = language === 'it'
-  return STRINGS[language].topGate({ tier: tier === 'fable' ? 'fable' : 'codex-astra', name: top.name,
+  return STRINGS[language].topGate({ tier, key: top.key, name: top.name,
     action: resume ? (it ? 'ripresa (SendMessage)' : 'resume (SendMessage)') : (it ? 'avvio' : 'launch'),
     spent: Boolean(permit), alternative: top.alternative })
 }
@@ -1013,10 +1060,29 @@ export const codexRun = (a: AgentRun, usage: UsageReadings, at: number): AgentRu
     ...(status?.action ? { stepNote: status.action } : {}) }
 }
 
-async function syncCodexRuns($: EngineInterface): Promise<void> {
+// The Gemini mirror of codexRun: an independently running Gemini keeps its relay's row live.
+export const geminiRun = (a: AgentRun, usage: UsageReadings, at: number): AgentRun => {
+  if (!a.geminiStatus) return a
+  const status = usage.geminiStatuses?.[a.geminiStatus]
+  const relayStatus = a.relayStatus ?? a.status
+  const relayEndedAt = a.relayEndedAt ?? a.endedAt
+  const geminiState = status?.state === 'running' && at - status.updatedAt > STATUS_STALE_MS ? undefined : status?.state
+  const state = geminiState === 'running' ? 'running' : relayStatus === 'running' ? 'running'
+    : geminiState === 'failed' ? 'failed' : relayStatus
+  return { ...a, relayStatus, relayEndedAt, status: state, geminiState,
+    endedAt: state === 'running' ? undefined : relayEndedAt ?? at,
+    ...(status?.action ? { stepNote: status.action } : {}) }
+}
+
+// A row relayed to Codex or Gemini: its own state is the relay's, merged with the other model's.
+const isRelayed = (a: AgentRun): boolean => Boolean(a.codexStatus || a.geminiStatus)
+const relayRun = (a: AgentRun, usage: UsageReadings, at: number): AgentRun =>
+  a.codexStatus ? codexRun(a, usage, at) : a.geminiStatus ? geminiRun(a, usage, at) : a
+
+async function syncRelayRuns($: EngineInterface): Promise<void> {
   const usage = await read($, usageReadings)
   const at = await $.clock.now()
-  await update($, agents, list => list.map(a => codexRun(a, usage, at)))
+  await update($, agents, list => list.map(a => relayRun(a, usage, at)))
   await syncRunning($)
 }
 
@@ -1081,24 +1147,141 @@ async function refreshCodexUsage($: EngineInterface, force = false): Promise<voi
       ? { ...recordPlanUsage(refreshed, 'codex', latest.rateLimits, latest.updatedAt),
           codexReadAt: at, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : refreshed
   })
-  await syncCodexRuns($)
+  await syncRelayRuns($)
+}
+
+// agy's `/usage` data ({ groups: [{ name, buckets: [{ window, remaining_fraction, reset_time }] }] }): the
+// family is the group named "Gemini Models"; the other groups are Antigravity's quota for third-party models.
+const GEMINI_GROUP = 'Gemini Models'
+const GEMINI_WINDOWS: Readonly<Record<string, PlanWindowKey>> = { '5h': 'fiveHour', weekly: 'week' }
+
+export const geminiLimitsFrom = (data: unknown): PlanUsage | undefined => {
+  const groups = (data as { groups?: unknown } | null | undefined)?.groups
+  if (!Array.isArray(groups)) return undefined
+  const group = groups.find(g => g && typeof g === 'object' && (g as { name?: unknown }).name === GEMINI_GROUP) as { buckets?: unknown } | undefined
+  if (!Array.isArray(group?.buckets)) return undefined
+  const plan: PlanUsage = {}
+  for (const bucket of group.buckets as { window?: unknown; remaining_fraction?: unknown; reset_time?: unknown }[]) {
+    const key = typeof bucket?.window === 'string' ? GEMINI_WINDOWS[bucket.window] : undefined
+    const left = bucket?.remaining_fraction
+    const reset = typeof bucket?.reset_time === 'string' ? Date.parse(bucket.reset_time) : NaN
+    if (!key || plan[key] || !nonnegative(left) || left > 1 || !Number.isFinite(reset)) continue
+    plan[key] = { percentUsed: Math.round((1 - left) * 100), resetsAt: new Date(reset).toISOString() }
+  }
+  return plan.fiveHour || plan.week ? plan : undefined
+}
+
+// The whole output of `agy -p "/usage" --output-format json`.
+export const geminiUsageFrom = (text: string): PlanUsage | undefined => {
+  try {
+    const value = JSON.parse(text)
+    return value?.command?.name === 'usage' ? geminiLimitsFrom(value.command.data) : undefined
+  } catch { return undefined }
+}
+
+const nullableCount = (n: unknown): boolean => n === undefined || n === null || nonnegative(n)
+
+export const geminiStatusFrom = (text: string): GeminiStatus | undefined => {
+  try {
+    if (text.length > STATUS_MAX_BYTES) return undefined
+    const value = JSON.parse(text)
+    const u = value?.totalTokenUsage
+    // cache_read_tokens is apart from input_tokens in agy's usage, so it may exceed it.
+    if (value?.version !== 1 || !['running', 'done', 'failed'].includes(value.state) ||
+        !(value.sessionId === null || typeof value.sessionId === 'string' && value.sessionId.length <= 120) ||
+        !(value.model === null || typeof value.model === 'string' && value.model.length <= 120) ||
+        typeof value.action !== 'string' || [...value.action].length > 60 || !nonnegative(value.updatedAt) ||
+        !u || ![u.input_tokens, u.output_tokens, u.cache_read_tokens].every(nonnegative) ||
+        !nullableCount(u.thinking_tokens) || !nullableCount(u.total_tokens)) return undefined
+    return { version: 1, sessionId: value.sessionId, model: value.model, state: value.state, action: value.action,
+      totalTokenUsage: { input_tokens: u.input_tokens, output_tokens: u.output_tokens, cache_read_tokens: u.cache_read_tokens,
+        thinking_tokens: u.thinking_tokens ?? null, total_tokens: u.total_tokens ?? null },
+      rateLimits: geminiLimitsFrom(value.rateLimits), updatedAt: value.updatedAt }
+  } catch { return undefined }
+}
+
+// A manual snapshot has no run state, session id or token counters.
+export const geminiPlanFrom = (text: string): { rateLimits: PlanUsage; updatedAt: number } | undefined => {
+  try {
+    if (text.length > STATUS_MAX_BYTES) return undefined
+    const value = JSON.parse(text)
+    if (!value || !nonnegative(value.updatedAt) ||
+        !(value.model === null || typeof value.model === 'string' && value.model.length <= 120)) return undefined
+    if ('version' in value) {
+      const status = geminiStatusFrom(text)
+      return status?.rateLimits ? { rateLimits: status.rateLimits, updatedAt: status.updatedAt } : undefined
+    }
+    const rateLimits = geminiLimitsFrom(value.rateLimits)
+    return rateLimits ? { rateLimits, updatedAt: value.updatedAt } : undefined
+  } catch { return undefined }
+}
+
+// The Codex reader's mirror for ~/.gemini/savvy-status, with its own statuses and poll stamp.
+async function refreshGeminiUsage($: EngineInterface, force = false): Promise<void> {
+  const at = await $.clock.now()
+  const previous = await read($, usageReadings)
+  if (!force && previous.geminiCacheReadAt !== undefined && at - previous.geminiCacheReadAt < STATUS_POLL_MS) return
+  await update($, usageReadings, prev => ({ ...prev, geminiCacheReadAt: at }))
+  const statuses: Record<string, GeminiStatus> = {}, statusMtimes: Record<string, number> = {}
+  let latest: { rateLimits: PlanUsage; updatedAt: number; source: { name: string; mtimeMs: number } } | undefined
+  try {
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
+    if (home) {
+      const directory = `${home.replace(/[\\/]+$/, '')}/.gemini/savvy-status`
+      const files = (await $.fs.list(directory)).filter(f => f.kind === 'file' && !f.isLink &&
+        f.name.endsWith('.json') && STATUS_NAME.test(f.name.slice(0, -5)) && f.size <= STATUS_MAX_BYTES)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name))
+      const wanted = new Set((await read($, agents)).map(a => a.geminiStatus).filter(Boolean))
+      wanted.add('snapshot')
+      for (const file of files) {
+        const name = file.name.slice(0, -5)
+        if (!wanted.has(name) && latest && file.mtimeMs <= latest.updatedAt) continue
+        const cached = previous.geminiStatuses?.[name]
+        let status = cached
+        let plan = cached?.rateLimits ? { rateLimits: cached.rateLimits, updatedAt: cached.updatedAt } : undefined
+        const savedSnapshot = name === 'snapshot' && previous.gemini && previous.geminiUpdatedAt !== undefined &&
+          previous.geminiSource?.name === name && previous.geminiSource.mtimeMs === file.mtimeMs
+        if (savedSnapshot) plan = { rateLimits: previous.gemini!, updatedAt: previous.geminiUpdatedAt! }
+        else if (!cached || cached.state === 'running' || previous.geminiStatusMtimes?.[name] !== file.mtimeMs) {
+          try {
+            const text = await $.fs.read(`${directory}/${file.name}`)
+            status = geminiStatusFrom(text)
+            plan = geminiPlanFrom(text)
+          } catch { status = undefined; plan = undefined }
+        }
+        if (status) { statuses[name] = status; statusMtimes[name] = file.mtimeMs }
+        if (plan && (!latest || plan.updatedAt > latest.updatedAt)) latest = { ...plan, source: { name, mtimeMs: file.mtimeMs } }
+      }
+    }
+  } catch { /* Keep the panel's last plan reading across filesystem gaps. */ }
+  // A session that never saw a Gemini snapshot keeps its usage as it was.
+  const seen = Object.keys(statuses).length > 0 || previous.geminiStatuses !== undefined
+  await update($, usageReadings, prev => {
+    const refreshed = seen ? { ...prev, geminiStatuses: statuses, geminiStatusMtimes: statusMtimes } : prev
+    return latest && (prev.geminiUpdatedAt === undefined || latest.updatedAt > prev.geminiUpdatedAt)
+      ? { ...recordPlanUsage(refreshed, 'gemini', latest.rateLimits, latest.updatedAt),
+          geminiReadAt: at, geminiUpdatedAt: latest.updatedAt, geminiSource: latest.source } : refreshed
+  })
+  if (seen) await syncRelayRuns($)
 }
 
 const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
-const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex'>): boolean => hasPlan(usage.claude) || hasPlan(usage.codex)
+const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini'>): boolean =>
+  hasPlan(usage.claude) || hasPlan(usage.codex) || hasPlan(usage.gemini)
 
 // Keep the observed usage at the reset instant; it becomes expired strictly after it.
 const isReset = (value: PlanUsage['fiveHour'], at: number): boolean => Boolean(value?.resetsAt && at > Date.parse(value.resetsAt))
 const planAt = (plan: PlanUsage | undefined, at: number): PlanUsage | undefined => plan && Object.fromEntries(
   Object.entries(plan).map(([key, value]) => [key, isReset(value, at) ? { ...value, percentUsed: 0 } : value]))
 
-export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'policies' | 'history'>, at = 0): string => {
+export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini' | 'policies' | 'history'>, at = 0): string => {
   if (!hasPlans(usage)) return ''
   const budget = budgetSummary({ ...usage, statuses: {} }, at)
   // A family with no reading is left out, as its plan tile is.
   const family = (name: string, key: PlanFamily, plan?: PlanUsage) => hasPlan(plan)
     ? `${name}${Object.values(budget[key]).some(window => window.verdict === 'ask') ? '!' : ''} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : ''
-  return [family('Claude', 'claude', planAt(usage.claude, at)), family('Codex', 'codex', planAt(usage.codex, at))].filter(Boolean).join('  ')
+  return [family('Claude', 'claude', planAt(usage.claude, at)), family('Codex', 'codex', planAt(usage.codex, at)),
+    family('Gemini', 'gemini', planAt(usage.gemini, at))].filter(Boolean).join('  ')
 }
 
 const codexAccount = (a: AgentRun, usage: UsageReadings) => {
@@ -1107,10 +1290,18 @@ const codexAccount = (a: AgentRun, usage: UsageReadings) => {
     cost: codexCostOf(status.model || a.codexModel || tierOf(a.type), status.totalTokenUsage) } : { tokens: undefined, cost: undefined }
 }
 
+// No verified Gemini price table: its cost stays unknown, its tokens are input, cache reads and output.
+const geminiAccount = (a: AgentRun, usage: UsageReadings) => {
+  const status = a.geminiStatus && usage.geminiStatuses?.[a.geminiStatus]
+  return status ? { tokens: status.totalTokenUsage.input_tokens + status.totalTokenUsage.cache_read_tokens + status.totalTokenUsage.output_tokens,
+    cost: undefined as number | undefined } : { tokens: undefined, cost: undefined }
+}
+
 const hasClaudeUsage = (a: AgentRun): boolean => a.steps > 0 || a.tokens > 0 || a.contextTokens > 0 || a.costUsd > 0
 
-const rowAccount = (a: AgentRun, usage: UsageReadings) => tierOf(a.type) in CODEX_WEARS
-  ? codexAccount(a, usage) : { tokens: hasClaudeUsage(a) ? a.contextTokens : undefined, cost: hasClaudeUsage(a) ? a.costUsd : undefined }
+const rowAccount = (a: AgentRun, usage: UsageReadings) => tierOf(a.type) in CODEX_WEARS ? codexAccount(a, usage)
+  : tierOf(a.type) in GEMINI_WEARS ? geminiAccount(a, usage)
+  : { tokens: hasClaudeUsage(a) ? a.contextTokens : undefined, cost: hasClaudeUsage(a) ? a.costUsd : undefined }
 
 const accountText = (a: AgentRun, usage: UsageReadings): string => {
   const value = rowAccount(a, usage)
@@ -1200,6 +1391,7 @@ async function rememberClaudeModels($: EngineInterface, ids: string[]): Promise<
 export const runModel = (a: AgentRun, withEffort = true, hints: ModelHints = EMPTY_MODELS): string => {
   const tier = tierOf(a.type)
   if (tier in CODEX_WEARS) return codexModel(tier, hints, a.codexModel, a.codexEffort, withEffort)
+  if (tier in GEMINI_WEARS) return geminiModel(tier, a.geminiModel, a.geminiEffort, withEffort)
   return withEffort && a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)
 }
 
@@ -1241,6 +1433,7 @@ export const plannedModel = (p: PlannedTask, hints: ModelHints = EMPTY_MODELS): 
   const tier = plannedTier(p)
   const ofTier = TIER_MODEL[tier] ?? ''
   if (tier in CODEX_WEARS) return codexModel(tier, hints, undefined, undefined, false)
+  if (tier in GEMINI_WEARS) return geminiModel(tier, undefined, undefined, false)
   const [model = '', effort = ''] = ofTier.split(' · ')
   const declared = p.model ? `${p.model.charAt(0).toUpperCase()}${p.model.slice(1)}` : model
   return [hints.claude[declared.toLowerCase()] || declared, p.effort ?? effort].filter(Boolean).join(' · ')
@@ -1277,19 +1470,35 @@ export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPT
     codex.tokens = (codex.tokens ?? 0) + own.tokens
     if (own.cost !== undefined) codex.cost = (codex.cost ?? 0) + own.cost
   }
+  // Gemini likewise: the largest cumulative snapshot of each conversation, counted once.
+  const gemini: { cost: number | undefined; tokens: number | undefined } = { cost: undefined, tokens: undefined }
+  const conversations = new Map<string, number>()
+  for (const a of list) {
+    const status = a.geminiStatus && usage.geminiStatuses?.[a.geminiStatus]
+    if (!(tierOf(a.type) in GEMINI_WEARS) || !status || !status.sessionId) continue
+    const own = geminiAccount(a, usage).tokens
+    if (own !== undefined && own >= (conversations.get(status.sessionId) ?? -1)) conversations.set(status.sessionId, own)
+  }
+  for (const tokens of conversations.values()) gemini.tokens = (gemini.tokens ?? 0) + tokens
   const start = Math.min(...list.map(a => a.startedAt))
   const end = Math.max(...list.map(a => a.endedAt ?? Math.max(at, a.startedAt)))
   // Codex shows only where it is used: a Codex worker in the list or a Codex plan reading.
   const showsCodex = list.some(a => tierOf(a.type) in CODEX_WEARS) || hasPlan(usage.codex)
-  return { claude, codex, showsCodex, time: list.length ? end - start : 0 }
+  const showsGemini = list.some(a => tierOf(a.type) in GEMINI_WEARS) || hasPlan(usage.gemini)
+  return { claude, codex, gemini, showsCodex, showsGemini, time: list.length ? end - start : 0 }
 }
 
 const knownCost = (cost?: number): string => cost === undefined ? '—' : fmtCost(cost)
 const knownTokens = (tokens?: number): string => tokens === undefined ? '—' : fmtTokens(tokens)
 const codexCost = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Codex ${knownCost(t.codex.cost)}` : ''
 const codexTokens = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Codex ${knownTokens(t.codex.tokens)}` : ''
-const familyCosts = (t: ReturnType<typeof totals>) => [`Claude ${knownCost(t.claude.cost)}`, codexCost(t)].filter(Boolean).join(' · ')
-const familyTokens = (t: ReturnType<typeof totals>) => [`Claude ${knownTokens(t.claude.tokens)}`, codexTokens(t)].filter(Boolean).join(' · ')
+const geminiCost = (t: ReturnType<typeof totals>): string => t.showsGemini ? `Gemini ${knownCost(t.gemini.cost)}` : ''
+const geminiTokens = (t: ReturnType<typeof totals>): string => t.showsGemini ? `Gemini ${knownTokens(t.gemini.tokens)}` : ''
+// The relays' families, on the line beneath Claude's.
+const relayCosts = (t: ReturnType<typeof totals>): string => [codexCost(t), geminiCost(t)].filter(Boolean).join(' · ')
+const relayTokens = (t: ReturnType<typeof totals>): string => [codexTokens(t), geminiTokens(t)].filter(Boolean).join(' · ')
+const familyCosts = (t: ReturnType<typeof totals>) => [`Claude ${knownCost(t.claude.cost)}`, relayCosts(t)].filter(Boolean).join(' · ')
+const familyTokens = (t: ReturnType<typeof totals>) => [`Claude ${knownTokens(t.claude.tokens)}`, relayTokens(t)].filter(Boolean).join(' · ')
 
 // --- desktop drawings: each row is one SVG, as the band above the prompt is.
 
@@ -1389,16 +1598,19 @@ const CRAB_SCALE = 1.1
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.
 // In a theme every figure moves: a running one at full pace, any other idles.
-// A Codex figure wears its tier's costume and moves as that tier does.
+// A Codex or Gemini figure wears its tier's costume and moves as that tier does.
 const crab = (x: number, y: number, costume: string, dim = false, isWalking = false, scale = CRAB_SCALE, dress: Dress | null = dressOf() ?? null): string => {
   const { f, groups } = pixels()
-  const wears = CODEX_WEARS[costume]
+  const wears = wornBy(costume)
   const figure = wears ?? costume
   const themed = dress && costumeIn(dress, figure)
   const draw = themed ?? COSTUMES[figure] ?? ((g: Fill) => crabBody(g))
-  if (wears) {
+  if (costume in CODEX_WEARS) {
     withBody(codexBody, () => draw(f, colorOf(costume)))
     codexBadge(f, costume.replace(/^codex-/, ''), colorOf(costume))
+  } else if (costume in GEMINI_WEARS) {
+    withBody(geminiBody, () => draw(f, colorOf(costume)))
+    geminiBadge(f, costume.replace(/^gemini-/, ''), colorOf(costume))
   } else draw(f, colorOf(costume))
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
@@ -1501,13 +1713,15 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
     const x = i * (tw + gap)
     return tile(x, top, tw, 56, k, tileValue(x, top + 33, tw, v) + (second ? tileValue(x, top + 48, tw, second, false) : ''))
   }
-  // Only a family with a reading gets a tile: a lone family (no Codex) spans the row.
+  // Only a family with a reading gets a tile: a lone family (no Codex) spans the row. Tiles go two to a row;
+  // a third family starts a row of its own, which it spans.
   const families = planFamilies(usage)
   const stacked = W < 360 || families.length < 2
   const planW = stacked ? W : (W - gap) / 2
-  const plans = families.map(([name, plan, color, readAt], i) => {
-    const family: PlanFamily = name === 'Claude' ? 'claude' : 'codex'
-    return planTile(stacked ? 0 : i * (planW + gap), top + 62 + (stacked ? 88 * i : 0), planW, name, plan, color, at, readAt,
+  const plans = families.map(([name, plan, color, readAt, family], i) => {
+    const row = stacked ? i : Math.floor(i / 2), column = stacked ? 0 : i % 2
+    const spans = !stacked && column === 0 && i === families.length - 1
+    return planTile(column * (planW + gap), top + 62 + 88 * row, spans ? W : planW, name, plan, color, at, readAt,
       { policy: budgetPolicy(usage, family), history: usage.history?.[family], lang, locale: LOCALE[lang] })
   }).join('')
   return svg(
@@ -1515,17 +1729,20 @@ const headerSvg = (W: number, title: string, t: ReturnType<typeof totals>, at: n
     headerHeight(title, W, usage),
     `${weather}${title ? `<text class="t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(fitted)}</text>` : ''}
 ${title ? (dress?.ornament(W) ?? '') : ''}
-${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, codexCost(t))}${metricTile(1, s.tokens, `Claude ${knownTokens(t.claude.tokens)}`, codexTokens(t))}${metricTile(2, s.time, fmtTime(t.time))}${plans}`,
+${metricTile(0, s.cost + ' ≈', `Claude ${knownCost(t.claude.cost)}`, relayCosts(t))}${metricTile(1, s.tokens, `Claude ${knownTokens(t.claude.tokens)}`, relayTokens(t))}${metricTile(2, s.time, fmtTime(t.time))}${plans}`,
   )
 }
 
-const planFamilies = (usage: UsageReadings): [string, PlanUsage | undefined, string, number | undefined][] =>
-  ([['Claude', usage.claude, CLAY, usage.claudeReadAt], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt]] as [string, PlanUsage | undefined, string, number | undefined][])
+type PlanRow = [string, PlanUsage | undefined, string, number | undefined, PlanFamily]
+
+const planFamilies = (usage: UsageReadings): PlanRow[] =>
+  ([['Claude', usage.claude, CLAY, usage.claudeReadAt, 'claude'], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt, 'codex'],
+    ['Gemini', usage.gemini, colorOf('gemini-hydrogen'), usage.geminiReadAt, 'gemini']] as PlanRow[])
     .filter(([, plan]) => hasPlan(plan))
 
 const headerHeight = (title: string, W: number, usage: UsageReadings): number => {
-  const rows = planFamilies(usage).length
-  return (title ? 88 : 60) + (rows === 0 ? 0 : 88 * (W < 360 ? rows : 1))
+  const tiles = planFamilies(usage).length
+  return (title ? 88 : 60) + (tiles === 0 ? 0 : 88 * (W < 360 ? tiles : Math.ceil(tiles / 2)))
 }
 
 // The task's own progress when the worker reports steps; a finished run is full.
@@ -1564,7 +1781,7 @@ const stepLine = (a: AgentRun, at: number): string => {
 }
 
 export const progressOf = (a: AgentRun): number | null => {
-  const waiting = a.codexState === 'running' || a.isWaiting || a.pendingCompletion
+  const waiting = a.codexState === 'running' || a.geminiState === 'running' || a.isWaiting || a.pendingCompletion
   if (a.stepTotal) return Math.min(waiting ? RUNNING_CAP : 1, (a.stepDone ?? 0) / a.stepTotal)
   if (waiting) return 0
   return a.status === 'done' ? 1 : null
@@ -1700,7 +1917,7 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usag
     if (!previous || a.startedAt >= previous.startedAt) unique.set(key, a)
   }
   return [...unique.values()].map((a): AgentRun => {
-    let relay = a.codexStatus ? { ...a, status: a.relayStatus ?? a.status, endedAt: a.relayEndedAt ?? a.endedAt } : a
+    let relay = isRelayed(a) ? { ...a, status: a.relayStatus ?? a.status, endedAt: a.relayEndedAt ?? a.endedAt } : a
     const listed = relay.agentId && statusOf.get(relay.agentId)
     // A worker that handed back its report is done, whatever the roster still holds
     // for it: a command it left in the background keeps it `waiting` for as long as
@@ -1720,7 +1937,7 @@ const reconciled = (list: AgentRun[], infos: AgentInfo[], listedAt: number, usag
       else if (!relay.agentId || (listed === undefined && !relay.isWorkflow && relay.startedAt < listedAt)) relay = settled('failed')
       else if (listed && ENDED[listed]) relay = settled(ENDED[listed]!)
     }
-    return a.codexStatus ? codexRun({ ...relay, relayStatus: relay.status, relayEndedAt: relay.endedAt }, usage, listedAt) : relay
+    return isRelayed(a) ? relayRun({ ...relay, relayStatus: relay.status, relayEndedAt: relay.endedAt }, usage, listedAt) : relay
   })
 }
 
@@ -1826,7 +2043,7 @@ async function reconcile($: EngineInterface, stoppingAgentId?: string): Promise<
 
 const describeBudgetPolicies = (usage: UsageReadings, at: number): string => {
   const s = tr()
-  return [`${s.budget}: Claude ${s.policy[budgetPolicy(usage, 'claude')]} · Codex ${s.policy[budgetPolicy(usage, 'codex')]}.`,
+  return [`${s.budget}: ${PLAN_FAMILIES.map(family => `${FAMILY_NAME[family]} ${s.policy[budgetPolicy(usage, family)]}`).join(' · ')}.`,
     ...PLAN_FAMILIES.filter(family => decisionHolds(usage, family, at)).map(family =>
       s.goUntil(FAMILY_NAME[family], formatPlanTimestamp(usage.decisions![family]!.until, true, at, { locale: LOCALE[lang] })))].join(' ')
 }
@@ -1971,7 +2188,7 @@ export const register: Register = (on, options) => {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
                 tier: {
                   type: 'string',
-                  enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(CODEX_WEARS), 'other'],
+                  enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(GEMINI_WEARS), ...Object.keys(CODEX_WEARS), 'other'],
                   description: 'The savvy tier; `other` for an agent of the project that is no savvy worker, named in `agent`.',
                 },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
@@ -1995,7 +2212,7 @@ export const register: Register = (on, options) => {
     })
     await $.tool.register({
       name: 'budget',
-      description: 'Read the current budget summary per family (claude, codex) and window (fiveHour, week), without changing the progress bar. ' +
+      description: 'Read the current budget summary per family (claude, codex, gemini) and window (fiveHour, week), without changing the progress bar. ' +
         'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask, retier, spend) and, for retier and spend, an advice string. ' +
         'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set by /savvy-budget, or by decide with policy pace. ' +
         'Once a tier has finished runs, a second line, estimates:, gives per tier the runs, their mean cost in USD and that cost as a percent of each Claude window (null until observed).',
@@ -2004,9 +2221,9 @@ export const register: Register = (on, options) => {
     await $.tool.register({
       name: 'decide',
       description: 'Record the user\'s yes to costly work on a family whose budget verdict is ask: it opens the budget gate on that family\'s ' +
-        'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra) until the family\'s next reset. Call it only after the user said yes in chat, ' +
+        'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra; Gemini Hydrogen, Carbon) until the family\'s next reset. Call it only after the user said yes in chat, ' +
         'quoting their words in answer; never on your own judgment. Main session only. ' +
-        "With tier (fable or astra) it instead records the user's yes to launching that top tier, which is for PLANS only: it holds for one launch " +
+        "With tier (fable, astra or carbon) it instead records the user's yes to launching that top tier, which is for PLANS only: it holds for one launch " +
         'or resume by default, uses sets a number or "session" when the user\'s words allow more; it does not open the budget gate. ' +
         'With policy "pace" (and family) it instead records the user\'s standing word to keep working inside the budget by re-tiering, ' +
         'without asking: the family\'s policy becomes pace and stays until the user changes it with /savvy-budget; answer quotes their words.',
@@ -2016,7 +2233,7 @@ export const register: Register = (on, options) => {
           family: { type: 'string', enum: [...PLAN_FAMILIES] },
           answer: { type: 'string', description: "The user's own words that said yes." },
           policy: { type: 'string', enum: ['pace'], description: 'Record the pace policy for the family, from the user\'s own words; it persists.' },
-          tier: { type: 'string', enum: ['fable', 'astra'], description: 'Top tier the yes is for; Fable and Astra are for plans only.' },
+          tier: { type: 'string', enum: ['fable', 'astra', 'carbon'], description: 'Top tier the yes is for; Fable, Astra and Carbon are for plans only.' },
           uses: { description: 'With tier: launches or resumes the yes covers; 1 by default, or "session".', oneOf: [{ type: 'integer', minimum: 1 }, { type: 'string', enum: ['session'] }] },
         },
         required: ['answer'],
@@ -2029,6 +2246,7 @@ export const register: Register = (on, options) => {
         'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
         'call it again at the start of each step, and before any command expected to run longer than a minute, with a note naming the actual action (reading CreatureProbe.cs, running EditMode tests), never working; close with `done` equal to `total` and `skipped` for the steps left undone. ' +
         'Codex relays also declare their exact `model` slug, `effort`, and a unique `codexStatus` filename stem before piping Codex JSON through the status writer (declarations need no done). ' +
+        'Gemini relays likewise declare `model`, `effort` and a unique `geminiStatus` before piping agy stream-json through theirs. ' +
         'Cheap and silent: it only draws a bar.',
       inputSchema: {
         type: 'object',
@@ -2036,9 +2254,10 @@ export const register: Register = (on, options) => {
           done: { type: 'integer', minimum: 0, description: 'Steps finished so far.' },
           total: { type: 'integer', minimum: 1, description: 'Steps planned; may change if the plan changes.' },
           note: { type: 'string', description: 'The concrete action: reading CreatureProbe.cs or running EditMode tests; never working.' },
-          model: { type: 'string', description: 'Codex relays: the exact model slug passed to codex exec (for example gpt-6.1-sol).' },
-          effort: { type: 'string', description: 'Codex relays: the reasoning effort passed to codex exec.' },
+          model: { type: 'string', description: 'Codex and Gemini relays: the exact model slug passed to codex exec or agy (for example gpt-6.1-sol, gemini-4-argon).' },
+          effort: { type: 'string', description: 'Codex and Gemini relays: the reasoning effort passed to codex exec or agy.' },
           codexStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Codex relays: the unique name of this invocation in ~/.codex/savvy-status/<name>.json.' },
+          geminiStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Gemini relays: the unique name of this invocation in ~/.gemini/savvy-status/<name>.json.' },
           skipped: {
             type: 'integer',
             minimum: 0,
@@ -2069,6 +2288,7 @@ export const register: Register = (on, options) => {
     await refreshCodexModels($)
     await refreshClaudeUsage($, true)
     await refreshCodexUsage($, true)
+    await refreshGeminiUsage($, true)
     await rememberClaudeModels($, (await read($, agents)).map(a => a.model))
     await update($, flow, f => (f?.isFinished ? null : f))
     try {
@@ -2084,6 +2304,7 @@ export const register: Register = (on, options) => {
         await refreshCodexModels($)
         await refreshClaudeUsage($)
         await refreshCodexUsage($)
+        await refreshGeminiUsage($)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
           const at = await $.clock.now()
@@ -2146,11 +2367,12 @@ export const register: Register = (on, options) => {
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
   on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
-    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string; codexStatus?: string }
+    const input = e as unknown as { done?: number; total?: number; note?: string; skipped?: number; model?: string; effort?: string; codexStatus?: string; geminiStatus?: string }
     if ((input.model !== undefined && typeof input.model !== 'string') || (input.effort !== undefined && typeof input.effort !== 'string')) {
       return { deny: tr().badModel }
     }
     if (input.codexStatus !== undefined && (typeof input.codexStatus !== 'string' || !STATUS_NAME.test(input.codexStatus))) return { deny: tr().badStatus }
+    if (input.geminiStatus !== undefined && (typeof input.geminiStatus !== 'string' || !STATUS_NAME.test(input.geminiStatus))) return { deny: tr().badGeminiStatus }
     const agentId = e.agentId
     if (!agentId) return { result: tr().ignoredSteps }
     // Set on every run of the updater, which may run again on a conflict.
@@ -2172,6 +2394,11 @@ export const register: Register = (on, options) => {
             ...(input.model?.trim() ? { codexModel: input.model.trim() } : {}),
             ...(input.effort?.trim() ? { codexEffort: input.effort.trim() } : {}),
             ...(input.codexStatus?.trim() ? { codexStatus: input.codexStatus.trim() } : {}),
+          } : {}),
+          ...(tierOf(a.type) in GEMINI_WEARS ? {
+            ...(input.model?.trim() ? { geminiModel: input.model.trim() } : {}),
+            ...(input.effort?.trim() ? { geminiEffort: input.effort.trim() } : {}),
+            ...(input.geminiStatus?.trim() ? { geminiStatus: input.geminiStatus.trim() } : {}),
           } : {}),
           // A worker that skipped nothing keeps the row it always had.
           ...(skipped ? { stepSkipped: skipped } : {}),
@@ -2372,7 +2599,7 @@ export const register: Register = (on, options) => {
               ...(a.status !== 'running' ? { isHandedBack: undefined, leftBackground: undefined } : {}),
               // A model step is work again, not a wait on background work.
               waitingSince: undefined,
-              ...(a.codexStatus ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
+              ...(isRelayed(a) ? { relayStatus: 'running' as const, relayEndedAt: undefined } : {}),
               endedAt: undefined,
               contextTokens:
                 (usage.input_tokens || 0) +
@@ -2429,7 +2656,7 @@ export const register: Register = (on, options) => {
             activity: undefined,
             activityId: undefined,
             activityAt: undefined,
-            ...(a.codexStatus ? { relayStatus: status, relayEndedAt: isOver ? at : undefined } : {}),
+            ...(isRelayed(a) ? { relayStatus: status, relayEndedAt: isOver ? at : undefined } : {}),
             ...(fallback && e.usage
               ? {
                   model: e.usage.model || a.model,
@@ -2441,7 +2668,7 @@ export const register: Register = (on, options) => {
         }),
       )
       await update($, now, () => at)
-      await syncCodexRuns($)
+      await syncRelayRuns($)
     }
     const result = await next(e)
     if (agentId && e.reason === 'answer') {

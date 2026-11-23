@@ -12,19 +12,31 @@
  * The last retrospective is the commit in .claude/.state/last-retrospective (the skill writes it); the skills used
  * are in .claude/.state/skills-used.txt (log-skill-use.mjs). With no baseline the hook writes HEAD as the baseline and
  * says nothing: counting the whole history would hold the first turn on a new machine for nothing.
+ * With `--antigravity` the payload is Antigravity's camelCase one (`continuationActive` is the `stop_hook_active` guard,
+ * the project is the workspace) and the hold is `{"decision":"continue","reason":...}`, which re-enters the loop and
+ * injects the reason as a system message (hooks docs, Stop output). The state files are the same in both modes.
+ * In that mode a run with SAVVY_RELAY set (a relay's headless `agy -p`, whose hooks inherit its environment) gets no
+ * hold and writes nothing: the continued loop would drag the relay's task into a retrospective nobody asked for.
  * Fail-open: any error (no git, no commits, unreadable input) exits 0 with no output; without CLAUDE_PROJECT_DIR
  * (no project) it does nothing.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { MARK, USED, projectRoot, stateDir } from "./state.mjs";
+import { MARK, USED, antigravityRoot, projectRoot, stateDir } from "./state.mjs";
 import { isEntryPoint } from "./entry-point.mjs";
 
 export const DEFAULT_COMMITS = 8;
 export const COMMITS_ENV = "SKILL_RETRO_COMMITS";
 export const ARCHIVE_ENV = "SKILL_RETRO_ARCHIVE_DIRS";
 export const DEFAULT_ARCHIVE_DIRS = ["docs/implementations/archive"];
+/** Set (to anything non-empty) by a relay that runs `agy -p` headless: the Antigravity mode stays silent. */
+export const RELAY_ENV = "SAVVY_RELAY";
+
+/** Whether this Antigravity run is a relay's headless one (RELAY_ENV set and non-empty). */
+export function isRelayRun(env) {
+  return Boolean(env?.[RELAY_ENV]);
+}
 
 /** The backlog skill's project config, read for its `docsDir` (this plugin cannot import that one). */
 export const BACKLOG_CONFIG = ".claude/backlog.json";
@@ -100,11 +112,12 @@ function git(root, args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
 }
 
-function main(input, env) {
+function main(input, env, antigravity = false) {
+  if (antigravity && isRelayRun(env)) return null;
   const event = JSON.parse(input || "{}");
-  const root = projectRoot(env);
+  const root = antigravity ? antigravityRoot(event) : projectRoot(env);
   if (!root) return null;
-  const dir = stateDir(env);
+  const dir = stateDir(env, root);
   const markFile = join(dir, MARK);
   const mark = existsSync(markFile) ? readFileSync(markFile, "utf8").trim() : "";
   if (!mark) {
@@ -120,12 +133,12 @@ function main(input, env) {
       archiveDirs(env, root),
     ).size,
     threshold: Number(env[COMMITS_ENV]) || DEFAULT_COMMITS,
-    alreadyBlocked: event.stop_hook_active === true,
+    alreadyBlocked: (antigravity ? event.continuationActive : event.stop_hook_active) === true,
   });
   const usedFile = join(dir, USED);
   const skills = (existsSync(usedFile) ? readFileSync(usedFile, "utf8") : "").split(/\r?\n/).filter(Boolean);
   const text = retroText(reason, skills);
-  return text && { decision: "block", reason: text };
+  return text && { decision: antigravity ? "continue" : "block", reason: text };
 }
 
 if (isEntryPoint(import.meta.url)) {
@@ -134,7 +147,7 @@ if (isEntryPoint(import.meta.url)) {
   process.stdin.on("data", (chunk) => (input += chunk));
   process.stdin.on("end", () => {
     try {
-      const out = main(input, process.env);
+      const out = main(input, process.env, process.argv.includes("--antigravity"));
       if (out) process.stdout.write(JSON.stringify(out));
     } catch { /* fail-open */ }
     process.exit(0);

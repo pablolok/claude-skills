@@ -34,6 +34,13 @@ S strong, G good, W weaker within this pool, U unknown. Letters name the sources
 | Codex Terra (GPT-6.1) | G [E] | W [F] | G [G] | U | S [E] | G [I] | G [E] | G [E] |
 | Codex Sol (GPT-6.1) | G [D] | G [F] | G [G] | G [H] | G [E] | S [I] | G [D] | G [D] |
 | Codex Astra (GPT-6) | S [A] | G [F] | G [G] | G [H] | S [A] | U | S [A] | W [M] |
+| Gemini Flash (gemini-3.8-flash) | U | U | U | U | U | U | U | U |
+| Gemini Argon (gemini-4-argon) | U | U | U | U | U | U | U | U |
+| Gemini Hydrogen (gemini-4-hydrogen) | U | U | U | U | U | U | U | U |
+| Gemini Carbon (gemini-4-carbon) | U | U | U | U | U | U | U | U |
+
+The Gemini rows stay U until a source is read for them or "Observed in use" has evidence; until then a Gemini
+family is picked for a second opinion from another family, or because the user asked for it, not for a rating.
 
 Numbers behind the main rules: SWE Atlas Fable 80.5, Opus 77.4, Astra 69.4, Sol 65.9 [F]; Arena creative writing
 Opus 1517, Astra 1451, Sol 1449 [H]; Terminal-Bench 4.0 Sonnet 70.6, Opus 66.4 [B]; MultiChallenge Sol 81.95, Terra
@@ -52,9 +59,9 @@ At the tier the task needs:
 8. Images read together with desktop actions → Codex Terra is fast and good; judging a render against a reference
    stays with the orchestrator.
 9. Cheap narrow work → Light (Sonnet) or Codex Luna; Haiku leads Luna on terminal work [C].
-10. A second opinion comes from the other family, in the direction where the families differ: Codex Sol checks a
-    Claude implementation for edge cases and scope; Opus checks a Codex implementation for design and fit with the
-    codebase.
+10. A second opinion comes from another family, in the direction where the families differ: Codex Sol or Gemini
+    Hydrogen checks a Claude implementation for edge cases and scope (both, for a high-risk diff); Opus checks a Codex
+    or Gemini implementation for design and fit with the codebase.
 11. Whatever model writes it, "done" means execution evidence: no model's honesty is measured against another's.
 
 ## Observed in use

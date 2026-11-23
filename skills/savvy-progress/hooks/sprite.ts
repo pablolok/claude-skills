@@ -21,7 +21,7 @@ export const mirror = (rows: string[]): string[] => rows.map(r => [...r].reverse
 // puts the eyes in a group of their own (drawn over the costume).
 export type Look = { body?: string; claws?: string; legs?: string; eyes?: string; eyeCls?: string }
 
-// A body: the crab, or the Codex figure drawn in its place; `armCls` lets a raised
+// A body: the crab, or the Codex or Gemini figure drawn in its place; `armCls` lets a raised
 // claw travel with the prop it holds.
 export type Body = (f: Fill, armFront?: number, armCls?: string, look?: Look) => void
 
@@ -132,6 +132,63 @@ export const CODEX_BADGES: Record<string, string[]> = {
 
 export const codexBadge = (f: Fill, intensity: string, c: string): void =>
   stamp(f, 17, 16, CODEX_BADGES[intensity] ?? [], { o: c }, 'badge')
+
+// The Gemini figure: a pixel homage to its mark, a four-pointed sparkle with the crab's
+// eyes, on the crab's footprint (body 7..22 x 10..21, hands at the claws, feet at the
+// legs). Pale periwinkle, edged in ink, so it reads on either pane.
+export const GEMINI_BODY = '#E3EAFD'
+
+const SPARKLE = [
+  '.......kk.......',
+  '......kwwk......',
+  '.....kwwwwk.....',
+  '...kkwwwwwwkk...',
+  '.kkwwwwwwwwwwkk.',
+  'kwwwwwwwwwwwwwwk',
+  'kwwwwwwwwwwwwwwk',
+  '.kkwwwwwwwwwwkk.',
+  '...kkwwwwwwkk...',
+  '.....kwwwwk.....',
+  '......kwwk......',
+  '.......kk.......',
+]
+
+export const geminiBody: Body = (f, armFront = 0, armCls, look = {}) => {
+  const body = look.body ?? GEMINI_BODY
+  const claws = look.claws ?? body
+  const legs = look.legs ?? body
+  const eyes = look.eyes ?? INK
+  if (body !== 'none') stampRuns(f, 7, 10, SPARKLE, { k: INK, w: body })
+  if (claws !== 'none') {
+    stampRuns(f, 3, 14, HAND, { k: INK, w: claws })
+    stampRuns(f, 23, 14 + armFront, mirror(HAND), { k: INK, w: claws }, armCls)
+  }
+  if (eyes !== 'none') {
+    f(11, 14, 2, 2, eyes, look.eyeCls)
+    f(17, 14, 2, 2, eyes, look.eyeCls)
+  }
+  if (legs === 'none') return
+  const foot = (x: number, cls: string) => {
+    f(x, 22, 2, 2, legs, cls)
+    f(x, 24, 2, 1, INK, cls)
+  }
+  foot(7, 'la')
+  foot(17, 'la')
+  foot(11, 'lb')
+  foot(21, 'lb')
+}
+
+// The badge of a Gemini intensity, drawn over its costume in the tier's color at the
+// sparkle's heart (13..17 x 15..19): a bolt, a bulb, a drop, a gem.
+export const GEMINI_BADGES: Record<string, string[]> = {
+  flash: ['..oo.', '.oo..', 'oooo.', '..oo.', '.oo..'],
+  argon: ['.ooo.', 'o.o.o', 'o.o.o', '.ooo.', '.ooo.'],
+  hydrogen: ['..o..', '.ooo.', 'ooooo', 'ooooo', '.ooo.'],
+  carbon: ['ooooo', '.ooo.', '..o..'],
+}
+
+export const geminiBadge = (f: Fill, intensity: string, c: string): void =>
+  stamp(f, 13, 15, GEMINI_BADGES[intensity] ?? [], { o: c }, 'badge')
 
 // The rects of a drawing, grouped by class: what `crab` and the header ornaments nest.
 export const pixels = (): { f: Fill; groups: Map<string, string[]> } => {

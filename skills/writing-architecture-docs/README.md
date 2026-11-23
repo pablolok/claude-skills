@@ -30,6 +30,8 @@ validates and renders its diagrams.
 `claude plugin marketplace add pablolok/claude-skills`, then
 `claude plugin install writing-architecture-docs@pablolok-skills --scope user`.
 
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
+
 ## Conditional detail and verification
 
 The nine document-quality rules live in `references/document-quality.md`; load them for the document being changed, without sweeping unrelated documents.

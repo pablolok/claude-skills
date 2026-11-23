@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1] - 2026-11-24
+- In Antigravity a run with SAVVY_RELAY set (a relay's headless agy -p, whose hooks inherit its environment) gets no Stop hold and writes no state: the continue would drag the relay's task into a retrospective, as a live run showed.
+
+
+## [2.3.0] - 2026-11-24
+- Hooks also run in Google Antigravity: a root `hooks.json` (PostToolUse `read_file` and Stop) and an `--antigravity` mode in both scripts that reads Antigravity's camelCase payload, takes the project from `workspacePaths[0]` (never `CLAUDE_*`), counts a `read_file` of a `SKILL.md` as a skill use, and continues the stop with `{"decision":"continue","reason":...}`. The state files and the Claude Code behaviour are unchanged.
+
+
 ## [2.2.1] - 2026-11-15
 - a project skill made a layer over a shared one keeps every rule the shared text does not state as strictly (each rule found in the shared skill before it is deleted) and says at its top that it wins where the two differ
 

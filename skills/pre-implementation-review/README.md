@@ -39,6 +39,8 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 `pre-implementation-review:pre-implementation-review` when it runs from the plugin: match the part after the last
 colon.
 
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
+
 ## In a Task Workflow
 
 Run the review at the start of each task, once the task is picked and before tests or implementation begin.

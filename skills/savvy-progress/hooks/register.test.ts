@@ -5,7 +5,8 @@ import type { Engine } from 'claude-code/testing'
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
 import { budgetGate, budgetSummary, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
 import { activityOf, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
-import { codexBody, crabBody, pixels, withBody } from './sprite'
+import { geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
+import { codexBody, crabBody, geminiBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
 const AGENTS = 'agents'
@@ -1518,14 +1519,14 @@ test('with the language on it, the plan tiles, the budget command, the gate and 
   expect(header).toContain('0 min fa')
   expect(header).not.toContain(' plan ')
   expect(header).not.toContain('ago')
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro.' })
-  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex> <entro|pieno|ritmo|una-volta>' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro · Gemini ritmo.' })
+  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex|gemini> <entro|pieno|ritmo|una-volta>' })
   const refused = (await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny ?? ''
   expect(refused).toContain('Blocco del budget')
   expect(refused).toContain('/savvy-budget claude una-volta')
   expect(refused).not.toContain('Ask the user')
-  expect((await budgetCommand($, 'codex pieno')).text).toBe('Budget: Claude entro · Codex pieno.')
-  expect((await budgetCommand($, 'claude una-volta')).text).toMatch(/^Budget: Claude entro · Codex pieno\. Claude: via libera fino a /)
+  expect((await budgetCommand($, 'codex pieno')).text).toBe('Budget: Claude entro · Codex pieno · Gemini ritmo.')
+  expect((await budgetCommand($, 'claude una-volta')).text).toMatch(/^Budget: Claude entro · Codex pieno · Gemini ritmo\. Claude: via libera fino a /)
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
   expect(commands.find(c => c.name === 'savvy-budget')?.description).toContain('Imposta il budget')
   expect(commands.find(c => c.name === 'agents-info')?.description).toContain('Mostra o nasconde')
@@ -1604,6 +1605,8 @@ const statusFiles = (on: On, initial = STATUS_ONE) => {
   }
   const reads: string[] = [], faults = { missing: false, unreadable: false }
   on('fs.list', ($, e) => {
+    // The Gemini status directory, listed beside this one, is empty here.
+    if (e.path?.replace(/\\/g, '/').endsWith('/.gemini/savvy-status')) return { value: [] }
     expect(e.path?.replace(/\\/g, '/')).toMatch(/\/\.codex\/savvy-status$/)
     if (faults.missing) throw new Error('ENOENT')
     return { value: Object.entries(files).map(([name, f]) => ({ name: name + '.json', kind: 'file', size: f.size ?? f.text.length, mtimeMs: f.mtimeMs, isLink: false })) }
@@ -2926,14 +2929,16 @@ test('the budget summary exposes per-window values and user policy verdicts', ()
         exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over' },
       week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok' },
     },
+    gemini: {},
   })
 })
 
 test('budget summary leaves absent windows out and unknown projections null', () => {
-  expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {} })
+  expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {}, gemini: {} })
   expect(budgetSummary({ statuses: {}, claude: { fiveHour: { percentUsed: 12 } }, codex: { week: budgetWindow(90, 'week', 10081) } }, BUDGET_AT)).toEqual({
     claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
     codex: { week: { used: 0, resetsAt: budgetWindow(90, 'week', 10081).resetsAt, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
+    gemini: {},
   })
 })
 
@@ -2954,19 +2959,19 @@ test('budget command lists defaults and persists only the chosen family through 
   const { state, registered } = budgetEngine(on)
   await start($)
   expect(registered.some(tool => tool.name === 'budget')).toBe(true)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
-  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude pace · Codex full.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
+  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace.' })
   expect(state.usage().policies).toEqual({ codex: 'full' })
   await start($)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex full.' })
-  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude pace · Codex within.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace.' })
+  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude pace · Codex within · Gemini pace.' })
 })
 
 test('budget command rejects missing, extra or invalid arguments without changing policies', async ($, on) => {
   const { state } = budgetEngine(on)
   await start($)
   for (const args of ['claude', 'both full', 'claude unlimited', 'claude full extra']) {
-    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex> <within|full|pace|once>' })
+    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex|gemini> <within|full|pace|once>' })
   }
   expect(state.usage().policies).toBeUndefined()
 })
@@ -3212,7 +3217,7 @@ test('the user opens the gate with /savvy-budget <family> once until the next re
   seed()
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
   const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
-  expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within. Claude: go until ${until}.` })
+  expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within · Gemini pace. Claude: go until ${until}.` })
   expect(state.usage().decisions?.claude).toMatchObject({ by: 'user', until: budgetWindow().resetsAt })
   expect(state.usage().policies).toEqual({ claude: 'within', codex: 'within' })
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
@@ -3621,7 +3626,7 @@ test('the bar title shows the pace policy', async ($, on) => {
 test('/savvy-budget <family> pace sets the policy and lists it', async ($, on) => {
   const { state } = budgetEngine(on)
   await start($)
-  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
+  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
   expect(state.usage().policies).toEqual({ claude: 'pace' })
 })
 
@@ -3670,7 +3675,496 @@ test('a policy the user stored as within still refuses, and /savvy-budget within
   expect(budgetGate('savvy-heavy', within, [], BUDGET_AT)).toContain('/savvy-budget claude once')
   const { state } = budgetEngine(on)
   await start($)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace.' })
-  expect(await budgetCommand($, 'claude within')).toMatchObject({ text: 'Budget: Claude within · Codex pace.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
+  expect(await budgetCommand($, 'claude within')).toMatchObject({ text: 'Budget: Claude within · Codex pace · Gemini pace.' })
   expect(state.usage().policies).toEqual({ claude: 'within' })
+})
+
+// ---------------------------------------------------------------------------
+// The Gemini family: the Codex cases above, mirrored for the agy relays.
+
+// `agy -p "/usage" --output-format json`, as measured live (the response text left out).
+const AGY_USAGE = { conversation_id: '', status: 'SUCCESS', duration_seconds: 0, num_turns: 0,
+  usage: { input_tokens: 0, output_tokens: 0, thinking_tokens: 0, cache_read_tokens: 0, total_tokens: 0 },
+  command: { name: 'usage', data: { description: 'Within each group, models share a weekly limit and a 5-hour limit.', groups: [
+    { name: 'Gemini Models', description: 'Models within this group: Gemini 4 Neon, Gemini 4 Carbon, Gemini 4 Argon, Gemini 4 Hydrogen, Gemini 3.8 Flash', buckets: [
+      { id: 'gemini-weekly', name: 'Weekly Limit Remaining', description: 'You have used some of your weekly limit.', window: 'weekly', remaining_fraction: 0.9978731274604797, reset_time: '2026-11-30T21:24:13Z' },
+      { id: 'gemini-5h', name: 'Five Hour Limit Remaining', description: 'You have used some of your 5-hour limit.', window: '5h', remaining_fraction: 0.9914926290512085, reset_time: '2026-11-24T02:24:13Z' },
+    ] },
+    { name: 'Claude and GPT models', description: 'Models within this group: Claude Opus 5.5, Claude Sonnet 5.5, GPT-OSS 120B', buckets: [
+      { id: '3p-weekly', name: 'Weekly Limit Remaining', window: 'weekly', remaining_fraction: 1, reset_time: '2026-11-30T22:21:10Z' },
+      { id: '3p-5h', name: 'Five Hour Limit Remaining', window: '5h', remaining_fraction: 0.5, reset_time: '2026-11-24T03:21:10Z' },
+    ] },
+  ] } } }
+const GEMINI_PLAN: PlanUsage = {
+  fiveHour: { percentUsed: 1, resetsAt: '2026-11-24T02:24:13.000Z' },
+  week: { percentUsed: 0, resetsAt: '2026-11-30T21:24:13.000Z' },
+}
+// The stream-json `result.usage` of a live flash run: cache reads are apart from the input.
+const GEMINI_USAGE = { input_tokens: 13534, output_tokens: 460, thinking_tokens: 276, cache_read_tokens: 9099, total_tokens: 13994 }
+const GEMINI_ONE = { version: 1, sessionId: '00000000-0000-4000-8000-000000000002', model: 'gemini-3.8-flash', state: 'done',
+  action: 'write_file hello.txt', totalTokenUsage: GEMINI_USAGE, rateLimits: AGY_USAGE.command.data, updatedAt: 100 }
+const GEMINI_SNAPSHOT = { rateLimits: AGY_USAGE.command.data, model: null, updatedAt: 300 }
+
+// The Gemini status directory, beside an empty Codex one; reading anything else is a test failure.
+const geminiFiles = (on: On, initial: Record<string, unknown> = GEMINI_ONE) => {
+  const files: Record<string, { text: string; mtimeMs: number; size?: number }> = { 'gem-one': { text: JSON.stringify(initial), mtimeMs: 200 } }
+  const reads: string[] = []
+  on('fs.list', ($, e) => {
+    if (!e.path?.replace(/\\/g, '/').endsWith('/.gemini/savvy-status')) return { value: [] }
+    return { value: Object.entries(files).map(([name, f]) => ({ name: name + '.json', kind: 'file', size: f.size ?? f.text.length, mtimeMs: f.mtimeMs, isLink: false })) }
+  })
+  on('fs.read', ($, e) => {
+    if (e.path.endsWith('models_cache.json')) return { value: '{}' }
+    expect(e.path.replace(/\\/g, '/')).toMatch(/\/\.gemini\/savvy-status\/[\w-]+\.json$/)
+    const name = e.path.replace(/\\/g, '/').split('/').pop()!.slice(0, -5)
+    reads.push(name)
+    if (!files[name]) throw new Error('unreadable')
+    return { value: files[name].text }
+  })
+  return { files, reads }
+}
+
+const geminiRelay = (over: Partial<AgentRun> = {}) => run('relay', { type: 'savvy-gemini-argon', geminiStatus: 'gem-one', status: 'done', endedAt: 0, ...over })
+
+// The Gemini figures, each with the Claude tier whose costume it wears, its color and its intensity.
+const GEMINI: [string, string, string, string][] = [
+  ['gemini-carbon', 'fable', '#3F51B5', 'Carbon'],
+  ['gemini-hydrogen', 'careful', '#2BA6C6', 'Hydrogen'],
+  ['gemini-argon', 'medium', '#D2559A', 'Argon'],
+  ['gemini-flash', 'light', '#D4B21C', 'Flash'],
+]
+// The sparkle's eyes, wherever their group or color.
+const GEMINI_EYES = ['<rect x="11" y="14" width="2" height="2"', '<rect x="17" y="14" width="2" height="2"']
+
+test("every theme, and the classic set, draws all four Gemini figures in their tier's costume, with the badge and the sparkle's eyes", () => {
+  const faults: string[] = []
+  for (const [theme, dress] of [['classic', null] as const, ...Object.entries(DRESSES)]) {
+    for (const [figure, wears] of GEMINI) {
+      let drawn = ''
+      try {
+        drawn = figureSvg(figure, dress)
+      } catch (err) {
+        faults.push(`${theme} ${figure}: throws ${String(err)}`)
+        continue
+      }
+      const cls = dress ? `c-${dress.prefix}-${wears}` : `c-${wears}`
+      if (!drawn.includes(`class="${cls}`)) faults.push(`${theme} ${figure}: not dressed as ${wears}`)
+      if (!/<g class="badge"><rect/.test(drawn)) faults.push(`${theme} ${figure}: no badge`)
+      const hasEyes = figureSvg(wears, dress).includes('<rect x="9" y="12" width="2" height="2"')
+      for (const px of GEMINI_EYES) if (drawn.includes(px) !== hasEyes) faults.push(`${theme} ${figure}: eyes ${hasEyes ? 'missing' : 'shown with eyes hidden'}`)
+    }
+  }
+  expect(faults).toEqual([])
+})
+
+test('each Gemini intensity has a badge of its own, in a color no other tier has', () => {
+  const badge = (figure: string): string => /<g class="badge">(.*?)<\/g>/.exec(figureSvg(figure, null))?.[1] ?? ''
+  const shapes = GEMINI.map(([figure]) => badge(figure).replace(/fill="[^"]*"/g, ''))
+  expect(new Set(shapes).size).toBe(4)
+  for (const [figure, , color] of GEMINI) expect(badge(figure)).toContain(`fill="${color}"`)
+  const others = ['#7F77DD', '#D85A30', '#BA7517', '#378ADD', '#1D9E75', '#8FA3BF', '#6E9B4A', '#E0A526', '#9B7BE0', '#888780']
+  expect(new Set([...others, ...GEMINI.map(([, , color]) => color)]).size).toBe(others.length + 4)
+})
+
+test('a Gemini figure leaves the crab as it was, even when its drawing throws', () => {
+  const crab = figureSvg('careful', DRESSES.winter)
+  figureSvg('gemini-hydrogen', DRESSES.winter)
+  expect(figureSvg('careful', DRESSES.winter)).toBe(crab)
+  expect(() =>
+    withBody(geminiBody, () => {
+      throw new Error('torn costume')
+    }),
+  ).toThrow('torn costume')
+  const { f, groups } = pixels()
+  crabBody(f)
+  expect(groups.get('bd')?.[0]).toBe('<rect x="7" y="10" width="16" height="12" fill="#D97757"/>')
+})
+
+test("a Gemini run shows its intensity, not the relay's model, plugin-prefixed or bare", { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  const types = GEMINI.flatMap(([tier]) => [`savvy-flow:savvy-${tier}`, `savvy-${tier}`])
+  state.seed(AGENTS, types.map((type, i) => run(`w${i}`, { type, model: 'claude-sonnet-5-5', effort: 'low', costUsd: 0.42, status: 'done', endedAt: 5 })))
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const rows = (await ui.findAll({ type: 'Svg' })).slice(1).map(e => ({ svg: String(e.props.source), alt: String(e.props.alt) }))
+  await ui.unmount()
+  expect(rows.length).toBe(types.length)
+  const faults: string[] = []
+  for (const { svg, alt } of rows) {
+    const seen = GEMINI.find(([tier, , color]) => svg.includes(`<tspan fill="${color}">${tier}</tspan>`))
+    if (!seen) faults.push(`no gemini tier in ${alt}`)
+    else {
+      const [tier, , , label] = seen
+      if (!svg.includes(label) || !alt.includes(label)) faults.push(`${tier}: no ${label}`)
+      if (/Sonnet/.test(svg) || /Sonnet/.test(alt)) faults.push(`${tier}: shows the relay's model`)
+      if (svg.includes('≈—')) faults.push(`${tier}: missing session shows a cost placeholder`)
+      if (!svg.includes('class="badge"')) faults.push(`${tier}: no badge`)
+    }
+  }
+  expect(faults).toEqual([])
+})
+
+test('a planned Gemini task, named with or without savvy-, waits as its intensity', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await plan($, [{ title: 'second opinion', tier: 'savvy-gemini-hydrogen' }, { title: 'quick fix', tier: 'gemini-flash' }])
+  expect(state.flow()?.tasks.map(t => t.tier)).toEqual(['gemini-hydrogen', 'gemini-flash'])
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const [, hydrogen, flash] = (await ui.findAll({ type: 'Svg' })).map(e => String(e.props.source))
+  await ui.unmount()
+  expect(hydrogen).toContain('<tspan fill="#2BA6C6">gemini-hydrogen</tspan>')
+  expect(hydrogen).toContain('Hydrogen')
+  expect(hydrogen).toContain('class="c-careful"')
+  expect(flash).toContain('Flash')
+  expect(flash).toContain('class="c-light"')
+})
+
+test('the progress tool takes the Gemini tiers, and decide takes carbon', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  const schema = registered.find(t => t.name === 'progress')?.inputSchema as { properties: { tasks: { items: { properties: { tier: { enum: string[] } } } } } }
+  expect(schema.properties.tasks.items.properties.tier.enum).toEqual(expect.arrayContaining(GEMINI.map(([tier]) => tier)))
+  const decide = registered.find(t => t.name === 'decide')?.inputSchema as { properties: { tier: { enum: string[] }; family: { enum: string[] } } }
+  expect(decide.properties.tier.enum).toEqual(['fable', 'astra', 'carbon'])
+  expect(decide.properties.family.enum).toEqual(['claude', 'codex', 'gemini'])
+})
+
+test('a Gemini slug names its family and version; any other is shown as given', () => {
+  expect(geminiModelName('gemini-4-argon')).toBe('Argon 4')
+  expect(geminiModelName('gemini-3.8-flash')).toBe('Flash 3.8')
+  expect(geminiModelName('gemini-4-neon')).toBe('gemini-4-neon')
+})
+
+test('a planned Gemini task names its bare intensity and no effort, whatever the plan declares', () => {
+  expect(plannedModel(taskOf('gemini-carbon'), { codex: {}, claude: {} })).toBe('Carbon')
+  expect(plannedModel({ ...taskOf('gemini-argon'), effort: 'max' }, { codex: {}, claude: {} })).toBe('Argon')
+})
+
+test("a Gemini run with a declared model and no effort shows each intensity's own effort", () => {
+  for (const [family, effort, slug] of [['flash', 'low', 'gemini-3.8-flash'], ['argon', 'medium', 'gemini-4-argon'],
+    ['hydrogen', 'high', 'gemini-4-hydrogen'], ['carbon', 'high', 'gemini-4-carbon']] as const) {
+    expect(runModel(run('w1', { type: `savvy-gemini-${family}`, geminiModel: slug }))).toBe(`${geminiModelName(slug)} · ${effort}`)
+  }
+})
+
+test("a Gemini run awaiting declaration keeps the bare intensity, not the relay's effort", () => {
+  expect(runModel(run('w1', { type: 'savvy-gemini-argon', effort: 'low' }))).toBe('Argon')
+})
+
+test("a run's declared Gemini model and effort win", () => {
+  expect(runModel(run('w1', { type: 'savvy-flow:savvy-gemini-argon', geminiModel: 'gemini-4-argon', geminiEffort: 'xhigh' }))).toBe('Argon 4 · xhigh')
+})
+
+test('the step tool accepts a Gemini model and effort and preserves them through later relay usage', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  answering(on)
+  await start($)
+  await spawn($, 'w1', 'savvy-flow:savvy-gemini-argon')
+  expect(await stepped($, 'w1', { done: 1, model: 'gemini-4-argon', effort: 'medium' })).toMatchObject({ result: 'ok' })
+  await stepOf($, 'w1', 0)
+  await stepped($, 'w1', { done: 2 })
+  expect(byId(state.agents(), 'w1')).toMatchObject({ model: 'claude-opus-5-5', geminiModel: 'gemini-4-argon', geminiEffort: 'medium' })
+  expect(byId(state.agents(), 'w1')?.codexModel).toBeUndefined()
+  const { rows, terminal } = await panelOf($)
+  expect(rows[0]).toContain('Argon 4 · medium')
+  expect(terminal).toContain('Argon 4 · medium')
+})
+
+test('the step tool accepts a Gemini status declaration without done, and each family keeps to its own field', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await spawn($, 'relay', 'savvy-gemini-hydrogen')
+  await stepped($, 'relay', { total: 4, done: 0, note: 'checking agy login' })
+  expect(await stepped($, 'relay', { geminiStatus: 'gem-one', model: 'gemini-4-hydrogen', codexStatus: 'not-mine' })).toMatchObject({ result: 'ok' })
+  expect(byId(state.agents(), 'relay')).toMatchObject({ geminiStatus: 'gem-one', stepDone: 0, stepNote: 'checking agy login' })
+  expect(byId(state.agents(), 'relay')?.codexStatus).toBeUndefined()
+  await spawn($, 'cx', 'savvy-codex-sol')
+  await stepped($, 'cx', { geminiStatus: 'not-mine' })
+  expect(byId(state.agents(), 'cx')?.geminiStatus).toBeUndefined()
+})
+
+test('the step schema declares geminiStatus, and the tool rejects a name that escapes its directory', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  expect(registered.find(t => t.name === 'step')?.inputSchema).toMatchObject({ properties: { geminiStatus: { type: 'string' } }, required: [] })
+  expect(registered.find(t => t.name === 'step')?.description).toContain('geminiStatus')
+  expect(await stepped($, 'relay', { geminiStatus: '../outside' })).toMatchObject({ deny: 'geminiStatus must be a safe filename stem' })
+})
+
+test("agy's /usage output gives the Gemini Models group's windows, used as one minus the remaining fraction", () => {
+  expect(geminiUsageFrom(JSON.stringify(AGY_USAGE))).toEqual(GEMINI_PLAN)
+  expect(geminiLimitsFrom(AGY_USAGE.command.data)).toEqual(GEMINI_PLAN)
+})
+
+test("the third-party group never stands for Gemini, whatever the groups' order", () => {
+  const [gemini, others] = AGY_USAGE.command.data.groups
+  expect(geminiLimitsFrom({ groups: [others] })).toBeUndefined()
+  expect(geminiLimitsFrom({ groups: [others, gemini] })).toEqual(GEMINI_PLAN)
+})
+
+test('an invalid Gemini bucket is skipped, and the first bucket of a window wins', () => {
+  const bucket = (window: unknown, remaining_fraction: unknown, reset_time: unknown) => ({ window, remaining_fraction, reset_time })
+  const groups = (buckets: unknown[]) => ({ groups: [{ name: 'Gemini Models', buckets }] })
+  for (const bad of [bucket('5h', 1.2, '2026-11-24T02:24:13Z'), bucket('5h', -0.1, '2026-11-24T02:24:13Z'), bucket('5h', '0.5', '2026-11-24T02:24:13Z'),
+    bucket('5h', 0.5, undefined), bucket('5h', 0.5, 'soon'), bucket('1h', 0.5, '2026-11-24T02:24:13Z')]) {
+    expect(geminiLimitsFrom(groups([bad]))).toBeUndefined()
+  }
+  expect(geminiLimitsFrom(groups([bucket('5h', 0.25, '2026-11-24T02:24:13Z'), bucket('5h', 0.9, '2026-11-24T03:00:00Z')])))
+    .toEqual({ fiveHour: { percentUsed: 75, resetsAt: '2026-11-24T02:24:13.000Z' } })
+  expect(geminiLimitsFrom(undefined)).toBeUndefined()
+  expect(geminiUsageFrom('broken')).toBeUndefined()
+  expect(geminiUsageFrom(JSON.stringify({ ...AGY_USAGE, command: { ...AGY_USAGE.command, name: 'models' } }))).toBeUndefined()
+})
+
+test('a bounded Gemini status parses its windows and counters, cache reads above the input included', () => {
+  expect(geminiStatusFrom(JSON.stringify(GEMINI_ONE))).toEqual({ ...GEMINI_ONE, rateLimits: GEMINI_PLAN })
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, rateLimits: null }))?.rateLimits).toBeUndefined()
+})
+
+test('missing Gemini thinking and total counts stay unknown', () => {
+  const { thinking_tokens: _, total_tokens: __, ...counted } = GEMINI_USAGE
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, totalTokenUsage: counted }))?.totalTokenUsage)
+    .toEqual({ ...counted, thinking_tokens: null, total_tokens: null })
+})
+
+test('an invalid or oversized Gemini status supplies no reading', () => {
+  expect(geminiStatusFrom('broken')).toBeUndefined()
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, totalTokenUsage: { ...GEMINI_USAGE, cache_read_tokens: '9' } }))).toBeUndefined()
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, state: 'SUCCESS' }))).toBeUndefined()
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, action: 'x'.repeat(61) }))).toBeUndefined()
+  expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, output: 'x'.repeat(17_000) }))).toBeUndefined()
+})
+
+test('a plan-only Gemini snapshot parses without run fields, and never becomes a run status', () => {
+  expect(geminiPlanFrom(JSON.stringify(GEMINI_SNAPSHOT))).toEqual({ rateLimits: GEMINI_PLAN, updatedAt: 300 })
+  expect(geminiStatusFrom(JSON.stringify(GEMINI_SNAPSHOT))).toBeUndefined()
+  expect(geminiPlanFrom(JSON.stringify({ ...GEMINI_SNAPSHOT, updatedAt: 'yesterday' }))).toBeUndefined()
+  expect(geminiPlanFrom(JSON.stringify({ ...GEMINI_ONE, totalTokenUsage: null }))).toBeUndefined()
+  expect(geminiPlanFrom(JSON.stringify(GEMINI_ONE))).toEqual({ rateLimits: GEMINI_PLAN, updatedAt: 100 })
+})
+
+test('the Gemini row reads only its declared status file and shows its tokens with no cost', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = geminiFiles(on)
+  files.files.other = { text: JSON.stringify({ ...GEMINI_ONE, rateLimits: null, updatedAt: 50 }), mtimeMs: 100 }
+  state.seed(AGENTS, [geminiRelay()])
+  await start($)
+  expect(files.reads).toEqual(['gem-one'])
+  const { terminal } = await panelOf($)
+  expect(terminal).toContain('23k')
+  expect(terminal).not.toContain('23k ≈')
+})
+
+test('a Gemini reading gives the header its tile and stamps its own reading age', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  geminiFiles(on)
+  await start($)
+  expect(state.usage()).toMatchObject({ gemini: GEMINI_PLAN, geminiReadAt: 10_000, geminiUpdatedAt: 100 })
+  expect(state.usage().codexReadAt).toBeUndefined()
+  const { header } = await panelOf($)
+  expect(header).toContain('Gemini · plan · pace')
+  expect(header).toContain('5h  1%')
+  expect(header).toContain('7d  0%')
+})
+
+test('a plan-only Gemini snapshot supplies usage before any relay runs, and is not reread unchanged', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = geminiFiles(on)
+  delete files.files['gem-one']
+  files.files.snapshot = { text: JSON.stringify(GEMINI_SNAPSHOT), mtimeMs: 300 }
+  await start($)
+  expect(state.usage().gemini).toEqual(GEMINI_PLAN)
+  await clock.advance(6000)
+  expect(files.reads).toEqual(['snapshot'])
+})
+
+test('a session with no Gemini snapshot keeps no Gemini statuses', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const files = geminiFiles(on)
+  delete files.files['gem-one']
+  await start($)
+  expect(state.usage().geminiStatuses).toBeUndefined()
+  expect(state.usage().gemini).toBeUndefined()
+})
+
+test('a live Gemini action becomes its row step note, and a running Gemini keeps a stopped relay row running', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
+  geminiFiles(on, { ...GEMINI_ONE, state: 'running', updatedAt: 9_000, action: 'run_command npm test' })
+  state.seed(AGENTS, [geminiRelay({ status: 'running', stepDone: 4, stepTotal: 4 })])
+  await start($)
+  expect(byId(state.agents(), 'relay')).toMatchObject({ status: 'running', geminiState: 'running', stepNote: 'run_command npm test' })
+})
+
+test('a relay turn.complete cannot finish a running Gemini row, and a finished Gemini releases it', async ($, on) => {
+  const { clock, state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  on('turn.complete', () => ({ text: '' }))
+  const files = geminiFiles(on, { ...GEMINI_ONE, state: 'running' })
+  state.seed(AGENTS, [geminiRelay({ status: 'running', endedAt: undefined })])
+  await start($)
+  await $.turn.complete({ answer: 'waiting', durationMs: 1, isAborted: false, turnId: 't1', agentId: 'relay', reason: 'answer' })
+  expect(byId(state.agents(), 'relay')).toMatchObject({ status: 'running', relayStatus: 'done', geminiState: 'running' })
+  files.files['gem-one'] = { text: JSON.stringify(GEMINI_ONE), mtimeMs: 300 }
+  await clock.advance(3000)
+  expect(byId(state.agents(), 'relay')?.status).toBe('done')
+})
+
+test('a failed Gemini fails a completed relay row, and a stale heartbeat stops holding it', () => {
+  const status = geminiStatusFrom(JSON.stringify(GEMINI_ONE))!
+  expect(geminiRun(geminiRelay(), { statuses: {}, geminiStatuses: { 'gem-one': { ...status, state: 'failed' } } }, 0).status).toBe('failed')
+  const stale = { statuses: {}, geminiStatuses: { 'gem-one': { ...status, state: 'running' as const, updatedAt: 0 } } }
+  expect(geminiRun(geminiRelay(), stale, 10_000).status).toBe('running')
+  expect(geminiRun(geminiRelay(), stale, 20_000).status).toBe('done')
+  expect(geminiRun(run('plain', { status: 'done' }), stale, 0)).toEqual(run('plain', { status: 'done' }))
+})
+
+test('a running Gemini bar stays below full even when all steps were reported', () => {
+  expect(progressOf(geminiRelay({ geminiState: 'running', status: 'running', stepDone: 4, stepTotal: 4 }))).toBe(0.99)
+})
+
+test('a Gemini conversation resumed twice contributes only its largest cumulative snapshot, and no cost', () => {
+  const status = geminiStatusFrom(JSON.stringify(GEMINI_ONE))!
+  const usage: UsageReadings = { statuses: {}, geminiStatuses: Object.fromEntries([1, 2, 3].map(n =>
+    ['gem-' + n, { ...status, totalTokenUsage: { ...status.totalTokenUsage, input_tokens: n * 10_000 } }])) }
+  const rows = [1, 2, 3].map(n => geminiRelay({ id: String(n), geminiStatus: 'gem-' + n }))
+  const t = totals([...rows, run('worker', { tokens: 200, costUsd: 0.2 })], 0, usage)
+  expect(t.gemini).toEqual({ tokens: 30_000 + 9099 + 460, cost: undefined })
+  expect(t.showsGemini).toBe(true)
+  expect(t.claude).toMatchObject({ tokens: 200, cost: 0.2 })
+})
+
+test('without Gemini the family totals leave it out', () => {
+  expect(totals([run('worker', { tokens: 200 })], 0).showsGemini).toBe(false)
+})
+
+test('a Gemini worker puts Gemini beside Codex in the cost and token tiles', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed(AGENTS, [geminiRelay({ geminiStatus: undefined })])
+  state.seed(FLOW, flowOf())
+  const header = (await headerOf($)).source
+  expect(header).toContain('Gemini —')
+  expect(header).not.toContain('Codex —')
+})
+
+test('three plan families go two to a row, the third spanning a row of its own', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  state.seed('usage', { ...READINGS, gemini: GEMINI_PLAN })
+  state.seed(FLOW, flowOf())
+  const header = await headerOf($)
+  expect(planBoxes(header.source)).toEqual([{ x: 0, y: 90, width: 233 }, { x: 239, y: 90, width: 233 }, { x: 0, y: 178, width: 472 }])
+  expect(header.source).toContain('Gemini · plan · pace</text>')
+  expect(header.height).toBe(264)
+})
+
+test('compact usage adds Gemini after the others, and leaves it out unread', () => {
+  expect(planUsageText({ ...READINGS, gemini: GEMINI_PLAN })).toBe('Claude 41/94%  Codex 2/9%  Gemini 1/0%')
+  expect(planUsageText({ gemini: GEMINI_PLAN })).toBe('Gemini 1/0%')
+  expect(planUsageText(READINGS)).toBe('Claude 41/94%  Codex 2/9%')
+})
+
+test('a Gemini reading stamps its own reading time and history', () => {
+  const recorded = recordPlanUsage({ statuses: {} }, 'gemini', GEMINI_PLAN, 5)
+  expect(recorded).toMatchObject({ gemini: GEMINI_PLAN, geminiReadAt: 5 })
+  expect(recorded.codexReadAt).toBeUndefined()
+  expect(recorded.history?.gemini?.fiveHour?.samples).toEqual([{ at: 5, percentUsed: 1 }])
+})
+
+test('the budget summary gives Gemini its own windows and policy verdicts', () => {
+  const usage: UsageReadings = { statuses: {}, gemini: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { gemini: 'full' } }
+  expect(budgetSummary(usage, BUDGET_AT).gemini).toEqual({
+    fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
+      exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over' },
+    week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok' },
+  })
+  expect(budgetSummary(usage, BUDGET_AT).codex).toEqual({})
+})
+
+const GEMINI_ASKS: UsageReadings = { statuses: {}, gemini: { fiveHour: budgetWindow() }, policies: { gemini: 'within' } }
+
+test("the gate holds Gemini's costly relays while Gemini asks, and only them", () => {
+  for (const type of ['savvy-flow:savvy-gemini-hydrogen', 'savvy-gemini-carbon']) {
+    const refusal = budgetGate(type, GEMINI_ASKS, [], BUDGET_AT)
+    expect(refusal).toContain('Gemini')
+    expect(refusal).toContain('/savvy-budget gemini once')
+  }
+  for (const type of ['savvy-gemini-flash', 'savvy-flow:savvy-gemini-argon', 'savvy-heavy', 'savvy-codex-sol']) {
+    expect(budgetGate(type, GEMINI_ASKS, [], BUDGET_AT)).toBeUndefined()
+  }
+  // A Claude ask does not hold Gemini back, and the other family's yes does not open it.
+  expect(budgetGate('savvy-gemini-hydrogen', askUsage(), [], BUDGET_AT)).toBeUndefined()
+  expect(budgetGate('savvy-gemini-hydrogen', decideBudget(GEMINI_ASKS, 'codex', BUDGET_AT, 'user'), [], BUDGET_AT)).toBeDefined()
+  expect(budgetGate('savvy-gemini-hydrogen', decideBudget(GEMINI_ASKS, 'gemini', BUDGET_AT, 'user'), [], BUDGET_AT)).toBeUndefined()
+})
+
+test('/savvy-budget gemini sets its policy alone, and once opens its gate until the next reset', async ($, on) => {
+  const { state } = budgetEngine(on)
+  launching($, on)
+  await start($)
+  expect(await budgetCommand($, 'gemini full')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini full.' })
+  expect(state.usage().policies).toEqual({ gemini: 'full' })
+  state.seed('usage', GEMINI_ASKS)
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-gemini-hydrogen' })).deny).toContain('/savvy-budget gemini once')
+  const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
+  expect(await budgetCommand($, 'gemini once')).toMatchObject({ text: `Budget: Claude pace · Codex pace · Gemini within. Gemini: go until ${until}.` })
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-gemini-hydrogen' })).deny).toBeUndefined()
+})
+
+test("the decide tool records the user's yes for Gemini", async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, GEMINI_ASKS)
+  await start($)
+  seed()
+  expect((await launch($, 'dig', { subagent_type: 'savvy-gemini-carbon' })).deny).toContain('PLANS only')
+  expect((await launch($, 'dig', { subagent_type: 'savvy-gemini-hydrogen' })).deny).toContain('Budget gate: Gemini')
+  say('Yes, use Gemini.')
+  expect((await decideWith($, { family: 'gemini', answer: 'yes, use gemini' })).result).toBe(`ok: Gemini go until ${budgetWindow().resetsAt}`)
+  expect(state.usage().decisions?.gemini).toMatchObject({ by: 'orchestrator', words: 'yes, use gemini' })
+  expect((await launch($, 'dig', { subagent_type: 'savvy-gemini-hydrogen' })).deny).toBeUndefined()
+})
+
+test('the top-tier gate refuses Carbon, either name, whatever the budget says, and names the way out', () => {
+  const ok: UsageReadings = { statuses: {}, gemini: { fiveHour: budgetWindow(10, 'fiveHour', 3) } }
+  for (const type of ['savvy-gemini-carbon', 'savvy-flow:savvy-gemini-carbon']) {
+    const refusal = topTierGate(type, ok)
+    expect(refusal).toContain('savvy-gemini-carbon (Gemini Carbon) is for PLANS only')
+    expect(refusal).toContain('(tier carbon, uses 1')
+    expect(refusal).toContain('Hydrogen (Gemini)')
+  }
+  expect(topTierGate('savvy-gemini-carbon', ok, true, 'it')).toContain('(tier carbon, uses 1')
+  expect(topTierGate('savvy-gemini-hydrogen', ok)).toBeUndefined()
+  // Fable's and Astra's refusals still name their own tiers.
+  expect(topTierGate('savvy-fable', ok)).toContain('savvy-fable (Claude Fable) is for PLANS only')
+  expect(topTierGate('savvy-fable', ok)).toContain('(tier fable, uses 1')
+  expect(topTierGate('savvy-codex-astra', ok)).toContain('savvy-codex-astra (Codex Astra) is for PLANS only')
+  expect(topTierGate('savvy-codex-astra', ok)).toContain('(tier astra, uses 1')
+})
+
+test('the Carbon relay is held like Fable and Astra, and the yes of one top tier opens no other', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  await start($)
+  seed()
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-gemini-carbon' })).deny).toContain('Hydrogen (Gemini)')
+  expect((await decideTier($, { tier: 'carbon', family: 'codex' })).deny).toBeDefined()
+  expect((await decideTier($, { tier: 'carbon', family: 'gemini' })).result).toBe('ok: Gemini Carbon allowed for 1 launch')
+  expect(state.usage().topTiers?.['gemini-carbon']).toMatchObject({ uses: 1 })
+  expect((await launch($, 'fable', { subagent_type: 'savvy-flow:savvy-fable' })).deny).toContain('PLANS only')
+  expect((await launch($, 'astra', { subagent_type: 'savvy-codex-astra' })).deny).toContain('PLANS only')
+  expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-gemini-carbon' })).deny).toBeUndefined()
+  expect((await launch($, 'plan2', { subagent_type: 'savvy-gemini-carbon' })).deny).toContain('used up')
+  expect(state.usage().topTiers?.['gemini-carbon']?.uses).toBe(0)
+})
+
+test('a SendMessage resume of a Carbon worker needs a yes with a use left', async ($, on) => {
+  const { state, seed } = topGated($, on)
+  state.seed(AGENTS, [run('car', { type: 'savvy-flow:savvy-gemini-carbon', status: 'done' }), run('hy', { type: 'savvy-flow:savvy-gemini-hydrogen', status: 'done' })])
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  seed()
+  const resume = (to: string) => $.tool.call({ tool: 'SendMessage', tool_use_id: `send-${to}`, to, message: 'go on' })
+  expect((await resume('car')).deny).toContain('resume (SendMessage)')
+  expect((await resume('hy')).deny).toBeUndefined()
+  await decideTier($, { tier: 'carbon' })
+  expect((await resume('car')).deny).toBeUndefined()
+  expect((await resume('car')).deny).toContain('used up')
 })

@@ -26,7 +26,7 @@ test('recorded real exec events end in the observed failed state', async t => {
   const status = await runStatus('recorded', { directory: await directory(t), input: input(await fixture('codex-exec-recorded.jsonl')), output: null })
   assert.equal(status.state, 'failed')
   assert.equal(status.action, 'workspace routing discovery failed')
-  assert.equal(status.sessionId, '01a1d1b9-bc52-7212-857e-3858ca6aff50')
+  assert.equal(status.sessionId, '00000000-0000-7000-8000-000000000003')
 })
 
 test('the documented success stream records completed turn usage', async t => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.2] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [0.1.1] - 2026-11-15
 - concept-match-loop: a check measured from the vertices or the low passes a flap, so read the surface per texel off the source along its normal; concept-to-asset: a bake cage regrown only where texels still miss, never where they tilt
 

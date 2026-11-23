@@ -12,6 +12,7 @@ import unittest
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
+import antigravity_manifest  # noqa: E402  pylint: disable=wrong-import-position
 import build_marketplace  # noqa: E402  pylint: disable=wrong-import-position
 
 
@@ -126,7 +127,8 @@ class TestBuild(unittest.TestCase):
 
 class TestCommittedMarketplace(unittest.TestCase):
     def test_the_committed_marketplace_matches_the_published_skills(self) -> None:
-        self.assertEqual(build_marketplace.main(["--check"]), 0, "run `python build_marketplace.py`")
+        self.assertEqual(build_marketplace.main(["--check"]), 0,
+                         "run `python build_marketplace.py`, or publish the plugins it names")
 
     def test_every_plugin_source_is_a_published_skill(self) -> None:
         # Skills may be at the root or nested in a bundle; a mod with no skill has its own manifest.
@@ -142,12 +144,16 @@ class TestCommittedMarketplace(unittest.TestCase):
 
     def test_a_published_manifest_that_declares_a_version_declares_the_published_one(self) -> None:
         # Claude Code takes the manifest's version over the marketplace entry's: a stale one hides every update.
+        # The Antigravity manifest (in the published folder, or on the Antigravity copy) names the same version.
         marketplace = json.loads((REPO / build_marketplace.MARKETPLACE).read_text(encoding="utf-8"))
         for plugin in marketplace["plugins"]:
-            manifest = REPO / plugin["source"] / build_marketplace.MOD_MANIFEST
-            if manifest.is_file():
-                declared = json.loads(manifest.read_text(encoding="utf-8")).get("version", plugin["version"])
-                self.assertEqual(declared, plugin["version"], plugin["name"])
+            folder = REPO / plugin["source"]
+            copy = antigravity_manifest.copy_folder(folder, plugin["category"], REPO / antigravity_manifest.TREE)
+            for manifest in (folder / build_marketplace.MOD_MANIFEST, folder / antigravity_manifest.MANIFEST,
+                             copy / antigravity_manifest.MANIFEST):
+                if manifest.is_file():
+                    declared = json.loads(manifest.read_text(encoding="utf-8")).get("version", plugin["version"])
+                    self.assertEqual(declared, plugin["version"], f"{plugin['name']}: {manifest.relative_to(REPO)}")
 
 
 if __name__ == "__main__":

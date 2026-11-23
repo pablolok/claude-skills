@@ -16,6 +16,9 @@ directories. Unpublished empty skeletons are skipped; populated or already publi
 
     python build_marketplace.py          # write the marketplace
     python build_marketplace.py --check  # exit 1 when the committed marketplace differs from the published skills
+
+``--check`` also fails when a published plugin's Antigravity manifest (or the Antigravity copy of a plugin with Claude
+agents) is missing or stale: ``automate_publish.py`` writes them, see ``antigravity_manifest.py``.
 """
 
 from __future__ import annotations
@@ -26,6 +29,8 @@ import pathlib
 import re
 import sys
 import typing
+
+import antigravity_manifest
 
 REPO = pathlib.Path(__file__).resolve().parent
 INSTALL_CONFIG = "install.config.json"
@@ -215,6 +220,22 @@ def build(repo: pathlib.Path = REPO) -> typing.Dict[str, typing.Any]:
     }
 
 
+def antigravity_problems(repo: pathlib.Path = REPO) -> typing.List[str]:
+    """What keeps the published plugins from loading in Antigravity as the publish leaves them; empty when current."""
+    skills = _read_json(repo / INSTALL_CONFIG).get("skills", {})
+    tree = repo / antigravity_manifest.TREE
+    found: typing.List[str] = []
+    copies = []
+    for name, config in sorted(skills.items()):
+        folder = repo / PUBLISHED / config["category"] / name
+        if not config.get("plugin", True) or not folder.is_dir():
+            continue
+        found += antigravity_manifest.problems(folder, config["category"], tree, repo)
+        if antigravity_manifest.has_claude_agents(folder):
+            copies.append(antigravity_manifest.copy_folder(folder, config["category"], tree))
+    return found + antigravity_manifest.orphans(tree, copies, repo)
+
+
 def render(marketplace: typing.Dict[str, typing.Any]) -> str:
     """The file's text: stable formatting, LF, final newline."""
     return json.dumps(marketplace, indent=2, ensure_ascii=False) + "\n"
@@ -233,10 +254,18 @@ def main(argv: typing.Optional[typing.Sequence[str]] = None) -> int:
     target = REPO / MARKETPLACE
     current = target.read_text(encoding="utf-8") if target.exists() else None
     if args.check:
-        if current != text:
+        stale = current != text
+        if stale:
             print(f"{MARKETPLACE.as_posix()} is out of date: run `python build_marketplace.py`", file=sys.stderr)
+        try:
+            antigravity = antigravity_problems(REPO)
+        except (MarketplaceError, OSError, ValueError, KeyError) as exc:
+            antigravity = [str(exc)]
+        for problem in antigravity:
+            print(f"antigravity: {problem}: publish the plugin with `python automate_publish.py`", file=sys.stderr)
+        if stale or antigravity:
             return 1
-        print(f"{MARKETPLACE.as_posix()} matches the published skills")
+        print(f"{MARKETPLACE.as_posix()} and the Antigravity manifests match the published skills")
         return 0
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "w", encoding="utf-8", newline="\n") as handle:

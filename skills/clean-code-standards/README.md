@@ -25,6 +25,8 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 A hook that gates on this skill sees the name `clean-code-standards:clean-code-standards` when it runs from the
 plugin: match the part after the last colon.
 
+In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
+
 ## Conditional detail and verification
 
 Detailed test invariants live in `references/test-invariants.md`; read them when tests involve absence checks, thresholds, transformations or borrowed state.

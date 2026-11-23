@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.21.2] - 2026-11-24
+- The Codex stream fixtures and their test carry placeholder thread ids in place of recorded ones.
+
+
+## [1.21.1] - 2026-11-24
+- The Gemini relays run agy with SAVVY_RELAY=1 (task, second opinion, follow-up), so a plugin Stop hook that continues the turn (skill-retrospective's) leaves the headless run to its brief.
+
+
+## [1.21.0] - 2026-11-24
+- Gemini tier: four Sonnet relays (savvy-gemini-flash/argon/hydrogen/carbon) run Google Gemini through the Antigravity CLI (agy -p, stream-json, --sandbox, git state changes denied; read-only second opinions deny writes and commands), follow-ups via --conversation; Carbon is plans only on the user's recorded yes; gemini-status.mjs snapshots usage and plan windows; references/gemini.md; SKILL.md split under 24 kB into references/ for Antigravity; Antigravity copy in published-antigravity/ without Claude agents.
+
+
 ## [1.20.1] - 2026-11-22
 - first observed run of the Tools tier (claude-sonnet-5-5): a 13-step editor recipe ran as written at about a quarter of a Careful capture's cost; expected outputs in a recipe come from a previous run of the same take
 

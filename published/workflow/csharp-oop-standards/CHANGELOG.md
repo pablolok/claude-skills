@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.5] - 2026-11-24
+- Antigravity (Gemini) plugin manifest and install line.
+
+
 ## [1.0.4] - 2026-11-12
 - Composite format braces: a closing brace right after a format specifier in string.Format or FormattableString.Invariant is read as part of the specifier; check generated JSON by parsing it back
 
