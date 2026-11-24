@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.24.1] - 2026-11-24
+- Stop a review, audit or test pass on the current diff as soon as the user changes the request, and relaunch it from the start on the new diff
+
+
 ## [1.24.0] - 2026-11-24
 - Gemini Neon relay (savvy-gemini-neon, gemini-4-neon at medium effort) beside Hydrogen for Careful-sized work; measured on 2026-11-24 in references/gemini.md and routing.md
 

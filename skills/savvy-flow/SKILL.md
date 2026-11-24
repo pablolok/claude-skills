@@ -373,6 +373,10 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   you do everything that does not depend on its verdict: tracker updates, counts, read-only checks, the commit
   message, the next brief. After the fixes, resume the same reviewer for a targeted check of those points only; a
   fresh full review only when the scope changed.
+- **Stop what checks code that is about to change.** When the user changes the request while a review, an audit or a
+  test pass is running on the current diff, stop it at once (`TaskStop`), without waiting to be told, and relaunch it
+  from the start on the new diff once that is ready: a verdict on code that will not be committed is spent for nothing,
+  and its findings mix with the new code's. Say so in one line, and re-plan the bar with the check after the new task.
 
 ## 5. Adversarial review (orchestrator only)
 
