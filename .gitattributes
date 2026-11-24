@@ -1,0 +1,4 @@
+# Every text file is checked out with LF on every machine. Published copies, the Antigravity copy and the recorded
+# fixtures are compared byte for byte, and the status scripts pass lines through with LF: a checkout that turns
+# them into CRLF (core.autocrlf=true on Windows) made the drift check and a node test fail with no change in the repo.
+* text=auto eol=lf
