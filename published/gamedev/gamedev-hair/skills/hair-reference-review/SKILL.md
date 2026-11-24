@@ -74,6 +74,10 @@ The review uses both, and the eye decides.
 - **Hair look:** strand contrast (fine detail) against clump contrast (coarse), and their ratio; the halo's width and
   coverage outside the outline; the length of a strand the eye can follow; the wave as the direction's power along
   traced strands, as rendered; lock width.
+- **Value levels:** the reference split into its levels (a darker under-layer, a lighter main layer, a few whitish
+  single hairs; often two or three), each read for area, patch size, spread and direction, after the lighting is
+  divided out (lighter because lit is not lighter hair). Read ours the same way and compare level by level, never
+  one mean over all of them.
 - **Flow:** dominant direction, coherence and spread per zone and view, gated by a noise floor read from the
   reference against itself.
 
@@ -172,7 +176,9 @@ complaint, or ask.
 for the places defects live (a cheek, the mouth, the chin, the border, the point); the mattes over the reference's
 masks as an overlay (ours only, the reference's only, both); films for anything that moves.
 
-**The judge:** by eye at 1:1 first, then enlarged. Where possible an independent judge who sees the sheet and the
+**The judge:** by eye at the scale the art owner sees, the whole feature, before any 4x close-up. When a shape looks
+odd in a close-up, inspect it at true render density, not in an enlarged crop: an enlargement invents shapes the
+shipped pixels do not carry. Then enlarged. Where possible an independent judge who sees the sheet and the
 reference, not the numbers or the author's notes.
 
 ## 4. The defects list

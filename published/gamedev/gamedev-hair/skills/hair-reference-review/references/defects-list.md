@@ -28,6 +28,9 @@ Rules:
   wrong").
 - **Separate the asset's defects from other owners'** (the skin's paint, the body's bake) and give them to their
   owner.
+- **Name the value level a defect belongs to** (under-layer, main layer, white single hairs) with its area, size,
+  spread and direction against the reference's, lighting divided out; a defect read on the whole mix hides which
+  level is wrong.
 - **List what has been tried** in a word each, so the next round does not repeat a failed representation.
 
 ## Diagnosis, per defect group

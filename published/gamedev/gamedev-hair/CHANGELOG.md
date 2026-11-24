@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.8] - 2026-11-24
+- strand-groom: the order of work for every zone (zone map, leading view per quantity, hair map, value levels, own-groom maps, owner's yes before the brief, build by levels); hair-reference-review: value-level read, judge at the owner's scale before close-ups
+
+
 ## [0.2.7] - 2026-11-24
 - Antigravity plugin manifest and install line removed: the plugins run in Claude Code; Gemini is used only through savvy-flow's relay tier.
 

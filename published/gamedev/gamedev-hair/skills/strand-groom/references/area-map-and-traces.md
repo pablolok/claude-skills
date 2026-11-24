@@ -75,7 +75,7 @@ Trace before building, and trace ours the same way to compare.
   target.
 - **A row that trades monotonically against another across many tunes points to the target or a missing term, not the
   knob.** Score the reference's own hull with the gate's mask rows first: if no shape passes every view, the target
-  contradicts itself (SKILL.md §0.5). One case: a push-out floor traded front IoU against side over-reach over about
+  contradicts itself (SKILL.md §0.5, step 2). One case: a push-out floor traded front IoU against side over-reach over about
   33 tunes; most of the "missing" mass lay outside the reference's hair in some trusted view.
 - **Wire the growth terms the hull rows need on every growth path** (hang, a margin law): in one case they were wired
   on one part only, and the others' mass stayed 18-41 % under the reference.

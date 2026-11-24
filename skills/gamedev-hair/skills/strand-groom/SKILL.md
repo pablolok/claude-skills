@@ -29,23 +29,45 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
    in every region the groom will be fitted to, under the hair included, before calling anything a conflict
    (`hair-reference-review` §1.4). Reason: a moustache's edge misread as the mouth line once made a false 20 mm
    "conflict" that drove a design decision.
-4. **Read the reference's flow before setting any direction.** A structure tensor per zone and per view, drawn as
-   segments over the picture. Reason: a brief said "down and forward" for a cheek whose hair runs down and back in
-   every view; the groom built to the brief was 50-60 degrees off.
-5. **Check that the reference agrees with itself** before matching it (`hair-reference-review` §1.5): views painted
-   one at a time need not agree in 3D, and no groom satisfies views that contradict each other. When they
-   contradict, make the set again as one multi-view image. Where views still disagree, the art owner picks the view
-   that wins each region (`hair-reference-review` §5): show them the views side by side, never decide it yourself,
-   and report both numbers.
-6. **Measure the mass before the texture.** Carve the reference's hull from its masks, carve the groom's own
+4. **Measure the mass before the texture.** Carve the reference's hull from its masks, carve the groom's own
    projections the same way (like with like), and read the volume per zone (cm3) and each zone's shortfall and
    excess in mm (p50 / p90) with its extents (reach, width, lowest tip). A groom far under the reference's volume is
    a smaller beard: no reshaping, texture or shading recovers it. Grow it into the reference's hull first (one groom
    at about half the volume covered under 0.6 of the masks; grown into the hull, about 0.9). Direction can pass
    every flow row while the mass is lost: gate direction, shape and length together from the first regrow.
-7. **Build the area map and trace the reference's locks** (two maps with the same named areas, the bare features
-   beside each area, each area's owner part and root polygon, every view's traced locks), and grow every area along
-   the traced flow from the first build. [references/area-map-and-traces.md](references/area-map-and-traces.md)
+5. **The order of work, for every zone** (a moustache, a cheek, a crown). Each step before the next:
+   1. **Map the zones over every reference view**: for a moustache the root line, centre, lobes, corners, legs and
+      edge; the equivalents for any groom. Two maps with the same named areas, each area's owner part and root
+      polygon. [references/area-map-and-traces.md](references/area-map-and-traces.md)
+   2. **Choose the leading view per zone for each quantity separately**: outline and position, direction, standoff
+      and depth. The front alone is not enough: the side or three-quarter view usually defines direction and depth
+      better. First check that the reference agrees with itself (`hair-reference-review` §1.5): views painted one at
+      a time need not agree in 3D, and when they contradict, make the set again as one multi-view image. Where views
+      still disagree, measure it and show the views side by side with both numbers; the art owner picks
+      (`hair-reference-review` §5), never you. Record the pick per zone and quantity.
+   3. **Outline the zone where hair must be.** The outline is a guide, not a mould (§2).
+   4. **The hair map.** In each view that shows the zone, trace real strokes lock by lock: root, course, tip, width,
+      layer, what each crosses. Then write the logic in a few plain sentences a non-technical person can check. A
+      structure tensor per zone and view, drawn as segments over the picture, checks the trace and never replaces it.
+      Reason: a brief said "down and forward" for a cheek whose hair runs down and back in every view; the groom
+      built to the brief was 50-60 degrees off.
+   5. **The value levels.** Before choosing tones, split the reference into its levels (often two or three: a darker
+      under-layer, a lighter main layer, a few whitish single hairs on top). For each: its area, patch size, width,
+      where along the hair it shows, how it is spread, and its direction (which level carries the locks' direction,
+      which crosses it). Divide out the lighting first: lighter because lit is not lighter hair. Then check that a
+      lighter level exists in the groom's data as well as in the renderer's shading, at the reference's area and size.
+   6. **The same maps on your own groom**, same cells, side by side with the reference's; name per cell what is
+      wrong: direction, position, standoff, arrangement or level.
+   7. **Show the maps and get the art owner's yes before the build brief.** A brief that says "direction stays"
+      without steps 4 and 5 mapped for that zone is refused.
+   8. **Build by levels**, every area grown along the traced flow from the first build
+      ([references/area-map-and-traces.md](references/area-map-and-traces.md)): the level that carries direction
+      and locks first, then the under-layer that fills behind it, the few white hairs last; judge each, then all
+      together. One structural change per build (§6).
+
+   Reason: one centre was rebuilt several times on length and shape alone, each build trading one defect for
+   another, because its direction and value levels had never been mapped. The three-level recipe (step 5) and the
+   build by levels (step 8) are proposed, not yet validated on a finished groom (Open).
 
 ## 1. The build order
 
@@ -106,8 +128,9 @@ most of the look, noise and flyaways come last. A short cut over a skin fade: re
   gained little more in one case).
 - **Flyaways are their own part:** a few long single hairs rooted at a lock's root, lifted off and running beside
   it. More lint reads as noise, not as a halo.
-- **Value per strand, not per lock.** Salt-and-pepper (grey) hair is strands of different value side by side;
-  give each strand a class (silver, dark, regular) and deeper layers a darker tone. A curl does not make grey hair.
+- **Value per strand, inside levels.** Salt-and-pepper (grey) hair is strands of different value side by side: give
+  each strand a class (silver, dark, regular) inside each value level (§0.5, step 5), and let the levels follow
+  depth, a darker tone for the deeper layer. A curl does not make grey hair.
   Read the tone's spread on the export (p10 / p90 over strand ids): a wide spread reads as near-white tips over a
   dark mass once the renderer adds its contrast. Narrowing the groom's law (tone p10 / p90 0.55 / 1.10 -> 0.60 /
   1.06, a light zone scaled down, in one case) reduced the tips where lowering the renderer's contrast flattened the
@@ -206,6 +229,8 @@ Blender notes (one case each; check on your version):
   guides).
 - A moustache from constructed guides has no validated recipe yet; guides authored from the reference's traced
   locks (references/area-map-and-traces.md) are the route being tried.
+- The value-level read (two or three levels, each with its own area, patch size, spread and direction) and the build
+  by levels are proposed from one centre's rebuilds, not yet validated on a finished groom.
 - Starting values for clump power, wave ratio, frizz share and the height-per-distance ratio come from one or two
   grooms (a short crop's density and caps: short-cut-and-fade.md); contributors should replace them with ranges.
 - Which DCC features (Blender's Interpolate Hair Curves with guide groups, Houdini Guide Advect, XGen region maps)
