@@ -118,6 +118,12 @@ conversation, plan windows). The plan windows come from `agy -p /usage --output-
 the writer runs it once the stream ends and keeps its `command.data` as `rateLimits`. The rules are in
 `references/gemini.md`; the recorded probes behind the tests are in `scripts/fixtures/README.md`.
 
+savvy-flow orchestrates inside Google Antigravity too: `/savvy-flow` starts it there, and the orchestrator delegates
+to six native subagents shipped in the Antigravity copy (from the source's `antigravity/` overlay): Light and Medium
+on `flash`, Careful and Heavy on `pro`, Fable on `inherit` (the session's model; plans only, each launch on the user's
+yes, asked in chat) and a read-only Reviewer on `inherit` for reviews and audits. The essentials are inlined in
+`SKILL.md`; the rules are in `references/antigravity.md`.
+
 ## Themes
 
 The orchestrator's chat messages wear the theme of the day, by the Italian calendar and in the same windows as the

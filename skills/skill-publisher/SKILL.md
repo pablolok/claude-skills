@@ -7,7 +7,7 @@ description: Use in the claude-skills repository to add, change, publish, tag an
 
 Each individual skill or bundle here is a plugin of the marketplace `pablolok-skills`. Its source is
 `skills/<plugin>/`; what users install is `published/<category>/<plugin>/` (with its generated `.antigravity-plugin/plugin.json`, and for a plugin with
-Claude-format agents a copy without `agents/` under `published-antigravity/<category>/<plugin>/`) and
+Claude-format agents a copy without them, with the source's `antigravity/` overlay laid over it, under `published-antigravity/<category>/<plugin>/`) and
 `.claude-plugin/marketplace.json`, all written only by the scripts below. A change is done when the plugin users get has it — not when the source file is saved.
 
 ## 1. Edit the source

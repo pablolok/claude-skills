@@ -11,8 +11,9 @@ that ships them: individual workflow skills and bundles of related game developm
   `skills/<skill>/SKILL.md` plus each skill's references/scripts; bundles have one version for all their skills.
 - `published/<category>/<plugin>/` is the published copy, the folder each plugin installs. It is written only by the
   publish flow, never by hand. Each plugin there carries a generated `.antigravity-plugin/plugin.json` for Google
-  Antigravity; `published-antigravity/<category>/<plugin>/` holds the generated Antigravity copy (no `agents/`) of a
-  plugin that ships Claude-format agents. Like `published/`, it is written only by the publish flow.
+  Antigravity; `published-antigravity/<category>/<plugin>/` holds the generated Antigravity copy (no Claude
+  `agents/`; the source's `antigravity/` overlay, if any, laid over it) of a plugin that ships Claude-format agents
+  or an overlay. Like `published/`, it is written only by the publish flow.
 - `install.config.json` lists plugins in `workflow` or `gamedev`; bundles also declare `"kind": "bundle"` there.
   Empty bundle skeletons are not published or listed in the marketplace.
 - `.claude-plugin/marketplace.json` is generated from `install.config.json` and `published/` by

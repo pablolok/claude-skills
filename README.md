@@ -147,7 +147,8 @@ node bootstrap/antigravity-plugins.mjs --dry-run  # prints the resulting plugins
   `node <skill>/scripts/dashboard.mjs`) and `savvy-progress` (its progress bar and agents panel).
 - **`published-antigravity/`**: a plugin that ships Claude-format agents (today `savvy-flow`) cannot load in
   Antigravity as published, which rejects those agents' models. Its Claude folder stays exactly as Claude Code loads
-  it, and the publish flow writes a copy without `agents/` here; the installer excludes the original so it loads once.
+  it, and the publish flow writes a copy here without the Claude `agents/` and with the source's `antigravity/`
+  overlay laid over it (savvy-flow's own Antigravity subagents); the installer excludes the original so it loads once.
   Like `published/`, it is written only by the publish flow.
 - **Updating**: run the installer again (it pulls and rewrites the entries); restart `agy` to see the new versions.
 
