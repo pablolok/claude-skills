@@ -26,8 +26,14 @@ on Gemini, or to move work off the Claude limits when the user asks; never move 
   - an implementation runs with `--sandbox` and a settings file that denies the git commands that change state, in a
     tree no other worker is writing (alone, or in its own worktree), with Gemini told not to commit: it leaves the
     commit message, and the commit follows the review;
-  - a second opinion runs read-only: its settings deny every file write and every shell command (`write_file(*)`,
-    `command(*)`), so the diff to review goes in the brief, and the relay checks that the tree did not change;
+  - a second opinion runs read-only, with `--sandbox` and settings that deny every file write (`write_file(*)`), the
+    git commands that change state (also `git rm`, `git mv`, `git apply`, `git am`) and the destructive shell commands
+    (`rm`, `mv`, `cp`, `chmod`, `dd`, `truncate`, `tee`, `sed -i`, …), and allow nothing more: Gemini runs the tests
+    and read-only commands (`git diff`, `git log`, `git status`, listing, reading) in the sandbox, which also keeps
+    `.git` read-only. Rules match a command by its leading words, so a shell redirect, an interpreter or a `$(...)`
+    line can still write a file: the relay saves `git status`, `git diff` and `HEAD` before the run and compares them
+    byte for byte after it, and any difference is a finding it reports, never something it restores (an ignored test
+    cache is fine);
   - a follow-up on the same topic continues the conversation (`--conversation <id>`) instead of starting cold: keep the
     conversation id in the registry row;
   - never `--dangerously-skip-permissions`, and never `--mode auto`.

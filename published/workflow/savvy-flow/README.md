@@ -106,11 +106,13 @@ asks. A Gemini task is marked in the plan before it goes out: the code goes to a
 
 A relay `savvy-gemini-<intensity>` runs
 `agy -p "<prompt>" --model <slug> --effort <effort> --sandbox --settings <file> --output-format stream-json --print-timeout <N>m`.
-Its settings deny the git commands that change state for a task, and every file write and shell command
-(`write_file(*)`, `command(*)`) for a read-only second opinion; a follow-up adds `--conversation <id>`. It never
+Its settings deny the git commands that change state for a task; for a read-only second opinion they also deny every
+file write (`write_file(*)`) and the destructive shell commands, so Gemini can still run the tests and read-only git
+commands in the sandbox, which keeps `.git` read-only. A follow-up adds `--conversation <id>`. It never
 passes `--dangerously-skip-permissions` or `--mode auto`. A refused tool does not fail the run (exit 0, `SUCCESS`):
 the relay reads the steps in `ERROR`, the result's `denied_actions` and stderr, then compares `git status` and `HEAD`
-with the start and runs the brief's checks. Gemini reads `AGENTS.md`, `GEMINI.md` and `.agents/skills`, not Claude
+(and, for a second opinion, `git diff`) with the start, reports any change without undoing it, and runs the brief's
+checks. Gemini reads `AGENTS.md`, `GEMINI.md` and `.agents/skills`, not Claude
 Code's skills: the brief names each `SKILL.md` a task needs by absolute path. The stream goes through
 `scripts/gemini-status.mjs <unique-name> [model]`, which passes it on to the relay's log and keeps a small snapshot in
 `~/.gemini/savvy-status/<name>.json` (conversation id, model, state, current action, token usage cumulative per

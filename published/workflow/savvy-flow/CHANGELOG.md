@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.23.1] - 2026-11-24
+- Gemini relays: read-only second opinions may run tests and read-only git commands; writes, git state changes and destructive commands stay denied, and the relay still checks the tree is unchanged.
+
+
 ## [1.23.0] - 2026-11-24
 - Gemini stays a relay tier like Codex (savvy-gemini-* run agy -p from Claude); Antigravity-hosted plugin support removed: no manifest, no Antigravity copy, SKILL.md back in one file.
 

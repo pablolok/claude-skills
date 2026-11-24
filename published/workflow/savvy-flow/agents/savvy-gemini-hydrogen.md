@@ -20,19 +20,28 @@ Steps:
    If `GEMINI_API_KEY` is set (test that it is set, never print it), say so in the report: `agy -p /usage` then fails,
    and the run may draw on that key rather than the sign-in's plan.
 2. **Before.** In a git repository, record `git status --porcelain` and `git rev-parse HEAD` (`git diff` alone misses
-   a new untracked file).
+   a new untracked file); for a second opinion, also save `git diff` and `git diff --cached` to files outside the
+   project (the status alone misses a further edit to a file already modified).
 3. **The prompt.** Write the brief you were given, unchanged, to a file outside the project (the session scratchpad, or
    the OS temp folder). Gemini does not load Claude Code's skills or `CLAUDE.md` (only `AGENTS.md`, `GEMINI.md` and
    `.agents/skills`): a skill the brief names without a path, find its `SKILL.md` (the project's `.claude/skills`,
    `~/.claude/skills`, the plugin cache under `~/.claude/plugins`) and add "Before starting, read and follow <absolute
    path>"; one you cannot find, report as an open question. Then append: "Do not commit, push, or change git state.
    Stay inside the working directory. When done, list the files you changed and the commands you ran to verify, with
-   their outcome." Write the run's settings to a second file outside the project:
+   their outcome." For a second opinion, append instead: "This is a read-only review. You may run the tests and
+   read-only commands (`git diff`, `git log`, `git status`, `git show`, listing and reading files); do not create, edit
+   or delete any file, and do not change git state. A cache the tests write in an ignored folder is fine. When done,
+   list the commands you ran, with their outcome." Write the run's settings to a second file outside the project:
    - task: `{"permissions":{"allow":["command(<the brief's verification command>)"],"deny":["command(git add)","command(git commit)","command(git push)","command(git reset)","command(git checkout)","command(git switch)","command(git restore)","command(git stash)","command(git rebase)","command(git merge)","command(git tag)","command(git clean)"]}}`
      (leave `allow` out when the brief names no verification command);
-   - second opinion: `{"permissions":{"deny":["write_file(*)","command(*)"]}}` (read-only: Gemini reads files, also
-     outside the working directory, writes none and runs no command; put the diff to review in the prompt). Never add
-     `"agentMode":""`: it soft-denies every command and every read outside the working directory, ending the turn.
+   - second opinion: `{"permissions":{"deny":["write_file(*)","command(git add)","command(git commit)","command(git push)","command(git reset)","command(git checkout)","command(git switch)","command(git restore)","command(git stash)","command(git rebase)","command(git merge)","command(git tag)","command(git clean)","command(git rm)","command(git mv)","command(git apply)","command(git am)","command(git cherry-pick)","command(git revert)","command(git pull)","command(rm)","command(rmdir)","command(unlink)","command(mv)","command(cp)","command(ln)","command(chmod)","command(chown)","command(dd)","command(truncate)","command(tee)","command(shred)","command(sed -i)","command(perl -i)"]}}`
+     (read-only: Gemini reads files, also outside the working directory, and runs the tests and read-only commands in
+     the sandbox; every file write through its tools, the git commands that change state and the destructive shell
+     commands are denied). Add no `allow` rule: under `--sandbox` a command runs in the sandbox without one, while a
+     `command(...)` allow lets a matching command leave the sandbox. The sandbox keeps `.git` read-only, but a write
+     past the prefixes (a shell redirect, an interpreter, a `$(...)` line) can still land in the working directory,
+     where step 6 catches it unless the path is git-ignored, or in a temp folder. Never add `"agentMode":""`: it
+     soft-denies every command and every read outside the working directory, ending the turn.
    Rules name permission actions (`write_file` covers every file-writing tool, `command` every shell command), never
    tool names.
 4. **Model.** Your model is **`gemini-4-hydrogen`**, effort `high` unless the brief names another (`agy models` lists
@@ -65,8 +74,10 @@ Steps:
      `response`;
    - stderr: every `warning:`, `error:` and other notice line;
    - git: compare `git status --porcelain` and `git rev-parse HEAD` with step 2. A second opinion leaves both
-     unchanged; a task changes only what the brief asked; a commit, a moved HEAD or a file outside the task is a defect
-     to report.
+     unchanged and its `git diff` and `git diff --cached` byte-identical (`cmp` the saved files; an ignored test cache
+     is fine): any difference is a finding to report, with the files it touched, never something you restore, check
+     out or overwrite. A task changes only what the brief asked; a commit, a moved HEAD or a file outside the task is
+     a defect to report.
 7. **Verify** with the command the brief names (build, tests) when it is cheap, and report its outcome. Gemini's own
    claims are not verification.
 8. **Usage**, best effort: the run's tokens from the status file (`totalTokenUsage`). The plan windows from its

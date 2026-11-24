@@ -47,8 +47,16 @@ PANEL_NON_THEMES = {"auto", "classic"}
 THEMES = pathlib.Path("references") / "themes.md"
 #: The Gemini tier's rules, out of the skill's core.
 GEMINI = pathlib.Path("references") / "gemini.md"
-#: A read-only Gemini run: every file write and every shell command denied, by permission action.
-GEMINI_READ_ONLY = '{"permissions":{"deny":["write_file(*)","command(*)"]}}'
+#: A read-only Gemini run: every file write, the git commands that change state and the destructive shell commands
+#: denied by permission action; no allow rule, so tests and read-only commands run inside the sandbox.
+GEMINI_READ_ONLY = ('{"permissions":{"deny":["write_file(*)","command(git add)","command(git commit)",'
+                    '"command(git push)","command(git reset)","command(git checkout)","command(git switch)",'
+                    '"command(git restore)","command(git stash)","command(git rebase)","command(git merge)",'
+                    '"command(git tag)","command(git clean)","command(git rm)","command(git mv)","command(git apply)",'
+                    '"command(git am)","command(git cherry-pick)","command(git revert)","command(git pull)",'
+                    '"command(rm)","command(rmdir)","command(unlink)","command(mv)","command(cp)","command(ln)",'
+                    '"command(chmod)","command(chown)","command(dd)","command(truncate)","command(tee)",'
+                    '"command(shred)","command(sed -i)","command(perl -i)"]}}')
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
           "December")
 #: A feast that moves with Easter names no month in its window: the months the panel's calendar can put it in
@@ -194,6 +202,14 @@ class TestWorkers(unittest.TestCase):
                 self.assertIn("Never run `agy -p` before this check passes", body)
                 self.assertIn("Never `--dangerously-skip-permissions`, and never `--mode auto`", body)
                 self.assertIn(f"`{GEMINI_READ_ONLY}`", body)
+                self.assertNotIn('"command(*)"', body, "a read-only second opinion still runs tests and read-only git")
+                self.assertIn("Add no `allow` rule", body, "an allow rule lets a command leave the sandbox")
+                self.assertIn("You may run the tests and read-only commands", body)
+                self.assertIn("A cache the tests write in an ignored folder is fine.", body)
+                self.assertIn("also save `git diff` and `git diff --cached`", body,
+                              "the status alone misses a further edit to a file already modified")
+                self.assertIn("never something you restore, check out or overwrite", body,
+                              "a change during a second opinion is reported, not undone")
                 self.assertIn("Never add `\"agentMode\":\"\"`", body, "it soft-denies commands and outside reads")
                 self.assertIn('"command(git commit)"', body, "a task's settings deny the git commands that change state")
                 self.assertIn("`<agy> -p \"$(cat <prompt>)\" --model <model> --effort <effort> --sandbox "
@@ -357,6 +373,15 @@ class TestModels(unittest.TestCase):
                       "high-risk diff", self.text)
         self.assertIn("never move work there on your own to spare Claude", gemini)
         self.assertIn("each launch on the user's explicit yes recorded with `decide` (`tier: \"carbon\"`)", gemini)
+
+    def test_a_gemini_second_opinion_runs_tests_and_read_only_git_but_writes_nothing(self) -> None:
+        gemini = _flat(_read(PUBLISHED / GEMINI))
+        self.assertIn("a second opinion runs read-only, with `--sandbox` and settings that deny every file write "
+                      "(`write_file(*)`)", gemini)
+        self.assertIn("Gemini runs the tests and read-only commands (`git diff`, `git log`, `git status`, listing, "
+                      "reading) in the sandbox", gemini)
+        self.assertIn("any difference is a finding it reports, never something it restores", gemini)
+        self.assertNotIn("`command(*)`", gemini, "denying every command left a reviewer only reading files")
 
     def test_codex_gets_the_claude_skills_it_needs_by_path(self) -> None:
         self.assertIn("**Codex does not load Claude Code's skills or `CLAUDE.md`.**", self.text)
