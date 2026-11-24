@@ -158,6 +158,10 @@ neck, a cheek-line fade, flyaways, an under-coat.
   silver, flyaway and under-coat flags.
 - Export per part when parts bind to different bones (the moustache to the head, the chin to the jaw).
 - Read the export back (counts, bounds, attributes on every vertex) before the engine sees it.
+- **Re-routing accepted strands keeps their draw rank and occlusion profile** (resampled at the same arc fraction):
+  an exporter that recomputes them reorders strands where nothing moved (a dark stripe on an untouched lobe in one
+  case). Re-baked shading normals are tested for the share pointing away from the skin's outside, and strays rooted
+  along the old route are listed and dropped. [references/rerouting.md](references/rerouting.md)
 
 Blender notes (one case each; check on your version):
 - Realise the procedural node trees into plain Curves objects per part for export and review, and keep the

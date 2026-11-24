@@ -70,6 +70,7 @@ Both settings at 0 must draw exactly as before; keep that as a regression.
   they overlap (export only) cut the step from 15.8 to 6.8 and the streak from 16-18 to 10, where occlusion floors,
   slope caps and shadow bias had moved nothing. A rank fix is per export: rerun it on every new groom and read every
   other strand's rank shift.
+  After a re-route, keep the accepted groom's rank (`strand-groom` references/rerouting.md).
 - Cast no shadow from the strands to start; a shadow map cannot draw millimetre wedges. Casting is one variant to
   test, receiving another.
 

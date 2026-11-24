@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.6] - 2026-11-24
+- strand-groom: re-routing keeps draw rank, occlusion and sound normals, stale strays dropped; hair-reference-review: medians per zone, shade terms proven by a validated term rebuild
+
+
 ## [0.2.5] - 2026-11-24
 - Antigravity (Gemini) plugin manifest and install line.
 

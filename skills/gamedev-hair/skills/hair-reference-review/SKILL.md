@@ -118,6 +118,13 @@ Rules for the rows:
   direction error read 18.6° -> 6.5° on the projection and 23.6° -> 18.6° on the render; by eye it was not closer). A row whose miss is smaller than the proxy's own error on the control cannot judge: send it
   to the engine. A proxy that leaves out a shading term (root shade, highlight) cannot gate a defect where that term
   acts. Which rows held in one case, depth-testing, and band gates: measures.md, Proxies.
+- **A mean over a mixed pixel set can match while a visible patch is wrong**: too-light and too-dark pixels cancel
+  (one band read 102.6 against the reference's 102.8 with a dark slab in plain view). Report medians per zone (the
+  slab, the light edge, the dark corner) and look. A set defined by one variant's errors does not show another
+  variant's new ones.
+- **Prove a suspected shade term by its rank in a term-by-term rebuild, validated on the accepted build first, then by
+  the capture.** Three suspects in a row (occlusion, the strand's own hull, the old envelope) were each only partly
+  right.
 - **Read the groom's holds at several seeds**: run ladder rounds at one seed, confirm the pick at three, judge the
   mean and report the worst (a seed change moved a row by more than its margin).
 - **Know what each row is blind to.** Aliasing reads as strand contrast; a median over the mask reads the backdrop
