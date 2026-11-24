@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.9] - 2026-11-24
+- strand-groom: an image-to-3D model is not a depth reference for hair (view conflicts go to the art owner); hair-reference-review: held-out-view rules if one is tried
+
+
 ## [0.2.8] - 2026-11-24
 - strand-groom: the order of work for every zone (zone map, leading view per quantity, hair map, value levels, own-groom maps, owner's yes before the brief, build by levels); hair-reference-review: value-level read, judge at the owner's scale before close-ups
 

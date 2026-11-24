@@ -52,6 +52,10 @@ The review uses both, and the eye decides.
    in one set); beyond the floor it is the art owner's pick (§5). **Compare the bare model with the reference's
    anatomy** (lip thickness, mouth open or closed) before gating a feature's visibility: a reference that changed
    the face is the art owner's decision, not a groom target.
+   **A generated 3D take is no tie-breaker** (`strand-groom` §0.6). If one is tried: one take first; the go/no-go and
+   the error bar written before generating; judge only in views the take was not made from (exclude its source and
+   the mirror, since takes come out mirror-symmetric); landmarks picked on skin, not hair; register to the own head
+   on face skin plus a local fit near the zone. A source view that agrees with itself only restates the conflict.
 6. **One pixel density.** Bring every picture (reference, DCC render, engine) to the same px/mm, the one a shipped
    shot uses. Judge only at a size that ships: at twice the density everything looks different, and a feature the
    shipped shot cannot resolve is not a defect. Know the reference's **real** detail, not its pixel count: a grid's

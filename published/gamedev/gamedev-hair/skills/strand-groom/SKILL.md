@@ -69,6 +69,13 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
    another, because its direction and value levels had never been mapped. The three-level recipe (step 5) and the
    build by levels (step 8) are proposed, not yet validated on a finished groom (Open).
 
+6. **An image-to-3D model is not a depth reference for hair.** To settle standoff or depth where the views
+   disagree, do not generate a 3D model from the concept: each take repeats the view it was made from and invents
+   the rest (one take read well in front and three-quarter, yet its hair fronts sat 30-40 mm too far back in both
+   profiles), and the error budget (registration plus spread between takes, 11-17 mm) was as large as the question.
+   Use it, if at all, as a look reference for mass in views near its source; a view conflict goes to the art owner
+   (step 5.2), not to a generator. If one is tried anyway, follow `hair-reference-review` §1.5 (held-out views).
+
 ## 1. The build order
 
 The order production groom tools are built around (XGen, Houdini, Blender's hair nodes): guides and clumps carry
