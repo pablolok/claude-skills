@@ -109,36 +109,5 @@ class TestPublishWritesTheAntigravityManifest(unittest.TestCase):
         self.assertFalse((self.root / "published").exists())
 
 
-    def _overlay_agent(self, source: pathlib.Path, name: str, model: str) -> None:
-        path = source / antigravity_manifest.OVERLAY / "agents" / f"{name}.md"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(f"---\nname: {name}\ndescription: x\nmodel: {model}\n---\n", encoding="utf-8")
-
-    def test_the_overlay_stays_out_of_the_claude_copy_and_becomes_the_antigravity_agents(self) -> None:
-        source = self._source("flow", agents_model="opus")
-        self._overlay_agent(source, "worker", "flash")
-        nested = source / "references" / antigravity_manifest.OVERLAY / "note.md"
-        nested.parent.mkdir(parents=True)
-        nested.write_text("# Kept\n", encoding="utf-8")
-        self._publish("flow")
-        published = self.root / "published" / "workflow" / "flow"
-        copy = self.root / antigravity_manifest.TREE / "workflow" / "flow"
-        self.assertFalse((published / antigravity_manifest.OVERLAY).exists())
-        self.assertTrue((published / "references" / antigravity_manifest.OVERLAY / "note.md").is_file(),
-                        "only the overlay at the source root is left out")
-        self.assertIn("model: opus", (published / "agents" / "worker.md").read_text(encoding="utf-8"))
-        self.assertIn("model: flash", (copy / "agents" / "worker.md").read_text(encoding="utf-8"))
-        self.assertFalse((copy / antigravity_manifest.OVERLAY).exists())
-        self.assertEqual(self._manifest(copy)["version"], "1.1.0")
-
-    def test_an_overlay_agent_on_a_claude_model_fails_before_the_bump(self) -> None:
-        source = self._source("flow", agents_model="opus")
-        self._overlay_agent(source, "worker", "sonnet")
-        with self.assertRaisesRegex(build_marketplace.MarketplaceError, "must declare a model Antigravity runs"):
-            self._publish("flow")
-        self.assertEqual(json.loads((source / "metadata.json").read_text(encoding="utf-8"))["version"], "1.0.0")
-        self.assertFalse((self.root / "published").exists())
-
-
 if __name__ == "__main__":
     unittest.main()

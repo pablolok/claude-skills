@@ -1,13 +1,5 @@
 # Changelog
 
-## [1.22.1] - 2026-11-24
-- Antigravity: essential mapping inlined in SKILL.md so the orchestrator needs no file lookup; savvy-reviewer subagent on inherit for reviews and audits.
-
-
-## [1.22.0] - 2026-11-24
-- Orchestrates inside Google Antigravity too: an antigravity/ overlay ships five native subagents (Light and Medium on flash, Careful and Heavy on pro, Fable on inherit and plans only on the user's yes), laid over the Antigravity copy as agents/ and kept out of the Claude copy; references/antigravity.md maps the flow (invoke_subagent, the Fable gate asked in chat, update_steps, parallel workers) and leaves out Codex, the Gemini relays and the progress tools. Claude Code behaviour and agents are unchanged.
-
-
 ## [1.21.2] - 2026-11-24
 - The Codex stream fixtures and their test carry placeholder thread ids in place of recorded ones.
 

@@ -57,20 +57,6 @@ CODEX = pathlib.Path("references") / "codex.md"
 GEMINI = pathlib.Path("references") / "gemini.md"
 #: A read-only Gemini run: every file write and every shell command denied, by permission action.
 GEMINI_READ_ONLY = '{"permissions":{"deny":["write_file(*)","command(*)"]}}'
-#: The Antigravity subagents, from the source's overlay (published as the Antigravity copy's `agents/`), and the model
-#: tier each runs on: `flash` for the lean tiers, `pro` for Careful and Heavy, the session's model for Fable.
-ANTIGRAVITY_AGENTS = SOURCE / "antigravity" / "agents"
-ANTIGRAVITY_MODELS = {"savvy-light": "flash", "savvy-medium": "flash", "savvy-careful": "pro",
-                      "savvy-heavy": "pro", "savvy-fable": "inherit", "savvy-reviewer": "inherit"}
-#: The read-only Antigravity subagent for reviews and audits: on the session's model, with no Claude counterpart.
-ANTIGRAVITY_REVIEWER = "savvy-reviewer"
-#: The tools that change files: the reviewer gets none of them.
-ANTIGRAVITY_WRITE_TOOLS = {"write_to_file", "replace_file_content", "multi_replace_file_content", "notebook_edit",
-                           "sed_file", "send_command_input"}
-#: The tool names an Antigravity session offers: a subagent naming any other can hang.
-ANTIGRAVITY_TOOLS = REPO / "tests" / "fixtures" / "antigravity-tools.json"
-#: How the orchestrator works in Antigravity, out of the skill's core.
-ANTIGRAVITY = pathlib.Path("references") / "antigravity.md"
 #: Antigravity loads at most this many bytes of a SKILL.md body and silently drops the rest.
 ANTIGRAVITY_SKILL_LIMIT = 24000
 #: A reference the skill points at, such as `references/codex.md`.
@@ -291,101 +277,6 @@ class TestWorkers(unittest.TestCase):
         self.assertIs(entry["strict"], False)
         self.assertNotIn("agents", entry)
         self.assertFalse((PUBLISHED / ".claude-plugin").exists())
-
-
-class TestAntigravityWorkers(unittest.TestCase):
-    """The workers Antigravity runs: subagents in its own format, laid over its copy, never shipped to Claude Code."""
-
-    def _fields(self, name: str) -> typing.Dict[str, str]:
-        return frontmatter(_read(ANTIGRAVITY_AGENTS / f"{name}.md"))
-
-    def test_each_tier_has_one_antigravity_subagent_named_by_its_file(self) -> None:
-        self.assertEqual(sorted(path.stem for path in ANTIGRAVITY_AGENTS.glob("*.md")), sorted(ANTIGRAVITY_MODELS))
-        for name in ANTIGRAVITY_MODELS:
-            with self.subTest(worker=name):
-                fields = self._fields(name)
-                self.assertEqual(fields.get("name"), name)
-                self.assertTrue(fields.get("description"))
-                self.assertNotIn(": ", fields["description"], "strict YAML reads a colon then a space as a key")
-
-    def test_each_is_a_subagent_only_on_its_tier_s_model(self) -> None:
-        for name, model in ANTIGRAVITY_MODELS.items():
-            with self.subTest(worker=name):
-                fields = self._fields(name)
-                self.assertEqual((fields.get("subagent"), fields.get("mainAgent")), ("true", "false"))
-                self.assertEqual(fields.get("model"), model)
-                self.assertNotIn("effort", fields, "Antigravity sets no effort per subagent")
-
-    def test_every_tool_is_one_antigravity_offers(self) -> None:
-        fixture = json.loads(_read(ANTIGRAVITY_TOOLS))
-        offered = set(fixture["tools"]) - set(fixture["notForSubagents"]["tools"])
-        for name in ANTIGRAVITY_MODELS:
-            with self.subTest(worker=name):
-                tools = _flow_list(self._fields(name).get("tools", ""))
-                self.assertTrue(tools, "an omitted `tools` gets only a small read-only default set")
-                self.assertEqual(sorted(tools - offered), [])
-                self.assertFalse({"invoke_subagent", "define_subagent", "ask_question"} & tools,
-                                 "a worker reports to the orchestrator: no subagents of its own, no questions to the user")
-
-    def test_the_lean_tiers_keep_files_and_shell_and_the_others_add_the_web(self) -> None:
-        lean = _flow_list(self._fields("savvy-light")["tools"])
-        self.assertEqual(lean, _flow_list(self._fields("savvy-medium")["tools"]))
-        self.assertTrue({"view_file", "write_to_file", "replace_file_content", "run_command"} <= lean)
-        self.assertFalse({"search_web", "read_url_content"} & lean)
-        for name in ("savvy-careful", "savvy-heavy", "savvy-fable"):
-            with self.subTest(worker=name):
-                self.assertEqual(_flow_list(self._fields(name)["tools"]), lean | {"search_web", "read_url_content"})
-
-    def test_the_bodies_keep_the_claude_workers_rules_without_claude_only_tools(self) -> None:
-        for name in set(ANTIGRAVITY_MODELS) - {ANTIGRAVITY_REVIEWER}:
-            with self.subTest(worker=name):
-                body = _flat(_read(ANTIGRAVITY_AGENTS / f"{name}.md"))
-                claude = _flat(_read(SOURCE / "agents" / f"{name}.md"))
-                for rule in ("Do exactly the task in the brief.", "Final report format",
-                             "1. Result: done / partially done / blocked."):
-                    self.assertIn(rule, claude)
-                    self.assertIn(rule, body)
-                for claude_only in ("mcp__savvy-progress", "ToolSearch", "TaskStop", "run_in_background"):
-                    self.assertNotIn(claude_only, body)
-
-    def test_the_reviewer_is_read_only_on_the_session_s_model(self) -> None:
-        tools = _flow_list(self._fields(ANTIGRAVITY_REVIEWER)["tools"])
-        self.assertTrue({"view_file", "list_dir", "find_by_name", "grep_search", "run_command"} <= tools)
-        self.assertFalse(ANTIGRAVITY_WRITE_TOOLS & tools, "a reviewer reports findings, never edits")
-        body = _flat(_read(ANTIGRAVITY_AGENTS / f"{ANTIGRAVITY_REVIEWER}.md"))
-        self.assertIn("You are read-only.", body)
-        self.assertIn("Review adversarially", body)
-        self.assertIn("1. Verdict: accept / accept with fixes / reject.", body)
-        self.assertFalse((SOURCE / "agents" / f"{ANTIGRAVITY_REVIEWER}.md").exists(), "Antigravity only")
-
-    def test_the_skill_inlines_the_antigravity_essentials_and_never_searches_for_the_reference(self) -> None:
-        text = _read(SOURCE / "SKILL.md")
-        block = _flat(text[text.index("- **In Antigravity**"):text.index("- Worker agents must exist")])
-        self.assertLess(len(block.encode("utf-8")), 1500)
-        self.assertIn("`invoke_subagent`", block)
-        for name, model in ANTIGRAVITY_MODELS.items():
-            with self.subTest(worker=name):
-                self.assertRegex(block, rf"`{name}`[^.;]*? on `{model}`")
-        self.assertIn("Reviews and audits go to `savvy-reviewer`", block)
-        self.assertIn("ask in chat", block, "Fable runs on the user's yes, asked in chat")
-        self.assertIn("Not here: Codex, the Gemini relays", block)
-        self.assertIn("the progress and budget tools", block)
-        self.assertIn("never search outside the workspace", block)
-
-    def test_the_claude_copy_never_carries_the_overlay(self) -> None:
-        self.assertFalse((PUBLISHED / "antigravity").exists())
-        self.assertNotIn("model: flash", "".join(_read(path) for path in (SOURCE / "agents").glob("*.md")))
-
-    def test_the_orchestrator_reads_the_antigravity_reference_and_it_names_each_worker_s_model(self) -> None:
-        self.assertIn(f"read `{ANTIGRAVITY.as_posix()}` first", _read(SOURCE / "SKILL.md"))
-        reference = _read(SOURCE / ANTIGRAVITY)
-        for name, model in ANTIGRAVITY_MODELS.items():
-            with self.subTest(worker=name):
-                [row] = [line for line in reference.splitlines() if line.startswith("|") and f"`{name}`" in line]
-                self.assertIn(f"`{model}`", row)
-        flat = _flat(reference)
-        self.assertIn("`invoke_subagent`", flat)
-        self.assertIn("ask in chat", flat, "Fable runs on the user's yes, asked in chat: Antigravity has no `decide`")
 
 
 class TestSkill(unittest.TestCase):

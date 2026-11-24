@@ -14,20 +14,6 @@ Task from the user: $ARGUMENTS
 ## 0. Preconditions
 
 - **You are the session's model.** The orchestrator runs on the model and effort the user selected for the session: Fable when the session is on Fable, Opus when it is on Opus. Never switch the session's model or effort, and never propose another. The flow is designed around a strong model at high effort, but that is the user's call, not a precondition you check. You orchestrate: you do not take the workers' tasks yourself.
-- **In Antigravity** (`invoke_subagent`, no Agent tool): this block replaces the checks below and the steps this host lacks.
-  - Each task is one `invoke_subagent` call (`TypeName` the worker, `Workspace` `inherit`): `savvy-light` and
-    `savvy-medium` on `flash` (lean: files and shell), `savvy-careful` and `savvy-heavy` on `pro` (with web),
-    `savvy-fable` on `inherit`, `savvy-reviewer` on `inherit` (read-only). Never `self`, `research`, `browser` or a
-    `define_subagent` agent.
-  - Reviews and audits go to `savvy-reviewer`: it runs on the session's model, so a rule asking for
-    one model is met only when the session is on it; otherwise tell the user.
-  - Fable: plans only. Before each launch or resume, ask in chat (plan, why not Heavy, cost), end your turn and wait
-    for a yes.
-  - Not here: Codex, the Gemini relays, `savvy-tools`, the progress and budget tools (`step`, `budget`, `decide`).
-    The plan goes in `update_steps`.
-  - For the detail, read `references/antigravity.md` first: it sits beside this SKILL.md, in the `savvy-flow` plugin folder
-    Antigravity loaded. Take its path from the skill path shown to you; if none is shown, go on with this block and
-    never search outside the workspace for it.
 - Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra`, and the Gemini relays `savvy-gemini-flash`, `savvy-gemini-argon`, `savvy-gemini-hydrogen`, `savvy-gemini-carbon` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
 - **Gemini** (Google's models through the Antigravity CLI): one shell call at the start, `agy models < /dev/null`

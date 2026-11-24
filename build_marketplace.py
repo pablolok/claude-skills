@@ -18,8 +18,7 @@ directories. Unpublished empty skeletons are skipped; populated or already publi
     python build_marketplace.py --check  # exit 1 when the committed marketplace differs from the published skills
 
 ``--check`` also fails when a published plugin's Antigravity manifest (or the Antigravity copy of a plugin with Claude
-agents or an ``antigravity/`` overlay in its source) is missing or stale: ``automate_publish.py`` writes them, see
-``antigravity_manifest.py``.
+agents) is missing or stale: ``automate_publish.py`` writes them, see ``antigravity_manifest.py``.
 """
 
 from __future__ import annotations
@@ -231,9 +230,8 @@ def antigravity_problems(repo: pathlib.Path = REPO) -> typing.List[str]:
         folder = repo / PUBLISHED / config["category"] / name
         if not config.get("plugin", True) or not folder.is_dir():
             continue
-        overlay = repo / "skills" / name / antigravity_manifest.OVERLAY
-        found += antigravity_manifest.problems(folder, config["category"], tree, repo, overlay)
-        if antigravity_manifest.needs_copy(folder, overlay):
+        found += antigravity_manifest.problems(folder, config["category"], tree, repo)
+        if antigravity_manifest.has_claude_agents(folder):
             copies.append(antigravity_manifest.copy_folder(folder, config["category"], tree))
     return found + antigravity_manifest.orphans(tree, copies, repo)
 
