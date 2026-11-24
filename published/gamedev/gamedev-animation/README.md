@@ -1,6 +1,6 @@
 # Game development — animation
 
-`gamedev-animation` bundles skills for game character animation, armour rigging and gear fitting. The
+`gamedev-animation` bundles Claude Code skills for game character animation, armour rigging and gear fitting. The
 method is engine-agnostic:
 - author and check in Blender (IK and constraints, baked to plain FK bones);
 - export FBX to any engine;
@@ -9,8 +9,6 @@ method is engine-agnostic:
 ```bash
 claude plugin install gamedev-animation@pablolok-skills --scope project
 ```
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
 
 Inside a session the skills are `gamedev-animation:character-animation`, `gamedev-animation:armor-rigging` and
 `gamedev-animation:gear-fitting`.

@@ -17,9 +17,6 @@ Restart the session afterwards. The mod is built on function hooks (`hooks/regis
 API that may change between releases. It works only as a plugin: a managed copy leaves out `.claude-plugin/`, which
 the mod needs.
 
-In Google Antigravity (`agy`) the plugin installs with its manifest only: the progress bar, the agents panel and the
-tools are a Claude Code mod with no Antigravity equivalent, and Antigravity's own `/agents` lists its subagents.
-
 ## What it draws
 
 - **Progress bar**: the flow's title, phase, accepted tasks out of planned, and a button with the crew size (the

@@ -1,14 +1,12 @@
 # Game development — cinematics
 
-`gamedev-cinematics` bundles generic skills to write a cinematic scene before building it, implement
+`gamedev-cinematics` bundles generic Claude Code skills to write a cinematic scene before building it, implement
 its accepted intent in passes, and maintain story coherence. The methods support different genres, art styles,
 teams, and engines. Unity and Unreal notes identify equivalent responsibilities without prescribing a codebase.
 
 ```bash
 claude plugin install gamedev-cinematics@pablolok-skills --scope project
 ```
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
 
 Inside a session the skills are `gamedev-cinematics:scene-script`, `gamedev-cinematics:cutscene-direction` and
 `gamedev-cinematics:story-coherence`.

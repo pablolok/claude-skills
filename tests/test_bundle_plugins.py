@@ -35,7 +35,7 @@ class TestBundlePlugins(unittest.TestCase):
         self._write(self.root / "install.config.json", json.dumps({
             "schemaVersion": 2, "skills": {self.name: {"category": "gamedev", "kind": "bundle"}},
         }))
-        for script in ("automate_publish.py", "build_marketplace.py", "antigravity_manifest.py"):
+        for script in ("automate_publish.py", "build_marketplace.py"):
             shutil.copyfile(REPO / script, self.root / script)
 
     @staticmethod
@@ -70,9 +70,6 @@ class TestBundlePlugins(unittest.TestCase):
         }])
         self.assertFalse((self.published / "SKILL.md").exists())
         self.assertFalse((self.published / ".claude-plugin" / "plugin.json").exists())
-        antigravity = json.loads((self.published / ".antigravity-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual(antigravity["version"], "0.2.0")
-        self.assertNotIn("skills", antigravity, "a bundle's nested skills load without a skills entry")
         for path in self.source.rglob("*"):
             if path.is_file():
                 self.assertEqual((self.published / path.relative_to(self.source)).read_bytes(), path.read_bytes())

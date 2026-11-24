@@ -152,10 +152,6 @@ conventions document beside the register, which the preamble links; the skill re
 As a Claude Code plugin (works in cloud sessions too): see the repository README —
 `claude plugin marketplace add pablolok/claude-skills`, then `claude plugin install backlog@pablolok-skills`.
 
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
-The `/backlog-dashboard` panel below is Claude Code only (a mod); in Antigravity the browser dashboard is the
-equivalent: `node <skill>/scripts/dashboard.mjs` (see `references/dashboard.md`).
-
 The gates live in the skill, not in the project. For CI, git hooks and package scripts, copy
 `bootstrap/backlog-gate.mjs` into the project (e.g. into its `scripts` folder) and commit it: it is the one place
 the project pins the skill's version (`VERSION`), and on first use it clones this repository's tag `backlog@<version>`

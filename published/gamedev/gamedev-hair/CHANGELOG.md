@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.7] - 2026-11-24
+- Antigravity plugin manifest and install line removed: the plugins run in Claude Code; Gemini is used only through savvy-flow's relay tier.
+
+
 ## [0.2.6] - 2026-11-24
 - strand-groom: re-routing keeps draw rank, occlusion and sound normals, stale strays dropped; hair-reference-review: medians per zone, shade terms proven by a validated term rebuild
 

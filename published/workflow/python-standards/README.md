@@ -21,5 +21,3 @@ As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`,
 `claude plugin install python-standards@pablolok-skills --scope user` (every project) or `--scope project`.
 Install `clean-code-standards` with it: this layer assumes the core. A hook that gates on this skill sees the name
 `python-standards:python-standards` when it runs from the plugin: match the part after the last colon.
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".

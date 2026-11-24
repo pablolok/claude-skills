@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.22.1] - 2026-11-24
+- Antigravity plugin manifest and install line removed: the plugins run in Claude Code; Gemini is used only through savvy-flow's relay tier.
+
+
 ## [1.22.0] - 2026-11-24
 - A third model family, gemini, beside claude and codex, for savvy-flow's Gemini relays (savvy-gemini-flash, -argon, -hydrogen, -carbon on agy): each relay figure wears its tier's costume on a sparkle body with its badge (bolt, bulb, drop, gem) in a color of its own; the step tool takes geminiStatus with the model and effort passed to agy, and the panel reads ~/.gemini/savvy-status/<name>.json (and a plan-only snapshot.json) for the row's state, action and tokens (no cost: no verified price table) and for the Gemini Models group of agy's /usage, used as round((1 - remaining_fraction) * 100) % per 5-hour and weekly window; the plan tile, the compact line, the budget summary, /savvy-budget gemini, decide with family gemini, and the budget gate on savvy-gemini-hydrogen and savvy-gemini-carbon follow; savvy-gemini-carbon is for plans only, gated like Fable and Astra until decide records tier carbon, at launch and on a SendMessage resume.
 

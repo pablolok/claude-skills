@@ -1,14 +1,12 @@
 # Game development — hair
 
-`gamedev-hair` bundles skills for making realistic hair and beards for games as strands: groomed in a
+`gamedev-hair` bundles Claude Code skills for making realistic hair and beards for games as strands: groomed in a
 DCC (Blender hair curves, or Houdini or XGen), drawn in any engine (notes for Unity URP and Unreal), judged against a
 reference image set, and turned into hair cards for the game when strands cost too much.
 
 ```bash
 claude plugin install gamedev-hair@pablolok-skills --scope project
 ```
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
 
 Inside a session the skills are `gamedev-hair:strand-groom`, `gamedev-hair:strand-rendering`,
 `gamedev-hair:hair-reference-review` and `gamedev-hair:groom-cards`.

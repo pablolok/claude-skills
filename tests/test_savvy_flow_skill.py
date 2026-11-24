@@ -45,22 +45,10 @@ PANEL_MANIFEST = REPO / "skills" / "savvy-progress" / ".claude-plugin" / "plugin
 PANEL_NON_THEMES = {"auto", "classic"}
 #: The chat themes, out of the skill's core: one section per month, read a section or a row at a time.
 THEMES = pathlib.Path("references") / "themes.md"
-#: The rules for choosing and wearing a chat theme, out of the skill's core and read once when the flow starts.
-CHAT_THEMES = pathlib.Path("references") / "chat-themes.md"
-#: The progress bar's calls, out of the skill's core.
-PROGRESS_BAR = pathlib.Path("references") / "progress-bar.md"
-#: A host's own task list, turn summary and sessions, out of the skill's core.
-HOST_TOOLS = pathlib.Path("references") / "host-tools.md"
-#: The Codex tier's rules, out of the skill's core.
-CODEX = pathlib.Path("references") / "codex.md"
 #: The Gemini tier's rules, out of the skill's core.
 GEMINI = pathlib.Path("references") / "gemini.md"
 #: A read-only Gemini run: every file write and every shell command denied, by permission action.
 GEMINI_READ_ONLY = '{"permissions":{"deny":["write_file(*)","command(*)"]}}'
-#: Antigravity loads at most this many bytes of a SKILL.md body and silently drops the rest.
-ANTIGRAVITY_SKILL_LIMIT = 24000
-#: A reference the skill points at, such as `references/codex.md`.
-REFERENCE_LINK = re.compile(r"references/[\w.-]+\.md")
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November",
           "December")
 #: A feast that moves with Easter names no month in its window: the months the panel's calendar can put it in
@@ -208,11 +196,10 @@ class TestWorkers(unittest.TestCase):
                 self.assertIn(f"`{GEMINI_READ_ONLY}`", body)
                 self.assertIn("Never add `\"agentMode\":\"\"`", body, "it soft-denies commands and outside reads")
                 self.assertIn('"command(git commit)"', body, "a task's settings deny the git commands that change state")
-                # SAVVY_RELAY=1 tells the hooks agy runs that the run is a relay's, headless: no Stop hook continues it.
-                self.assertIn("`SAVVY_RELAY=1 <agy> -p \"$(cat <prompt>)\" --model <model> --effort <effort> --sandbox "
+                self.assertIn("`<agy> -p \"$(cat <prompt>)\" --model <model> --effort <effort> --sandbox "
                               "--settings <settings> --output-format stream-json --print-timeout <N>m < /dev/null "
                               "2> <stderr> | node <root>/scripts/gemini-status.mjs <name> <model> > <log>`", body)
-                self.assertIn("`SAVVY_RELAY=1 <agy> -p \"$(cat <prompt>)\" --conversation <conversation id>", body,
+                self.assertIn("`<agy> -p \"$(cat <prompt>)\" --conversation <conversation id>", body,
                               "a follow-up is a relay's run too")
                 self.assertIn("--conversation <conversation id>", body, "a follow-up continues the conversation")
                 self.assertIn("`grep -c '\"state\":\"ERROR\"' <log>`", body, "a refused tool still exits 0")
@@ -220,6 +207,7 @@ class TestWorkers(unittest.TestCase):
                 self.assertIn("`git status --porcelain` and `git rev-parse HEAD`", body)
                 self.assertIn("`geminiStatus: <name>`", body, "the relay declares its status file to the agents panel")
                 self.assertIn("names a model wins", body)
+                self.assertNotIn("SAVVY_RELAY", body, "no hook guard: the run is an ordinary headless agy -p")
 
     def test_every_worker_closes_its_step_count_before_reporting(self) -> None:
         # The report itself is rarely reported as a step: without a closing call a finished worker stays at 5/7.
@@ -290,15 +278,6 @@ class TestSkill(unittest.TestCase):
         for name in WORKERS:
             self.assertIn(f"`{name}`", text)
 
-    def test_the_whole_skill_file_fits_what_antigravity_loads(self) -> None:
-        # Antigravity drops whatever follows its limit without a word: situational rules live in `references/`.
-        self.assertLess(len((SOURCE / "SKILL.md").read_bytes()), ANTIGRAVITY_SKILL_LIMIT)
-
-    def test_every_reference_the_skill_points_at_exists(self) -> None:
-        links = set(REFERENCE_LINK.findall(_read(SOURCE / "SKILL.md")))
-        self.assertTrue(links, "the skill points at its references")
-        self.assertEqual(sorted(link for link in links if not (SOURCE / link).is_file()), [])
-
 
 class TestModels(unittest.TestCase):
     """Workers run at their tier's model: an agent with no model of its own inherits the session's, the orchestrator's."""
@@ -348,8 +327,7 @@ class TestModels(unittest.TestCase):
         self.assertIn("declare it in the bar (the task's `effort`, `model`), never in the title", self.text)
         self.assertIn("A worker already running keeps what it started with", self.text)
         self.assertIn("A Codex or Gemini task takes it in its brief", self.text)
-        self.assertIn("plus `effort`, `model` and `agent` where section \"Models\" says so, repeated every time",
-                      _flat(_read(PUBLISHED / PROGRESS_BAR)))
+        self.assertIn("plus `effort`, `model` and `agent` where section \"Models\" says so, repeated every time", self.text)
 
     def test_an_agent_the_project_requires_is_a_task_of_the_plan_and_of_the_bar(self) -> None:
         self.assertIn("**An agent the project requires** (its own reviewer, its auditor) runs as that type", self.text)
@@ -360,10 +338,9 @@ class TestModels(unittest.TestCase):
         self.assertIn("never sent to a generic agent", self.text)
 
     def test_codex_is_optional_marked_in_the_plan_and_reviewed(self) -> None:
-        codex = _flat(_read(PUBLISHED / CODEX))
         self.assertIn("one shell call at the start, `codex login status`", self.text)
-        self.assertIn("A Codex task is marked as such in the plan you present before it is delegated, with its intensity.", codex)
-        self.assertIn("Its work gets the same adversarial review as any other tier.", codex)
+        self.assertIn("A Codex task is marked as such in the plan you present before it is delegated, with its intensity.", self.text)
+        self.assertIn("Its work gets the same adversarial review as any other tier.", self.text)
 
     def test_gemini_is_optional_marked_in_the_plan_and_reviewed(self) -> None:
         gemini = _flat(_read(PUBLISHED / GEMINI))
@@ -382,9 +359,8 @@ class TestModels(unittest.TestCase):
         self.assertIn("each launch on the user's explicit yes recorded with `decide` (`tier: \"carbon\"`)", gemini)
 
     def test_codex_gets_the_claude_skills_it_needs_by_path(self) -> None:
-        codex = _flat(_read(PUBLISHED / CODEX))
-        self.assertIn("**Codex does not load Claude Code's skills or `CLAUDE.md`.**", codex)
-        self.assertIn("reaches it only when the brief names its `SKILL.md` by absolute path", codex)
+        self.assertIn("**Codex does not load Claude Code's skills or `CLAUDE.md`.**", self.text)
+        self.assertIn("reaches it only when the brief names its `SKILL.md` by absolute path", self.text)
 
 
 class TestHostTools(unittest.TestCase):
@@ -393,25 +369,20 @@ class TestHostTools(unittest.TestCase):
     def setUp(self) -> None:
         self.text = _flat(_read(PUBLISHED / "SKILL.md"))
 
-    @property
-    def host(self) -> str:
-        """The host tools' rules, out of the skill's core."""
-        return _flat(_read(PUBLISHED / HOST_TOOLS))
-
     def test_the_host_task_list_holds_the_tiered_plan_and_the_progress_bar_stays(self) -> None:
         self.assertIn("**The host's task list holds the plan.** Its steps are the worker tasks, in plan order, each led "
-                      "by its tier", self.host)
+                      "by its tier", self.text)
         self.assertIn("a step is done when its task is accepted in review (section 5), not when the worker returns",
-                      self.host)
-        self.assertIn("The progress bar stays current as well.", self.host)
+                      self.text)
+        self.assertIn("The progress bar stays current as well.", self.text)
 
     def test_workers_are_never_moved_to_a_separate_session(self) -> None:
         self.assertIn("**Workers are always Agent tool calls.** Never move a worker task to a separate session",
-                      self.host)
+                      self.text)
 
     def test_a_turn_summary_does_not_close_the_flow(self) -> None:
-        self.assertIn("**A turn summary closes a turn, not the flow.**", self.host)
-        self.assertIn("Section 6 runs once, after the last task is accepted.", self.host)
+        self.assertIn("**A turn summary closes a turn, not the flow.**", self.text)
+        self.assertIn("Section 6 runs once, after the last task is accepted.", self.text)
 
     def test_the_budget_is_reported_in_local_time_to_the_minute_never_as_utc(self) -> None:
         self.assertIn("**Report the budget in the user's local time, to the minute.**", self.text)
@@ -429,33 +400,28 @@ class TestThemes(unittest.TestCase):
     def setUp(self) -> None:
         self.text = _flat(_read(PUBLISHED / "SKILL.md"))
 
-    @property
-    def rules(self) -> str:
-        """How a chat theme is chosen and worn, out of the skill's core."""
-        return _flat(_read(PUBLISHED / CHAT_THEMES))
-
     def test_a_theme_the_user_asks_for_holds_for_the_session(self) -> None:
         self.assertIn("**The user asks for one** (by name, or for none) → that one for the rest of the session",
-                      self.rules)
+                      self.text)
 
     def test_the_panel_option_is_read_from_the_host_and_classic_keeps_chat_plain(self) -> None:
-        self.assertIn("`claude plugin configure savvy-progress@pablolok-skills --json`: its `inputs.theme`", self.rules)
-        self.assertIn("`classic` means no theme in chat", self.rules)
-        self.assertIn("falls through to the calendar", self.rules)
+        self.assertIn("`claude plugin configure savvy-progress@pablolok-skills --json`: its `inputs.theme`", self.text)
+        self.assertIn("`classic` means no theme in chat", self.text)
+        self.assertIn("falls through to the calendar", self.text)
 
     def test_a_theme_set_from_the_panel_switches_chat_from_the_next_message(self) -> None:
-        self.assertIn("`/savvy-theme <theme|auto>` or from the theme picker in the panel", self.rules)
-        self.assertIn("switches chat to that theme from your next message", self.rules)
+        self.assertIn("`/savvy-theme <theme|auto>` or from the theme picker in the panel", self.text)
+        self.assertIn("switches chat to that theme from your next message", self.text)
 
     def test_the_calendar_puts_a_holiday_over_a_period_and_a_period_over_its_season(self) -> None:
-        self.assertIn("A holiday wins over the period it falls in, a period over its season.", self.rules)
+        self.assertIn("A holiday wins over the period it falls in, a period over its season.", self.text)
 
     def test_the_themes_live_in_a_reference_read_a_month_or_a_row_at_a_time(self) -> None:
         self.assertEqual(_read(PUBLISHED / THEMES), _read(SOURCE / THEMES), "publish the skill")
         self.assertNotIn("| Theme | When |", self.text, "the table loads with every flow: it belongs in the reference")
-        self.assertIn("The themes are in `references/themes.md`, one section per month", self.rules)
-        self.assertIn("the current month's section alone", self.rules)
-        self.assertIn("its row alone", self.rules)
+        self.assertIn("The themes are in `references/themes.md`, one section per month", self.text)
+        self.assertIn("the current month's section alone", self.text)
+        self.assertIn("its row alone", self.text)
 
     def test_every_theme_the_panel_can_pin_has_a_chat_row(self) -> None:
         options = json.loads(_read(PANEL_MANIFEST))["userConfig"]["theme"]["options"]

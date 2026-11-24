@@ -43,11 +43,9 @@ Steps:
    Pipe the stream-json stdout through the status writer and keep stderr separate. The prompt goes as the argument
    (`agy -p` reads neither stdin nor `@file`); a brief too long for one argument stays in its file, and the argument
    says "Read and follow <absolute path of the prompt file>":
-   - task: `SAVVY_RELAY=1 <agy> -p "$(cat <prompt>)" --model <model> --effort <effort> --sandbox --settings <settings> --output-format stream-json --print-timeout <N>m < /dev/null 2> <stderr> | node <root>/scripts/gemini-status.mjs <name> <model> > <log>`;
+   - task: `<agy> -p "$(cat <prompt>)" --model <model> --effort <effort> --sandbox --settings <settings> --output-format stream-json --print-timeout <N>m < /dev/null 2> <stderr> | node <root>/scripts/gemini-status.mjs <name> <model> > <log>`;
    - second opinion: the same, with the read-only settings of step 3;
-   - follow-up: `SAVVY_RELAY=1 <agy> -p "$(cat <prompt>)" --conversation <conversation id> --model <model> --effort <effort> --sandbox --settings <settings> --output-format stream-json --print-timeout <N>m < /dev/null 2> <stderr> | node <root>/scripts/gemini-status.mjs <new name> <model> > <log>`, from the same working directory and with the same settings. Declare the new name first.
-   `SAVVY_RELAY=1` reaches the hooks agy runs: a plugin hook that would continue the turn (the skill-retrospective
-   Stop hook) stays silent, so the headless run does only the brief.
+   - follow-up: `<agy> -p "$(cat <prompt>)" --conversation <conversation id> --model <model> --effort <effort> --sandbox --settings <settings> --output-format stream-json --print-timeout <N>m < /dev/null 2> <stderr> | node <root>/scripts/gemini-status.mjs <new name> <model> > <log>`, from the same working directory and with the same settings. Declare the new name first.
    An implementation runs in a tree no other worker is writing (alone, or in its own worktree). Never
    `--dangerously-skip-permissions`, and never `--mode auto` (unavailable on some accounts: it only warns and falls
    back). `<N>` is the brief's limit, else 30. Record both exit statuses right after the pipeline

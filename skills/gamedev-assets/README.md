@@ -1,14 +1,12 @@
 # Game development — assets
 
-`gamedev-assets` bundles skills for making 3D game assets from concept art and matching them to it.
+`gamedev-assets` bundles Claude Code skills for making 3D game assets from concept art and matching them to it.
 They are written for Blender plus any engine, with short Unity and Unreal notes where the engines differ. Tools are
 named by role. The current options are listed with their licence caveats as options to check, not as endorsements.
 
 ```bash
 claude plugin install gamedev-assets@pablolok-skills --scope project
 ```
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".
 
 Inside a session the skills are `gamedev-assets:concept-to-asset`, `gamedev-assets:concept-match-loop` and
 `gamedev-assets:anatomy-study`.

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.13.1] - 2026-11-24
+- Antigravity plugin manifest and install line removed: the plugins run in Claude Code; Gemini is used only through savvy-flow's relay tier.
+
+
 ## [1.13.0] - 2026-11-24
 - Antigravity manifest and install line; the browser dashboard is the Antigravity route for the Claude-only panel.
 

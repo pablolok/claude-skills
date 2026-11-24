@@ -21,10 +21,8 @@ on Gemini, or to move work off the Claude limits when the user asks; never move 
 - **Mixing families in one plan.** Each task carries its family and intensity in the plan you present, a Gemini task
   marked as such before it is delegated. Group by topic as usual: one family per topic, so one worker's context is
   not rebuilt in another family. Tasks of different families run in parallel only on disjoint files or in separate
-  worktrees, as any parallel workers (`references/parallel-workers.md`).
+  worktrees, as any parallel workers (section 4).
 - The relay (`savvy-gemini-<intensity>`) runs `agy -p` with stream-json output and returns what Gemini did, checked:
-  - every run sets `SAVVY_RELAY=1`, which the hooks agy runs inherit: a plugin's Stop hook that would continue the
-    turn (skill-retrospective's) stays silent, so a headless run does only its brief;
   - an implementation runs with `--sandbox` and a settings file that denies the git commands that change state, in a
     tree no other worker is writing (alone, or in its own worktree), with Gemini told not to commit: it leaves the
     commit message, and the commit follows the review;

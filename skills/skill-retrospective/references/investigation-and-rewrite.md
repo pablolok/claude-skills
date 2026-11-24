@@ -9,9 +9,8 @@
   that opened the work), the rounds and their scores, the steps redone, the user's corrections — quote them.
 - **What the agents actually did**, not what they reported: a worker's report tells its result and leaves out its
   wasted loops. Run `node <this skill's folder>/scripts/transcript-signals.mjs <transcripts folder> --since <the last
-  retrospective commit's date>` over only the implicated session's transcripts (in Claude Code: `~/.claude/projects/<project>/<session>/subagents/`
-  and the session's own `.jsonl`; the script reads Claude Code's transcript format only, so in Antigravity use the
-  commits and the agent's own report): per agent, the hooks that blocked it, its failed calls, the same call repeated, a
+  retrospective commit's date>` over only the implicated session's transcripts (`~/.claude/projects/<project>/<session>/subagents/`
+  and the session's own `.jsonl`): per agent, the hooks that blocked it, its failed calls, the same call repeated, a
   file edited again and again, work undone. Read that digest, never a transcript whole (they run to hundreds of
   thousands of tokens); open one only at what a signal points to. Each signal is a question: a block retried
   unchanged means the rule it enforces was missing from the brief or the skill; a knob edited dozens of times means
@@ -57,7 +56,7 @@ Open the whole file only when the scope cannot be resolved from those sections. 
       marketplace's). When the person maintains it (a clone they push to), edit the skill there, run its tests,
       prepare a new version with the repository's own flow (patch for a lesson, minor for a new step).
       Commit, tag, push and rollout require the user's authorization; source edits are not an installed update.
-      Once authorized, bring the projects up to it (in Claude Code `claude plugin update`; in Antigravity a rerun of the clone's `bootstrap/antigravity-plugins.mjs`; or the version a project pins).
+      Once authorized, bring the projects up to it (`claude plugin update`, or the version a project pins).
     - **A repository the person does not maintain** (another organisation's plugin, a marketplace they only
       install from), or a maintained one with no clone here (a cloud session, a collaborator's machine): never
       edit the installed copy, and open no issue or pull request unasked — an issue is a public action in the

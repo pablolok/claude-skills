@@ -31,5 +31,5 @@ A skill improvement outside the authorized work is reported for a separate decis
 
 After either outcome, record the current HEAD as the retrospective checkpoint in
 `.claude/.state/last-retrospective` and clear `.claude/.state/skills-used.txt` as the existing hooks
-expect (the same shared state files in Claude Code and in Antigravity). This is local workflow state, not a commit. Report only the observed problem, the narrow
+expect. This is local workflow state, not a commit. Report only the observed problem, the narrow
 change and its verification, or the explicit no-change outcome.

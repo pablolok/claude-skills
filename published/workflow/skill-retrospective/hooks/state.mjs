@@ -9,7 +9,6 @@
  * The state folder ignores itself (a `.gitignore` holding `*`), so the skill never has to edit the project's own
  * `.gitignore`: the state is per machine and never belongs in git.
  */
-import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -24,33 +23,11 @@ export function projectRoot(env = process.env) {
 }
 
 /**
- * The project root in Antigravity mode (`--antigravity`), read from the camelCase hook payload and never from
- * `CLAUDE_*` (not set there) or `process.cwd()` (the plugin root): `workspacePaths[0]`, else the git root of the payload
- * `cwd`, else that `cwd` itself; `null` when none is usable
- * (null, not undefined: `stateDir` must not fall back to `CLAUDE_PROJECT_DIR`).
- */
-export function antigravityRoot(payload) {
-  const first = payload?.workspacePaths?.[0];
-  if (typeof first === "string" && first) return first;
-  const cwd = payload?.cwd;
-  if (typeof cwd !== "string" || !cwd) return null;
-  return gitRoot(cwd) ?? cwd;
-}
-
-/** The git root of `dir`, or `undefined` when it is not inside a repository. */
-export function gitRoot(dir) {
-  try {
-    return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
  * The state folder, created on first use together with the `.gitignore` that keeps it out of git; `null`, with
- * nothing created, when there is no project. `root` overrides `CLAUDE_PROJECT_DIR` (Antigravity mode).
+ * nothing created, when there is no project.
  */
-export function stateDir(env = process.env, root = projectRoot(env)) {
+export function stateDir(env = process.env) {
+  const root = projectRoot(env);
   if (!root) return null;
   const dir = join(root, ".claude", ".state");
   mkdirSync(dir, { recursive: true });

@@ -1,5 +1,5 @@
 {
   "name": "jira-workflow",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Use when work is tracked in Jira, before code or tracker changes. Applies the project\u2019s declared cadence, fields, estimates, worklogs, releases and dependencies; continuous updates remain the default when no project policy is declared."
 }

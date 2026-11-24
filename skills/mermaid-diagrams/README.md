@@ -52,5 +52,3 @@ in the plugin; the next update overwrites it.
 
 `claude plugin marketplace add pablolok/claude-skills`, then
 `claude plugin install mermaid-diagrams@pablolok-skills --scope user`. It pairs with `writing-architecture-docs`.
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".

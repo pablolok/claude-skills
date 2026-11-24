@@ -39,5 +39,3 @@ title conventions, update cadence and where dependencies are written — and the
 
 As a Claude Code plugin: `claude plugin marketplace add pablolok/claude-skills`, then
 `claude plugin install jira-workflow@pablolok-skills --scope user` (every project) or `--scope project`.
-
-In Antigravity (`agy`), which has no marketplace: clone this repository and run `node bootstrap/antigravity-plugins.mjs` (on macOS, double-click `bootstrap/install-antigravity.command`). It lists the plugins in `~/.gemini/config/plugins.json`; run it again to update. See the repository README, section "Antigravity (Gemini)".

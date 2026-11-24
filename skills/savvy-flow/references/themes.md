@@ -3,7 +3,7 @@
 One section per month: every theme whose window can reach that month, with its window, its marks and its closing
 line. A theme's row is the same in every section it appears in. Read one section, or one row, never the whole file.
 The relays keep the same marks in every theme, so they have no column: Codex 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra;
-Gemini ⚡ Flash, 💡 Argon, 💧 Hydrogen, 💎 Carbon (`references/chat-themes.md`).
+Gemini ⚡ Flash, 💡 Argon, 💧 Hydrogen, 💎 Carbon (`SKILL.md`, section "Themes").
 
 ## January
 

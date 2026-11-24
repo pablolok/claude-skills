@@ -6,14 +6,13 @@ description: Use in the claude-skills repository to add, change, publish, tag an
 # Skill Publisher
 
 Each individual skill or bundle here is a plugin of the marketplace `pablolok-skills`. Its source is
-`skills/<plugin>/`; what users install is `published/<category>/<plugin>/` (with its generated `.antigravity-plugin/plugin.json`, and for a plugin with
-Claude-format agents a copy without `agents/` under `published-antigravity/<category>/<plugin>/`) and
-`.claude-plugin/marketplace.json`, all written only by the scripts below. A change is done when the plugin users get has it — not when the source file is saved.
+`skills/<plugin>/`; what users install is `published/<category>/<plugin>/` and `.claude-plugin/marketplace.json`, both written only by the scripts
+below. A change is done when the plugin users get has it — not when the source file is saved.
 
 ## 1. Edit the source
 
 - Edit `skills/<skill>/` only: `SKILL.md`, `README.md`, `metadata.json`, `CHANGELOG.md`, and what the skill runs.
-  Never `published/`, `published-antigravity/`, the marketplace, or an installed copy in a plugin cache (the next update overwrites it).
+  Never `published/`, the marketplace, or an installed copy in a plugin cache (the next update overwrites it).
 - **A skill is generic.** It serves every project and every person: no person's name, no rule owned by someone
   (the user wants…), no project names, paths or examples, no dated quotes — the rule and a one-line reason, neutral
   examples (a job, a record, a config), in English. `tests/test_skills_are_generic.py` fails otherwise. Anything
@@ -78,7 +77,6 @@ python automate_publish.py <plugin> <category> "<summary>" --bump <patch|minor|m
 python -m unittest discover -s tests -p "test_*.py"
 python build_marketplace.py --check
 claude plugin validate .
-agy plugin validate published/<category>/<plugin>   # non-strict, each published plugin; skip it when agy is missing
 ```
 
 - **Bump**: patch for a fix or a lesson in an existing step, minor for a new step or a removed section, major for a
@@ -95,9 +93,6 @@ agy plugin validate published/<category>/<plugin>   # non-strict, each published
   plugin's folder alone: its manifest is its marketplace entry, so the folder has none by design and the check fails
   with "No manifest found"; adding one would make the install refuse it. The warnings about a mod's `plugin.json`
   with no version or description are deliberate too: a version there would hide the marketplace's.
-- `agy plugin validate` (Antigravity's CLI) is run **without `--strict`**: a mod's `hooks/hooks.json` always raises a
-  warning there. A missing `agy` skips this step; it is not a failure. For a plugin with a `published-antigravity/` copy,
-  validate that copy (the Claude folder carries no Antigravity manifest by design).
 - Continue only on green. A skipped test is not a pass: the mermaid end-to-end test needs mermaid and jsdom
   installed — it finds them in `MERMAID_DEPS_DIR`, or in the launcher's cache under `CLAUDE_SKILLS_CACHE` after one
   `node scripts/mermaid.mjs check …` in any project.
@@ -127,10 +122,6 @@ python tag_published.py --push
   skill, never the other way. `claude plugin list --json` has **one entry per scope and per project**: update each
   one that matters (`--scope user`, and the project's own by running the command in its folder without `--scope`,
   which otherwise can pick another project), and read the versions back from the list.
-- **Antigravity** (`agy`; no marketplace): in a clone, `node bootstrap/antigravity-plugins.mjs` (on macOS
-  `bootstrap/install-antigravity.command`) pulls and rewrites the entries of `~/.gemini/config/plugins.json` for
-  `published/<category>/` and `published-antigravity/<category>/`; run it again after each publish, then restart `agy`.
-  Use `--dry-run` to see the result first. It never runs `agy plugin install`.
 - **claude.ai and the Desktop app**: the marketplace syncs from GitHub on its own; to force it, *Customize → Plugins
   → Add → Manage marketplaces → ⋮ → Check for updates*. A warning there (a description too long) means the plugin
   was synced without that part: fix it here and publish again. The Desktop app keeps **its own copy** of each

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.0] - 2026-11-24
+- Antigravity hook mode removed.
+
+
 ## [2.3.1] - 2026-11-24
 - In Antigravity a run with SAVVY_RELAY set (a relay's headless agy -p, whose hooks inherit its environment) gets no Stop hold and writes no state: the continue would drag the relay's task into a retrospective, as a live run showed.
 
