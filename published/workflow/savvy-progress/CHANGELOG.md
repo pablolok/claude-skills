@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.23.0] - 2026-11-24
+- Gemini Neon tier: color, costume, badge, effort, model name and budget gate
+
+
 ## [1.22.1] - 2026-11-24
 - Antigravity plugin manifest and install line removed: the plugins run in Claude Code; Gemini is used only through savvy-flow's relay tier.
 

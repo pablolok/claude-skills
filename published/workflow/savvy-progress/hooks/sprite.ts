@@ -179,10 +179,11 @@ export const geminiBody: Body = (f, armFront = 0, armCls, look = {}) => {
 }
 
 // The badge of a Gemini intensity, drawn over its costume in the tier's color at the
-// sparkle's heart (13..17 x 15..19): a bolt, a bulb, a drop, a gem.
+// sparkle's heart (13..17 x 15..19): a bolt, a bulb, a neon N, a drop, a gem.
 export const GEMINI_BADGES: Record<string, string[]> = {
   flash: ['..oo.', '.oo..', 'oooo.', '..oo.', '.oo..'],
   argon: ['.ooo.', 'o.o.o', 'o.o.o', '.ooo.', '.ooo.'],
+  neon: ['o...o', 'oo..o', 'o.o.o', 'o..oo', 'o...o'],
   hydrogen: ['..o..', '.ooo.', 'ooooo', 'ooooo', '.ooo.'],
   carbon: ['ooooo', '.ooo.', '..o..'],
 }

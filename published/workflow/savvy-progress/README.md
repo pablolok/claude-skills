@@ -41,10 +41,10 @@ the mod needs.
   unreadable cache leaves the bare intensity (`Codex · Sol`); a re-read that finds the same models redraws nothing.
   A run awaiting its declaration predicts the effort too: Luna low, Terra medium, Sol high and Astra high. A planned
   Codex task names no effort (`Codex · Sol 6.1`): the user's effort for Codex is in its brief, which the bar never
-  sees. Gemini relays (`savvy-gemini-flash`, `-argon`, `-hydrogen`, `-carbon`) declare theirs the same way
+  sees. Gemini relays (`savvy-gemini-flash`, `-argon`, `-neon`, `-hydrogen`, `-carbon`) declare theirs the same way
   (`Argon 4 · medium`); with no models cache to predict from, a planned Gemini task or a run awaiting its declaration
   shows the bare intensity (`Argon`), and a declared slug with no effort takes the tier's: Flash low, Argon medium,
-  Hydrogen high and Carbon high.
+  Neon medium, Hydrogen high and Carbon high.
   Codex rows show their own session's cumulative tokens and estimated cost once the relay declares its
   `codexStatus` filename stem; an unavailable snapshot or price reads as `—`. The row uses the snapshot's concrete
   action as its step note. A fresh snapshot saying `running` keeps the row running after its Claude relay stops;

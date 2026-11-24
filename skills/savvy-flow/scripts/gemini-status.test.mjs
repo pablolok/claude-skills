@@ -247,8 +247,8 @@ test('reusing a status name does not overwrite the existing run', async t => {
   assert.equal(await readFile(join(dir, 'taken.json'), 'utf8'), '{"keep":true}')
 })
 
-test('all four relays declare a status name and pipe stream-json through the writer', async () => {
-  for (const family of ['flash', 'argon', 'hydrogen', 'carbon']) {
+test('all five relays declare a status name and pipe stream-json through the writer', async () => {
+  for (const family of ['flash', 'argon', 'neon', 'hydrogen', 'carbon']) {
     const text = await readFile(join(root, '..', 'agents', `savvy-gemini-${family}.md`), 'utf8')
     assert.ok(text.includes('geminiStatus: <name>'), family)
     assert.ok(text.includes('| node <root>/scripts/gemini-status.mjs <name> <model> > <log>'), family)

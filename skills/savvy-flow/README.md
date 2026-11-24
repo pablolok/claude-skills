@@ -32,7 +32,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `agents/savvy-light.md` | Sonnet / low, lean tools: mechanical edits, builds, tests. |
 | `agents/savvy-tools.md` | Sonnet / medium with the session's connected tools (MCP servers, apps): mechanical work through them from a recipe in the brief. |
 | `agents/savvy-codex-luna.md` … `savvy-codex-astra.md` | Sonnet / low relays for the Codex CLI, one per OpenAI intensity (Luna, Terra, Sol, Astra): each picks the newest model of its family from Codex's model list, runs one task with `codex exec` (sandboxed), checks the diff and the tests, reports the Codex usage. |
-| `agents/savvy-gemini-flash.md` … `savvy-gemini-carbon.md` | Sonnet / low relays for the Antigravity CLI (`agy`), one per Gemini intensity (Flash, Argon, Hydrogen, Carbon): each runs one task with `agy -p` (sandboxed, git state and, for a second opinion, every write and command denied by its settings), checks the refusals, the diff and the tests, reports the Gemini usage. |
+| `agents/savvy-gemini-flash.md` … `savvy-gemini-carbon.md` | Sonnet / low relays for the Antigravity CLI (`agy`), one per Gemini intensity (Flash, Argon, Neon, Hydrogen, Carbon): each runs one task with `agy -p` (sandboxed, git state and, for a second opinion, every write and command denied by its settings), checks the refusals, the diff and the tests, reports the Gemini usage. |
 | `LICENSE` | The upstream MIT licence. |
 
 `savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
@@ -96,8 +96,9 @@ The recorded local CLI probe and the separate documentation sample used by the t
 ## Gemini (Google models)
 
 With the Antigravity CLI installed and signed in with a Google account (`agy models` exits 0; `agy` is looked up on
-the PATH, then in `~/.local/bin`), the orchestrator gains four Gemini tiers, one per intensity: Flash
-(`gemini-3.8-flash`, Light-sized work), Argon (`gemini-4-argon`, Medium), Hydrogen (`gemini-4-hydrogen`, Careful or
+the PATH, then in `~/.local/bin`), the orchestrator gains five Gemini tiers, one per intensity: Flash
+(`gemini-3.8-flash`, Light-sized work), Argon (`gemini-4-argon`, Medium), Neon (`gemini-4-neon`, medium effort,
+Careful-sized work beside Hydrogen), Hydrogen (`gemini-4-hydrogen`, Careful or
 Heavy, and second opinions) and Carbon (`gemini-4-carbon`, plans only, each launch on the user's yes, recorded with
 `decide` as for Fable and Codex Astra). Claude and Gemini share one plan the way Claude and Codex do: Claude
 orchestrates, Claude workers and Gemini relays take tasks, and a second opinion comes from another family (Codex Sol
@@ -147,7 +148,7 @@ The skill and the agents run fine alone. With the savvy-progress plugin of the s
 orchestrator reports the plan and the accepted tasks to a progress bar above the prompt, and each worker reports its
 own steps to the agents panel. Its budget summary paces the costly tiers against the plan's 5-hour and weekly
 windows: while a family the user set to `within` has a projection that asks for their decision, its Agent calls at Fable, Heavy or Careful (Codex
-Sol or Astra, Gemini Hydrogen or Carbon) are refused until the user's yes is recorded (`decide`, or `/savvy-budget <family> once`), valid until
+Sol or Astra, Gemini Neon, Hydrogen or Carbon) are refused until the user's yes is recorded (`decide`, or `/savvy-budget <family> once`), valid until
 the next reset. The default is the `pace` policy: a family nobody set refuses nothing for the budget, and the
 orchestrator keeps every window at or under 100 % by re-tiering, and never asks (`/savvy-budget <family> within` opts
 back into being asked). Without it those calls are skipped, and the pacing rules fall back to the host's plan usage.

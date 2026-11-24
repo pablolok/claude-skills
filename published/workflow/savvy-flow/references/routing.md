@@ -36,6 +36,7 @@ S strong, G good, W weaker within this pool, U unknown. Letters name the sources
 | Codex Astra (GPT-6) | S [A] | G [F] | G [G] | G [H] | S [A] | U | S [A] | W [M] |
 | Gemini Flash (gemini-3.8-flash) | U | U | U | U | U | U | U | U |
 | Gemini Argon (gemini-4-argon) | U | U | U | U | U | U | U | U |
+| Gemini Neon (gemini-4-neon) | U | U | U | U | U | U | U | U |
 | Gemini Hydrogen (gemini-4-hydrogen) | U | U | U | U | U | U | U | U |
 | Gemini Carbon (gemini-4-carbon) | U | U | U | U | U | U | U | U |
 
@@ -79,6 +80,12 @@ models have since changed before relying on it.
   1 % of the 5-hour window, against about 4 % for a Careful capture of the same size. Write the expected output of each
   step from a previous run of the same take, not from memory: a wrong count in the recipe is a false stop.
 
+- 2026-11-24 (gemini-4-neon-medium, gemini-4-hydrogen-high, gemini-4-argon-medium, one sample each, read-only, no
+  file edits): a short review of three buggy Python functions. Neon at medium and Hydrogen at high listed the same
+  bugs (37 s and 18.5k tokens against 36 s and 23.6k); Argon at medium found the main ones with no thinking
+  tokens (18 s, 14k); Neon at high took 220 s and 26.3k tokens for the same list. On a small function to
+  write, all three were correct. Neon is placed beside Hydrogen at Careful size, effort medium, not above it: one
+  sample shows no gain in findings. Re-check with a larger task before giving it its own rung.
 - 2026-11: Codex Terra implemented standard engine-editor work correctly, but two of three tasks came back with
   breaches of the named code standards (logic in static classes, the same order kept in three places by position).
   Name the standards' `SKILL.md` in the brief, list the most likely breaches in it, and plan one return round.

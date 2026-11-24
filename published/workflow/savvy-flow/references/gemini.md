@@ -11,9 +11,13 @@ same plan, and Gemini gives second opinions. Use it for a second opinion, for a 
 on Gemini, or to move work off the Claude limits when the user asks; never move work there on your own to spare Claude.
 - **Pick the intensity like a Claude tier**, the cheapest that gets it right: Flash (`gemini-3.8-flash`, effort low)
   for mechanical work, Argon (`gemini-4-argon`, medium) for standard work, Hydrogen (`gemini-4-hydrogen`, high) for
-  delicate or unfamiliar work and for second opinions, Carbon (`gemini-4-carbon`, high) for plans only, each launch on
-  the user's explicit yes recorded with `decide` (`tier: "carbon"`), exactly as for Fable and Codex Astra. Other
-  Gemini models (`gemini-4-neon`) stay out. A brief names a model or an effort only when the user asked for one.
+  delicate or unfamiliar work and for second opinions, Neon (`gemini-4-neon`, medium) beside Hydrogen for Careful-sized
+  work where a longer pass on edge cases is worth the wait, Carbon (`gemini-4-carbon`, high) for plans only, each
+  launch on the user's explicit yes recorded with `decide` (`tier: "carbon"`), exactly as for Fable and Codex Astra.
+  Neon takes low, medium, high and xhigh; on 2026-11-24 (`gemini-4-neon-medium`) it found the same bugs in a short
+  review as `gemini-4-hydrogen-high` in about the same time (37 s against 36 s) with fewer tokens (18.5k against
+  23.6k), while `gemini-4-neon-high` took 220 s for the same list: keep it at medium unless the brief asks for more.
+  A brief names a model or an effort only when the user asked for one.
 - **Second opinions come from another family.** A Claude implementation is checked by Codex Sol or Gemini Hydrogen,
   whichever is signed in; a high-risk diff (security, data loss, a migration, concurrency) by both, each read-only and
   in parallel, and you weigh where they agree and where they differ. A Gemini implementation is checked by Opus

@@ -24,7 +24,7 @@ CODEX_RELAYS = ("savvy-codex-astra", "savvy-codex-luna", "savvy-codex-sol", "sav
 #: The relays that run Gemini through the Antigravity CLI, each pinned to one model and its default effort.
 GEMINI_MODELS = {"savvy-gemini-argon": ("gemini-4-argon", "medium"), "savvy-gemini-carbon": ("gemini-4-carbon", "high"),
                  "savvy-gemini-flash": ("gemini-3.8-flash", "low"),
-                 "savvy-gemini-hydrogen": ("gemini-4-hydrogen", "high")}
+                 "savvy-gemini-hydrogen": ("gemini-4-hydrogen", "high"), "savvy-gemini-neon": ("gemini-4-neon", "medium")}
 GEMINI_RELAYS = tuple(GEMINI_MODELS)
 WORKERS = ("savvy-careful", *CODEX_RELAYS, "savvy-fable", *GEMINI_RELAYS, "savvy-heavy", "savvy-light", "savvy-medium",
            "savvy-tools")

@@ -1,6 +1,6 @@
 ---
 name: savvy-flow
-description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI, savvy-gemini-flash / argon / hydrogen / carbon for Google's Gemini through the Antigravity CLI, each when signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
+description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI, savvy-gemini-flash / argon / neon / hydrogen / carbon for Google's Gemini through the Antigravity CLI, each when signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
 disable-model-invocation: true
 argument-hint: <task description>
 ---
@@ -14,7 +14,7 @@ Task from the user: $ARGUMENTS
 ## 0. Preconditions
 
 - **You are the session's model.** The orchestrator runs on the model and effort the user selected for the session: Fable when the session is on Fable, Opus when it is on Opus. Never switch the session's model or effort, and never propose another. The flow is designed around a strong model at high effort, but that is the user's call, not a precondition you check. You orchestrate: you do not take the workers' tasks yourself.
-- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra`, and the Gemini relays `savvy-gemini-flash`, `savvy-gemini-argon`, `savvy-gemini-hydrogen`, `savvy-gemini-carbon` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra`, and the Gemini relays `savvy-gemini-flash`, `savvy-gemini-argon`, `savvy-gemini-neon`, `savvy-gemini-hydrogen`, `savvy-gemini-carbon` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
 - **Gemini** (Google's models through the Antigravity CLI): one shell call at the start, `agy models < /dev/null`
   (`agy` from the PATH, else `~/.local/bin/agy`): exit 0 means signed in, and it spends no quota. Missing or signed
@@ -44,7 +44,7 @@ Task from the user: $ARGUMENTS
   build, export, capture) on Medium or Light. One fresh worker per step, never one worker resumed for hours: a long
   context is rebought on every turn. Monitor usage continuously: read the `budget` summary at every worker return and
   every step, not only before costly launches, and keep each family's projected use at its reset at or under 100 %.
-  When a projection rises past it, cut a tier (Heavy → Careful → Medium, Sol → Terra, Hydrogen → Argon), shrink briefs, run fewer workers
+  When a projection rises past it, cut a tier (Heavy → Careful → Medium, Sol → Terra, Hydrogen or Neon → Argon), shrink briefs, run fewer workers
   in parallel and prefer the family with headroom; if no cheaper path fits, pause costly work and tell the user the
   projection and the reset time (section 4). Report the projection whenever it changes the plan. Under the `pace`
   policy you do all of this yourself and never ask about the budget (section 4).
@@ -154,6 +154,7 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Codex Astra | `savvy-codex-astra` | Astra family, effort high | **Plans only**, each launch on the user's explicit yes, as for Fable (section "Models"); other Fable-sized work goes to Sol |
 | Gemini Flash | `savvy-gemini-flash` | `gemini-3.8-flash` through the Antigravity CLI, effort low; a Sonnet relay | Only when Gemini is signed in (section 0), as below: Light-sized work |
 | Gemini Argon | `savvy-gemini-argon` | `gemini-4-argon`, effort medium | Medium-sized work |
+| Gemini Neon | `savvy-gemini-neon` | `gemini-4-neon`, effort medium | Careful-sized work beside Hydrogen: it reasons longer (slower, fewer tokens on the same review); an exhaustive review or a second opinion where latency does not matter |
 | Gemini Hydrogen | `savvy-gemini-hydrogen` | `gemini-4-hydrogen`, effort high | Careful- or Heavy-sized work; a **second opinion** from another family, beside Codex Sol |
 | Gemini Carbon | `savvy-gemini-carbon` | `gemini-4-carbon`, effort high | **Plans only**, each launch on the user's explicit yes, recorded with `decide` (`tier: "carbon"`), as for Fable; other Fable-sized work goes to Hydrogen |
 
@@ -250,7 +251,7 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
 
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - **Pace the costly tiers against the plan's rolling usage windows.** Before starting or resuming a long worker at
-  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows, Gemini Hydrogen or Carbon for Gemini's), read the `budget` summary returned by the
+  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows, Gemini Neon, Hydrogen or Carbon for Gemini's), read the `budget` summary returned by the
   progress tool; its read-only `budget` tool can refresh your view without changing the bar. Its `estimates` line,
   once a tier has finished runs, gives what one run of that tier has cost as a share of each Claude window. For a
   family with any `ask` verdict (only a family the user set to `within`: `pace` is the default), ask the user before starting or resuming long work on it, giving the projection
@@ -428,7 +429,7 @@ choice needs and nothing more, once, when the theme is chosen or changes:
 - a theme named by the user or pinned by the panel: its row alone (the first line starting with its id between
   backticks, `` | `winter` | ``).
 
-- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra; the Gemini intensities keep theirs: ⚡ Flash, 💡 Argon, 💧 Hydrogen, 💎 Carbon. The mascots follow the
+- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra; the Gemini intensities keep theirs: ⚡ Flash, 💡 Argon, 🔆 Neon, 💧 Hydrogen, 💎 Carbon. The mascots follow the
   roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
   fast one.
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.

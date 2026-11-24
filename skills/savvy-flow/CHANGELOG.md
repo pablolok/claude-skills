@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.24.0] - 2026-11-24
+- Gemini Neon relay (savvy-gemini-neon, gemini-4-neon at medium effort) beside Hydrogen for Careful-sized work; measured on 2026-11-24 in references/gemini.md and routing.md
+
+
 ## [1.23.1] - 2026-11-24
 - Gemini relays: read-only second opinions may run tests and read-only git commands; writes, git state changes and destructive commands stay denied, and the relay still checks the tree is unchanged.
 

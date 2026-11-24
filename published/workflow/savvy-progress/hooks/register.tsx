@@ -606,9 +606,10 @@ const TIER_COLOR: Record<string, string> = {
   'codex-terra': '#6E9B4A',
   'codex-sol': '#E0A526',
   'codex-astra': '#9B7BE0',
-  // The Gemini relays, one per intensity: bolt, bulb, drop, gem.
+  // The Gemini relays, one per intensity: bolt, bulb, sign, drop, gem.
   'gemini-flash': '#D4B21C',
   'gemini-argon': '#D2559A',
+  'gemini-neon': '#F2542D',
   'gemini-hydrogen': '#2BA6C6',
   'gemini-carbon': '#3F51B5',
   other: '#888780',
@@ -629,6 +630,7 @@ const TIER_MODEL: Record<string, string> = {
   'codex-astra': 'Codex · Astra',
   'gemini-flash': 'Gemini · Flash',
   'gemini-argon': 'Gemini · Argon',
+  'gemini-neon': 'Gemini · Neon',
   'gemini-hydrogen': 'Gemini · Hydrogen',
   'gemini-carbon': 'Gemini · Carbon',
 }
@@ -652,16 +654,17 @@ export const codexModelName = (slug: string): string => {
 const GEMINI_WEARS: Record<string, string> = {
   'gemini-carbon': 'fable',
   'gemini-hydrogen': 'careful',
+  'gemini-neon': 'careful',
   'gemini-argon': 'medium',
   'gemini-flash': 'light',
 }
 
 // What each Gemini relay passes to `agy --effort`.
-const GEMINI_EFFORT: Record<string, string> = { flash: 'low', argon: 'medium', hydrogen: 'high', carbon: 'high' }
+const GEMINI_EFFORT: Record<string, string> = { flash: 'low', argon: 'medium', neon: 'medium', hydrogen: 'high', carbon: 'high' }
 
 // `gemini-4-argon` → `Argon 4`, `gemini-3.8-flash` → `Flash 3.8`; any other slug as given.
 export const geminiModelName = (slug: string): string => {
-  const m = /^gemini-(\d+(?:\.\d+)*?)-(flash|argon|hydrogen|carbon)$/.exec(slug)
+  const m = /^gemini-(\d+(?:\.\d+)*?)-(flash|argon|neon|hydrogen|carbon)$/.exec(slug)
   return m?.[2] ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
 }
 
@@ -862,7 +865,7 @@ const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 
 // The costly tiers each family's ask verdict holds back until the user decides.
 const GATED_TIERS: Readonly<Record<string, PlanFamily>> = {
   fable: 'claude', heavy: 'claude', careful: 'claude', 'codex-sol': 'codex', 'codex-astra': 'codex',
-  'gemini-hydrogen': 'gemini', 'gemini-carbon': 'gemini',
+  'gemini-neon': 'gemini', 'gemini-hydrogen': 'gemini', 'gemini-carbon': 'gemini',
 }
 const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini' }
 const WINDOW_NAME: Readonly<Record<PlanWindowKey, string>> = { fiveHour: '5h', week: 'week' }

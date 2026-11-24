@@ -3731,13 +3731,14 @@ const geminiRelay = (over: Partial<AgentRun> = {}) => run('relay', { type: 'savv
 const GEMINI: [string, string, string, string][] = [
   ['gemini-carbon', 'fable', '#3F51B5', 'Carbon'],
   ['gemini-hydrogen', 'careful', '#2BA6C6', 'Hydrogen'],
+  ['gemini-neon', 'careful', '#F2542D', 'Neon'],
   ['gemini-argon', 'medium', '#D2559A', 'Argon'],
   ['gemini-flash', 'light', '#D4B21C', 'Flash'],
 ]
 // The sparkle's eyes, wherever their group or color.
 const GEMINI_EYES = ['<rect x="11" y="14" width="2" height="2"', '<rect x="17" y="14" width="2" height="2"']
 
-test("every theme, and the classic set, draws all four Gemini figures in their tier's costume, with the badge and the sparkle's eyes", () => {
+test("every theme, and the classic set, draws all five Gemini figures in their tier's costume, with the badge and the sparkle's eyes", () => {
   const faults: string[] = []
   for (const [theme, dress] of [['classic', null] as const, ...Object.entries(DRESSES)]) {
     for (const [figure, wears] of GEMINI) {
@@ -3761,10 +3762,10 @@ test("every theme, and the classic set, draws all four Gemini figures in their t
 test('each Gemini intensity has a badge of its own, in a color no other tier has', () => {
   const badge = (figure: string): string => /<g class="badge">(.*?)<\/g>/.exec(figureSvg(figure, null))?.[1] ?? ''
   const shapes = GEMINI.map(([figure]) => badge(figure).replace(/fill="[^"]*"/g, ''))
-  expect(new Set(shapes).size).toBe(4)
+  expect(new Set(shapes).size).toBe(GEMINI.length)
   for (const [figure, , color] of GEMINI) expect(badge(figure)).toContain(`fill="${color}"`)
   const others = ['#7F77DD', '#D85A30', '#BA7517', '#378ADD', '#1D9E75', '#8FA3BF', '#6E9B4A', '#E0A526', '#9B7BE0', '#888780']
-  expect(new Set([...others, ...GEMINI.map(([, , color]) => color)]).size).toBe(others.length + 4)
+  expect(new Set([...others, ...GEMINI.map(([, , color]) => color)]).size).toBe(others.length + GEMINI.length)
 })
 
 test('a Gemini figure leaves the crab as it was, even when its drawing throws', () => {
@@ -3833,7 +3834,8 @@ test('the progress tool takes the Gemini tiers, and decide takes carbon', async 
 test('a Gemini slug names its family and version; any other is shown as given', () => {
   expect(geminiModelName('gemini-4-argon')).toBe('Argon 4')
   expect(geminiModelName('gemini-3.8-flash')).toBe('Flash 3.8')
-  expect(geminiModelName('gemini-4-neon')).toBe('gemini-4-neon')
+  expect(geminiModelName('gemini-4-neon')).toBe('Neon 4')
+  expect(geminiModelName('gemini-4-krypton')).toBe('gemini-4-krypton')
 })
 
 test('a planned Gemini task names its bare intensity and no effort, whatever the plan declares', () => {
@@ -3842,7 +3844,7 @@ test('a planned Gemini task names its bare intensity and no effort, whatever the
 })
 
 test("a Gemini run with a declared model and no effort shows each intensity's own effort", () => {
-  for (const [family, effort, slug] of [['flash', 'low', 'gemini-3.8-flash'], ['argon', 'medium', 'gemini-4-argon'],
+  for (const [family, effort, slug] of [['flash', 'low', 'gemini-3.8-flash'], ['argon', 'medium', 'gemini-4-argon'], ['neon', 'medium', 'gemini-4-neon'],
     ['hydrogen', 'high', 'gemini-4-hydrogen'], ['carbon', 'high', 'gemini-4-carbon']] as const) {
     expect(runModel(run('w1', { type: `savvy-gemini-${family}`, geminiModel: slug }))).toBe(`${geminiModelName(slug)} · ${effort}`)
   }
