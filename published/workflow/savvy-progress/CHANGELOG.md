@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.24.0] - 2026-11-25
+- Tools tier: color, label, Medium's costume, estimates and a value of the plan's tier. Routing card: a progress call that sets tasks, and a compaction or a resume with a plan open, give the routing rules again. Fit gate: a Fable, Heavy or Careful launch whose brief reads as a ready run through a connected tool is refused and pointed at Tools, unless the prompt says why-not-tools with a reason
+
+
 ## [1.23.0] - 2026-11-24
 - Gemini Neon tier: color, costume, badge, effort, model name and budget gate
 

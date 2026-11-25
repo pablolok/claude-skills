@@ -20,8 +20,8 @@ SOURCE = REPO / "skills" / MOD
 PUBLISHED = REPO / "published" / "workflow" / MOD
 MARKETPLACE = REPO / ".claude-plugin" / "marketplace.json"
 MANIFEST = pathlib.Path(".claude-plugin") / "plugin.json"
-SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks/register.test.ts", "hooks/sprite.ts",
-           "hooks/themes.ts", "hooks/wardrobe.ts", "hooks/dress-spring.ts", "hooks/dress-summer.ts",
+SHIPPED = (MANIFEST.as_posix(), "hooks/hooks.json", "hooks/register.tsx", "hooks/register.test.ts", "hooks/fit.ts",
+           "hooks/sprite.ts", "hooks/themes.ts", "hooks/wardrobe.ts", "hooks/dress-spring.ts", "hooks/dress-summer.ts",
            "hooks/dress-autumn.ts", "hooks/dress-winter.ts", "types/index.d.ts",
            "plugin-entry.json",
            "metadata.json", "README.md", "LICENSE")

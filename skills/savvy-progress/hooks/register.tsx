@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
 import type { AgentRun, BudgetPolicy, GateRefusal, BudgetSummary, CodexStatus, CodexTokens, Flow, GeminiStatus, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
+import { readsAsRecipe, saysWhyNotTools } from './fit'
 import { CLAY, INK, codexBadge, codexBody, crabBody, geminiBadge, geminiBody, pixels, stamp, withBody } from './sprite'
 import type { Fill } from './sprite'
 import { DRESSES, THEMES, THEME_CSS, THEME_LABEL, THEME_LABEL_IT, costumeIn, themeOf, themeOn } from './themes'
@@ -142,6 +143,18 @@ const STRINGS = {
       `For anything that is not a plan, offer ${t.alternative} instead.`,
     planGate: (description: string, title: string) =>
       `Plan gate: '${description}' is not a task of the current plan '${title}'. Update the plan first: call progress with the new title, tasks and total (the new plan replaces the old one), then launch with description = the task's title.`,
+    fitGate: (description: string, tier: string) =>
+      `Fit gate: '${description}' reads as a ready procedure run through a connected tool, which is savvy-tools' work (savvy-flow, "Connected tools"), not savvy-${tier}'s. No worker was started. ` +
+      `Relaunch it as savvy-tools with the same description and its recipe (tier tools in the plan); judging what it returns stays with you. ` +
+      `If it needs savvy-${tier} after all (a diagnosis, a new or broken recipe, delicate code), relaunch it with a line of its own in the prompt: why-not-tools: <reason>`,
+    routingCard: [
+      'routing: re-tier each open task against this card before its launch, above all after a compaction or a resume.',
+      '- Tools (or Codex Luna/Terra, if Codex has the tool): a ready capture, export or check run through a connected tool.',
+      '- Light: mechanical edits, builds, tests. Medium: standard work in a few files.',
+      '- Careful: a clear approach, delicate to carry out. Heavy: unfamiliar or messy work, an unclear cause, a new or broken recipe.',
+      "- Fable: plans only, on the user's yes.",
+      '- You: design, judging images, the final review.',
+    ].join('\n'),
     gate: (g: GateText) =>
       `Budget gate: ${g.family} verdict ask under the within policy — ${g.facts.map(f => `${f.window} ${f.used}% → ${f.projected}% at reset ${f.resetsAt}${f.exhaustsAt ? `, runs out ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Ask the user before starting savvy-${g.tier}${g.share.length ? ` (a ${g.tier} run so far ≈ ${g.share.map(x => `${x.percent}% of ${x.window === 'fiveHour' ? '5h' : 'week'}`).join(', ')})` : ''}. ` +
@@ -226,6 +239,18 @@ const STRINGS = {
       `Per tutto ciò che non è un piano, proponi ${t.alternative}.`,
     planGate: (description: string, title: string) =>
       `Blocco del piano: '${description}' non è un compito del piano attuale '${title}'. Aggiorna prima il piano: chiama progress con il nuovo titolo, i compiti e il totale (il nuovo piano sostituisce il vecchio), poi avvia con description = il titolo del compito.`,
+    fitGate: (description: string, tier: string) =>
+      `Blocco di idoneità: '${description}' è una procedura pronta da eseguire con uno strumento collegato, lavoro di savvy-tools (savvy-flow, "Connected tools"), non di savvy-${tier}. Nessun worker avviato. ` +
+      `Rilancialo come savvy-tools con la stessa description e la sua ricetta (tier tools nel piano); giudicare ciò che riporta resta a te. ` +
+      `Se serve davvero savvy-${tier} (una diagnosi, una ricetta nuova o rotta, codice delicato), rilancialo con una riga a sé nel prompt: why-not-tools: <motivo>`,
+    routingCard: [
+      'instradamento: prima di ogni avvio rivedi con questa scheda il livello del compito, soprattutto dopo una compattazione o una ripresa.',
+      '- Tools (o Codex Luna/Terra, se Codex ha lo strumento): una cattura, un export o un controllo pronti, con uno strumento collegato.',
+      '- Light: modifiche meccaniche, build, test. Medium: lavoro ordinario in pochi file.',
+      '- Careful: approccio chiaro, esecuzione delicata. Heavy: lavoro sconosciuto o confuso, causa non chiara, ricetta nuova o rotta.',
+      "- Fable: solo piani, col sì dell'utente.",
+      '- Tu: il design, il giudizio sulle immagini, la revisione finale.',
+    ].join('\n'),
     gate: (g: GateText) =>
       `Blocco del budget: ${g.family} chiede una decisione con la politica entro — ${g.facts.map(f => `${f.window === '5h' ? '5h' : 'settimana'} ${f.used}% → ${f.projected}% all'azzeramento ${f.resetsAt}${f.exhaustsAt ? `, si esaurisce ${f.exhaustsAt}` : ''}`).join('; ')}. ` +
       `Chiedi all'utente prima di avviare savvy-${g.tier}${g.share.length ? ` (finora un'esecuzione ${g.tier} ≈ ${g.share.map(x => `${x.percent}% di ${x.window === 'fiveHour' ? '5h' : 'settimana'}`).join(', ')})` : ''}. ` +
@@ -601,6 +626,7 @@ const TIER_COLOR: Record<string, string> = {
   careful: '#BA7517',
   medium: '#378ADD',
   light: '#1D9E75',
+  tools: '#C46686',
   // The Codex relays, one per intensity: moon, earth, sun, star.
   'codex-luna': '#8FA3BF',
   'codex-terra': '#6E9B4A',
@@ -624,6 +650,7 @@ const TIER_MODEL: Record<string, string> = {
   careful: 'Opus · high',
   medium: 'Sonnet · medium',
   light: 'Sonnet · low',
+  tools: 'Sonnet · medium',
   'codex-luna': 'Codex · Luna',
   'codex-terra': 'Codex · Terra',
   'codex-sol': 'Codex · Sol',
@@ -634,6 +661,9 @@ const TIER_MODEL: Record<string, string> = {
   'gemini-hydrogen': 'Gemini · Hydrogen',
   'gemini-carbon': 'Gemini · Carbon',
 }
+
+// A Claude tier with no costume of its own wears that of the tier on its model and effort, in its own color.
+const CLAUDE_WEARS: Record<string, string> = { tools: 'medium' }
 
 // A Codex figure wears the costume of a Claude tier, on its own body, with its badge.
 const CODEX_WEARS: Record<string, string> = {
@@ -668,8 +698,8 @@ export const geminiModelName = (slug: string): string => {
   return m?.[2] ? `${m[2].charAt(0).toUpperCase()}${m[2].slice(1)} ${m[1]}` : slug
 }
 
-// A relay tier of either family: the Claude tier its figure wears, or undefined.
-const wornBy = (tier: string): string | undefined => CODEX_WEARS[tier] ?? GEMINI_WEARS[tier]
+// The Claude tier whose costume a tier's figure wears (one of CLAUDE_WEARS, or a relay of either family), or undefined.
+const wornBy = (tier: string): string | undefined => CLAUDE_WEARS[tier] ?? CODEX_WEARS[tier] ?? GEMINI_WEARS[tier]
 
 // Same rule as the relays: the lowest priority among visible models of the family.
 export const codexModelsFrom = (cache: unknown): Record<string, string> => {
@@ -861,7 +891,7 @@ export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary =
 // A tier's cost as a share of a window: the percent the window moved per dollar this session spent over the
 // window's recent history. Other sessions on the same plan move the window too, so the share errs high.
 const MIN_SPEND_USD = 0.5
-const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 'light']
+const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 'light', 'tools']
 // The costly tiers each family's ask verdict holds back until the user decides.
 const GATED_TIERS: Readonly<Record<string, PlanFamily>> = {
   fable: 'claude', heavy: 'claude', careful: 'claude', 'codex-sol': 'codex', 'codex-astra': 'codex',
@@ -987,6 +1017,29 @@ export const planGate = (subagentType: string, description: unknown, plan: Flow 
   if (plan.tasks.some(t => t.title === asked)) return undefined
   return STRINGS[language].planGate(asked, plan.title)
 }
+
+// The tiers a mechanical run through a connected tool is wasted on.
+const FIT_TIERS: readonly string[] = ['fable', 'heavy', 'careful']
+
+// An Agent call of a costly Claude tier whose brief reads as a ready procedure run through a connected tool, refused
+// unless the prompt says why in a `why-not-tools:` line: that work is savvy-tools'. It holds no state: the line is
+// what lets a brief through. Open on any missing text or error.
+export const fitGate = (subagentType: unknown, description: unknown, prompt: unknown, language: Lang = 'en'): string | undefined => {
+  try {
+    if (typeof subagentType !== 'string' || typeof description !== 'string' || typeof prompt !== 'string') return undefined
+    const tier = tierOf(subagentType)
+    if (!FIT_TIERS.includes(tier) || !readsAsRecipe(description, prompt) || saysWhyNotTools(prompt)) return undefined
+    return STRINGS[language].fitGate(description.trim(), tier)
+  } catch {
+    // A guard that cannot judge never holds work back.
+    return undefined
+  }
+}
+
+// The routing rules in short, for the orchestrator: a plan outlives a compaction or a resume with its tiers, while the
+// skill that set them is gone from the context. None while no plan is open.
+const routingCard = (plan: Flow | null | undefined): string | undefined =>
+  plan && !plan.isFinished && plan.tasks?.length ? tr().routingCard : undefined
 
 export const claudePlanUsage = (limits: SessionRateLimit[]): PlanUsage | undefined => {
   const window = (kind: string) => {
@@ -2168,6 +2221,7 @@ export const register: Register = (on, options) => {
         'A verdict of ask needs the user\'s decision before long work (the Agent tool refuses a costly tier of that family until it is recorded); over is accepted by full policy; ' +
         'under pace the verdict is retier (projection over 100%, with an advice string: re-tier, never ask) or spend (weekly under 90% with the reset under two days away). ' +
         'Once a tier has finished runs, a third line, estimates:, gives its mean cost and share of each window. ' +
+        'A call that sets tasks ends with the routing card, which tier takes what: re-tier each open task against it before its launch. ' +
         'For the main session only: a call from a subagent is ignored (workers report with `step`).',
       inputSchema: {
         type: 'object',
@@ -2191,7 +2245,7 @@ export const register: Register = (on, options) => {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
                 tier: {
                   type: 'string',
-                  enum: ['fable', 'heavy', 'careful', 'medium', 'light', ...Object.keys(GEMINI_WEARS), ...Object.keys(CODEX_WEARS), 'other'],
+                  enum: [...CLAUDE_TIERS, ...Object.keys(GEMINI_WEARS), ...Object.keys(CODEX_WEARS), 'other'],
                   description: 'The savvy tier; `other` for an agent of the project that is no savvy worker, named in `agent`.',
                 },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
@@ -2365,7 +2419,8 @@ export const register: Register = (on, options) => {
     await syncRunning($)
     const next = await read($, flow)
     if (next && input.tasks?.length) await autoOpen($, next.title)
-    return { result: `ok: ${label(next ?? blank(), runningOf(await read($, agents)))}\n${await budgetLines($)}` }
+    const card = input.tasks ? routingCard(next) : undefined
+    return { result: [`ok: ${label(next ?? blank(), runningOf(await read($, agents)))}`, await budgetLines($), ...(card ? [card] : [])].join('\n') }
   })
 
   // A worker's own progress: the call runs in the worker's loop, so agentId names it.
@@ -2500,6 +2555,8 @@ export const register: Register = (on, options) => {
     }
     const refusal = planGate(subagent, e.description, await read($, flow), lang)
     if (refusal) return { deny: refusal }
+    const misfit = fitGate(subagent, e.description, e.prompt, lang)
+    if (misfit) return { deny: misfit }
     await update($, usageReadings, prev => spendTopTier(prev, subagent, e.model))
     if (isSavvy(String(e.subagent_type ?? ''))) {
       // `running` is not counted here: agent.spawn and the reconcile derive it from the runs.
@@ -2631,6 +2688,15 @@ export const register: Register = (on, options) => {
   on('classic.SubagentStop', async ($, e, next) => {
     await debugResume($, 'classic.SubagentStop', e)
     return next(e)
+  })
+
+  // The main session read again after a compaction or a resume: the skill's routing rules may be gone from it, the open
+  // plan is not.
+  on('classic.SessionStart', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agent_id || (e.source !== 'compact' && e.source !== 'resume')) return result
+    const card = routingCard(await read($, flow))
+    return card ? { ...result, additionalContext: [...(result.additionalContext ?? []), card] } : result
   })
 
   on('turn.complete', async ($, e, next) => {

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.24.2] - 2026-11-25
+- Connected tools names the panel's fit gate and its why-not-tools line; Progress bar names the tools tier and the routing card
+
+
 ## [1.24.1] - 2026-11-24
 - Stop a review, audit or test pass on the current diff as soon as the user changes the request, and relaunch it from the start on the new diff
 

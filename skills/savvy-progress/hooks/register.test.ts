@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
-import { budgetGate, budgetSummary, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
+import { budgetGate, budgetSummary, fitGate, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
 import { activityOf, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
 import { codexBody, crabBody, geminiBody, pixels, withBody } from './sprite'
@@ -4155,6 +4155,263 @@ test('the Carbon relay is held like Fable and Astra, and the yes of one top tier
   expect((await launch($, 'plan', { subagent_type: 'savvy-flow:savvy-gemini-carbon' })).deny).toBeUndefined()
   expect((await launch($, 'plan2', { subagent_type: 'savvy-gemini-carbon' })).deny).toContain('used up')
   expect(state.usage().topTiers?.['gemini-carbon']?.uses).toBe(0)
+})
+
+// ---------------------------------------------------------------------------
+// The Tools tier: in the plan, the panel and the estimates like the other Claude tiers, and not a gated one.
+
+test('a planned Tools task has its own color and label, under the costume of the tier on its model', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  await start($)
+  await plan($, [{ title: 'capture the page', tier: 'savvy-tools' }, { title: 'second capture', tier: 'tools', effort: 'high' }])
+  expect(state.flow()?.tasks.map(t => t.tier)).toEqual(['tools', 'tools'])
+  const { rows: [first, second] } = await panelOf($)
+  expect(first).toContain('<tspan fill="#C46686">tools</tspan>')
+  expect(first).toContain('Sonnet · medium')
+  expect(first).toContain('class="c-medium"')
+  expect(second).toContain('Sonnet · high')
+})
+
+test('the progress tool takes the tools tier', async ($, on) => {
+  const { registered } = engine(on, { infos: [] })
+  await start($)
+  const schema = registered.find(t => t.name === 'progress')?.inputSchema as { properties: { tasks: { items: { properties: { tier: { enum: string[] } } } } } }
+  expect(schema.properties.tasks.items.properties.tier.enum).toEqual(expect.arrayContaining(['fable', 'heavy', 'careful', 'medium', 'light', 'tools', 'other']))
+})
+
+test("every theme, and the classic set, draws the Tools figure in Medium's costume, in its own color", () => {
+  const faults: string[] = []
+  for (const [theme, dress] of [['classic', null] as const, ...Object.entries(DRESSES)]) {
+    const cls = dress ? `c-${dress.prefix}-medium` : 'c-medium'
+    if (!figureSvg('tools', dress).includes(`class="${cls}`)) faults.push(`${theme}: not dressed as medium`)
+  }
+  expect(faults).toEqual([])
+  expect(figureSvg('tools', null)).toContain('fill="#C46686"')
+})
+
+test('a planned Tools task learns the version of its model alias', () => {
+  expect(plannedModel({ title: 'capture', tier: 'tools', after: [] }, { codex: {}, claude: { sonnet: 'Sonnet 5.5' } })).toBe('Sonnet 5.5 · medium')
+})
+
+test('the Tools tier has an estimate of its own', () => {
+  const runs = [run('t1', { type: 'savvy-flow:savvy-tools', status: 'done', costUsd: 1 }), run('t2', { type: 'savvy-tools', status: 'done', costUsd: 3 })]
+  expect(tierEstimates(runs, spending(40, 50, 10, 30), BUDGET_AT)).toEqual({ tools: { runs: 2, usd: 2, fiveHour: 1, week: 0.1 } })
+})
+
+test('the Tools tier is held by neither the budget gate nor the top-tier gate', () => {
+  expect(budgetGate('savvy-flow:savvy-tools', askUsage(), [], BUDGET_AT)).toBeUndefined()
+  expect(topTierGate('savvy-flow:savvy-tools', { statuses: {} })).toBeUndefined()
+})
+
+test('a plan and a run stored before the Tools tier draw without a fault', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(FLOW, flowOf({ tasks: [{ title: 'old capture', tier: 'other', after: [], agent: 'savvy-flow:savvy-tools' }, { title: 'odd', tier: 'vanished', after: [] }] }))
+  state.seed(AGENTS, [run('past', { type: 'savvy-flow:savvy-tools', status: 'done', endedAt: 5 })])
+  await start($)
+  const { terminal } = await panelOf($)
+  expect(terminal).toContain('old capture')
+  expect(terminal).toContain('odd')
+  expect(terminal).toContain('task past')
+})
+
+// ---------------------------------------------------------------------------
+// The routing card: the skill's routing rules, given again with every plan and after a compaction or a resume.
+
+const CARD = 'routing: re-tier each open task'
+const send = ($: Engine, input: Record<string, unknown>) => $.tool.call({ tool: 'mcp__savvy-progress__progress', ...input })
+
+test('a call that sets tasks ends with the routing card, short, after the budget line', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  const result = String((await plan($, [{ title: 'build', tier: 'careful' }])).result)
+  const lines = result.split('\n')
+  expect(lines[0]).toContain('ok:')
+  expect(lines[1]).toContain('budget: ')
+  const card = result.slice(result.indexOf(CARD))
+  expect(card.split('\n').length).toBeLessThanOrEqual(8)
+  expect(card.length).toBeLessThanOrEqual(700)
+  expect(card).toContain('- Tools')
+  expect(card).toContain('judging images')
+})
+
+test('the routing card speaks the panel language, within the same bound', { options: { language: 'it' } }, async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  const result = String((await plan($, [{ title: 'build', tier: 'careful' }])).result)
+  const card = result.slice(result.indexOf('instradamento:'))
+  expect(card).toContain('- Tools')
+  expect(card.split('\n').length).toBeLessThanOrEqual(8)
+  expect(card.length).toBeLessThanOrEqual(700)
+})
+
+test('a call without tasks, with none left, or that finishes the flow carries no routing card', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  const open = [{ title: 'build', tier: 'careful' }]
+  await plan($, open)
+  expect((await send($, { done: 1, phase: 'review' })).result).not.toContain(CARD)
+  expect((await send($, { tasks: [], total: 1, done: 1 })).result).not.toContain(CARD)
+  expect((await send($, { tasks: open, finished: true })).result).not.toContain(CARD)
+})
+
+test('a worker that calls progress gets no routing card', async ($, on) => {
+  engine(on, { infos: [] })
+  await start($)
+  const refused = await send($, { agentId: 'w1', title: 'mine', tasks: [{ title: 'x', tier: 'light' }] })
+  expect(refused.result).toBe('ignored: only the main session reports the flow')
+})
+
+test('after a compaction or a resume the open plan brings the routing card back, beside what other hooks add', async ($, on) => {
+  engine(on, { infos: [] })
+  on('classic.SessionStart', () => ({ additionalContext: ['theirs'] }))
+  await start($)
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  for (const source of ['compact', 'resume'] as const) {
+    const { additionalContext } = await $.classic.SessionStart({ source })
+    expect(additionalContext?.[0]).toBe('theirs')
+    expect(additionalContext?.[1]).toContain(CARD)
+    expect(additionalContext).toHaveLength(2)
+  }
+})
+
+test('the routing card stays away at a fresh start, in a subagent, and while no plan is open', async ($, on) => {
+  engine(on, { infos: [] })
+  on('classic.SessionStart', () => ({}))
+  await start($)
+  expect((await $.classic.SessionStart({ source: 'compact' })).additionalContext).toBeUndefined()
+  await plan($, [{ title: 'build', tier: 'careful' }])
+  for (const source of ['startup', 'clear'] as const) expect((await $.classic.SessionStart({ source })).additionalContext).toBeUndefined()
+  expect((await $.classic.SessionStart({ source: 'compact', agent_id: 'w1' })).additionalContext).toBeUndefined()
+  await send($, { finished: true })
+  expect((await $.classic.SessionStart({ source: 'compact' })).additionalContext).toBeUndefined()
+})
+
+// ---------------------------------------------------------------------------
+// The fit gate: a ready procedure run through a connected tool is Tools work. The briefs are invented.
+
+const RECIPE = 'Run the ready procedure in docs/capture.md through the browser tools: the five pages, the steps in order. Return the files.'
+const WHY = `${RECIPE}\nwhy-not-tools: the procedure broke last time and its cause is unknown`
+
+test('the fit gate refuses a ready run on a costly Claude tier, names the rule and the way through', () => {
+  for (const tier of ['heavy', 'careful', 'fable']) {
+    const refusal = fitGate(`savvy-flow:savvy-${tier}`, 'Shoot the settings pages', RECIPE)
+    expect(refusal).toContain('Fit gate')
+    expect(refusal).toContain('Connected tools')
+    expect(refusal).toContain('Relaunch it as savvy-tools')
+    expect(refusal).toContain(`savvy-${tier} after all`)
+    expect(refusal).toContain('why-not-tools: <reason>')
+  }
+  expect(fitGate('savvy-careful', 'Shoot the settings pages', RECIPE, 'it')).toContain('Blocco di idoneità')
+})
+
+test('the fit gate reads the run in the title however it is worded, and the tool and the procedure in the prompt', () => {
+  const RUNS: [string, string][] = [
+    ['Capture the checkout flow', 'Follow the steps of the last capture in the simulator, views unchanged.'],
+    ['Photograph the second lamp model', 'Same scripts as for the first; the editor is driven through mcp__scene__run.'],
+    ['Report pages: export and screenshots', 'The recipe is in RECIPE.md. Drive the app with its MCP tools.'],
+    ['Re-export the icons', 'Everything is prepared: run the export on the device and list the files.'],
+    ['Screenshots of the new theme', 'Repeat the previous capture in the browser with the theme switched.'],
+  ]
+  for (const [title, prompt] of RUNS) expect([title, fitGate('savvy-careful', title, prompt) !== undefined]).toEqual([title, true])
+})
+
+test('the fit gate lets genuine work through', () => {
+  const WORK: [string, string][] = [
+    // A build whose brief ends in an export, or quotes the procedure for later.
+    ['New checkout layout', `Build the new layout, then export it. ${RECIPE}`],
+    ['Build and export the icon set', RECIPE],
+    ['Fix the flicker, capture', RECIPE],
+    ['Capture flicker probe', RECIPE],
+    ['Compose the page and capture it', RECIPE],
+    ['Add a screenshot button', RECIPE],
+    ['Tools tier in the panel', RECIPE],
+    // A run with no connected tool, and a run in one with no procedure to repeat.
+    ['Export the parser module', 'Follow the same steps as the lexer module: move it, export it, run the tests.'],
+    ['Capture the empty state', 'Open the browser, work out how to reach the empty state, and explain why it differs.'],
+    // Features whose title is a run's word; the worker's progress tool, in every brief, is no connected tool.
+    ['Export orders to CSV', 'Report with mcp__savvy-progress__step. Follow the steps of the import module and run its tests.'],
+    ['Record login attempts', 'Call `mcp__savvy-progress__step` first. Same method as the audit log; the tests run in CI.'],
+    ['Capture webhook payloads', 'Get the endpoint ready for review. The list is read in the browser.'],
+    // A title that only resembles a run.
+    ['Exporter crash on empty input', RECIPE],
+    ['Recorder rewrite', RECIPE],
+  ]
+  for (const [title, prompt] of WORK) expect([title, fitGate('savvy-careful', title, prompt)]).toEqual([title, undefined])
+})
+
+test('a why-not-tools line with a reason opens the fit gate, and an empty or placeholder one does not', () => {
+  for (const line of ['why-not-tools: new camera, no recipe yet', '- Why-Not-Tools: diagnosis first', '  why-not-tools: "broken"']) {
+    expect([line, fitGate('savvy-heavy', 'Shoot the pages', `${RECIPE}\n${line}`)]).toEqual([line, undefined])
+  }
+  for (const line of ['why-not-tools:', 'why-not-tools:   ', 'why-not-tools: <reason>', 'why-not-tools: -', 'say why-not-tools: in a line']) {
+    expect([line, fitGate('savvy-heavy', 'Shoot the pages', `${line}\n${RECIPE}`) !== undefined]).toEqual([line, true])
+  }
+})
+
+test('the fit gate leaves the other tiers, families and agents alone', () => {
+  for (const type of ['savvy-tools', 'savvy-flow:savvy-tools', 'savvy-medium', 'savvy-light', 'savvy-codex-sol', 'savvy-codex-astra', 'savvy-gemini-hydrogen', 'Explore', 'general-purpose', 'heavy']) {
+    expect([type, fitGate(type, 'Shoot the settings pages', RECIPE)]).toEqual([type, undefined])
+  }
+})
+
+test('the fit gate opens on missing or unreadable text', () => {
+  const CALLS: [unknown, unknown, unknown][] = [
+    ['savvy-careful', undefined, RECIPE], ['savvy-careful', 'Shoot the pages', undefined], ['savvy-careful', 'Shoot the pages', ''],
+    ['savvy-careful', '', RECIPE], ['savvy-careful', 7, RECIPE], ['savvy-careful', 'Shoot the pages', { text: RECIPE }],
+    [undefined, 'Shoot the pages', RECIPE], [null, null, null],
+  ]
+  for (const call of CALLS) expect(fitGate(...call)).toBeUndefined()
+})
+
+test('a launch the fit gate refuses starts nothing and leaves the bar where it was; with the line it passes', async ($, on) => {
+  const state = planned($, on)
+  await start($)
+  await plan($, [{ title: 'Shoot the pages', tier: 'careful' }])
+  const before = state.flow()
+  const writes = state.written.length
+  const refused = await launch($, 'Shoot the pages', { ...careful, prompt: RECIPE })
+  expect(refused.deny).toContain('Fit gate')
+  expect(state.agents()).toEqual([])
+  expect(state.flow()).toEqual(before)
+  expect(state.written.slice(writes)).toEqual([])
+  expect((await launch($, 'Shoot the pages', { ...careful, prompt: WHY })).deny).toBeUndefined()
+  expect(state.agents().map(a => a.description)).toEqual(['Shoot the pages'])
+})
+
+test('the same brief relaunched as Tools passes at once', async ($, on) => {
+  const state = planned($, on)
+  await start($)
+  await plan($, [{ title: 'Shoot the pages', tier: 'tools' }])
+  expect((await launch($, 'Shoot the pages', { ...careful, prompt: RECIPE })).deny).toContain('Fit gate')
+  expect((await launch($, 'Shoot the pages', { subagent_type: 'savvy-flow:savvy-tools', prompt: RECIPE })).deny).toBeUndefined()
+  expect(state.agents().map(a => a.type)).toEqual(['savvy-flow:savvy-tools'])
+})
+
+test('the plan gate and the budget gate answer before the fit gate, and its line opens neither', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  await plan($, [{ title: 'Shoot the pages', tier: 'careful' }])
+  expect((await launch($, 'Shoot other pages', { ...careful, prompt: WHY })).deny).toContain('Plan gate')
+  seed()
+  expect((await launch($, 'Shoot the pages', { ...careful, prompt: WHY })).deny).toContain('Budget gate')
+  expect(state.agents()).toEqual([])
+})
+
+test("a fit refusal spends no use of a top tier's yes", async ($, on) => {
+  const { state } = topGated($, on)
+  await start($)
+  state.seed('usage', { statuses: {}, topTiers: { fable: { at: 0, words: 'yes', uses: 1 } } })
+  expect((await launch($, 'Shoot the pages', { prompt: RECIPE })).deny).toContain('Fit gate')
+  expect(state.usage().topTiers?.fable?.uses).toBe(1)
+})
+
+test('a SendMessage resume of a worker is not held by the fit gate', async ($, on) => {
+  const state = planned($, on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  await start($)
+  state.seed(AGENTS, [run('w1', { status: 'done' })])
+  const resumed = await $.tool.call({ tool: 'SendMessage', tool_use_id: 'send-w1', to: 'w1', summary: 'Shoot the pages', message: RECIPE })
+  expect(resumed.deny).toBeUndefined()
 })
 
 test('a SendMessage resume of a Carbon worker needs a yes with a use left', async ($, on) => {

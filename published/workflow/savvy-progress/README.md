@@ -26,8 +26,8 @@ the mod needs.
   and while one runs the bar stops at 99%, so every task accepted reads 100% only once nothing runs. The faint layer
   past the fill stays the plan's own workers, handed a task and not yet accepted.
 - **Agents panel** (`/agents-info` toggles it): running, finished and planned subagents with model and version, effort, task
-  progress, context, estimated cost and time. Each savvy tier animates its own figure; `prefers-reduced-motion` stops
-  them. **Clear finished** (*Svuota finiti* in Italian), beside the Finished heading, empties that list; the
+  progress, context, estimated cost and time. Each savvy tier animates its own figure (Tools wears Medium's
+  costume in a color of its own); `prefers-reduced-motion` stops them. **Clear finished** (*Svuota finiti* in Italian), beside the Finished heading, empties that list; the
   orchestrator can do the same with the progress tool's `clearFinished: true`. The cleared runs stay counted in the
   header's cost, tokens and time and in the tier estimates, running runs and planned tasks are untouched, and a
   cleared run that runs again comes back.
@@ -114,6 +114,16 @@ the mod needs.
   same way and spends a use; a resume the panel cannot match to a row (an unknown id or name) is not seen. The
   refusal says Fable is for plans and offers Heavy (Sol for Astra, Hydrogen for Carbon). The tier yes does not open the
   budget gate.
+- **Fit gate**: a `savvy-fable`, `savvy-heavy` or `savvy-careful` launch whose brief reads as a ready procedure run
+  through a connected tool is refused and pointed at `savvy-tools`. The rule (`hooks/fit.ts`) wants three signals
+  together: a title that names the run (shoot, capture, export, screenshot) and no making, fixing or diagnosing, a
+  prompt that reaches a connected tool, and a prompt that points at a procedure that exists. A line of its own in the
+  prompt, `why-not-tools: <reason>`, with a reason in words, lets the launch through. The refusal starts nothing, moves
+  no bar and spends no yes; missing text or an error opens the gate; resumes (SendMessage) are not checked. The top-tier,
+  budget and plan gates answer first, and the line opens none of them.
+- **Routing card**: a `progress` call that sets `tasks` on an open flow answers, after the budget and estimates lines,
+  with a card of at most eight lines: which tier takes what. The same card is added to the main session's context after
+  a compaction or a resume (`classic.SessionStart`), while a plan is open.
 - **Tier estimates**: every model step of the session, the main session's included, adds its estimated price to a
   running Claude spend, stored with each plan reading. Over a window's recent history, the percent it moved per
   dollar spent turns a tier's mean finished run (savvy Claude tiers, runs with a measured cost) into a share of the
@@ -301,7 +311,8 @@ payload and timing are unconfirmed, and that transition order is a tested race s
 | `.claude-plugin/plugin.json` | The mod's own manifest: name, version (the publish keeps it equal to `metadata.json`), the `language` and `theme` options, the types. |
 | `.claude-plugin/icon.png` | The mod's icon: the crab over a progress bar, a 512 px square. |
 | `hooks/hooks.json` | Names the hooks module. |
-| `hooks/register.tsx` | The module: the four tools, the budget gate on Agent calls, `/agents-info`, `/savvy-theme`, `/savvy-budget`, usage projections, the bar and the panel with its theme picker. |
+| `hooks/register.tsx` | The module: the four tools, the gates on Agent calls, `/agents-info`, `/savvy-theme`, `/savvy-budget`, usage projections, the bar and the panel with its theme picker. |
+| `hooks/fit.ts` | The fit gate's rule: does a brief read as a ready run through a connected tool. |
 | `hooks/sprite.ts` | The pixel crab every figure is drawn on. |
 | `hooks/themes.ts` | The calendar, the theme list and the seasons' and first holidays' costumes. |
 | `hooks/wardrobe.ts` | What every theme draws from: the palette, shared props, particles, header ornaments and weather. |
