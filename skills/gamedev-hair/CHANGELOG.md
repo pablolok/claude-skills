@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.10] - 2026-11-25
+- hair-reference-review: direction judged on the raster per cell by the worst cell, outline compared only for the same hair, art-owner questions with one picture; strand-groom: chance level before hand-matched hairs set a depth target, the mass under the nose
+
+
 ## [0.2.9] - 2026-11-24
 - strand-groom: an image-to-3D model is not a depth reference for hair (view conflicts go to the art owner); hair-reference-review: held-out-view rules if one is tried
 

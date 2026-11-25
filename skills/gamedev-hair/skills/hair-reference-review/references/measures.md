@@ -60,6 +60,11 @@ passed a moustache whose profile fanned to 105 degrees; "strays" were the part's
 113-117 degrees against 69-77). A count of strands out of the mass outline is a second row, with the reference's own
 count as its target. Read flow on the outer layer only for a part with an under-coat.
 
+**Judge direction on the raster, per cell, by the worst cell** (what is drawn in front), never by a median over
+strand data: strands hidden behind the outer layer or curling away from the camera vote in the data and not in the
+picture. One roll passed at 8 degrees (median of 16 cells on strand data) while its profile picture was a ball; per
+cell on the picture the worst error was 82 degrees.
+
 Once a groom's direction is grown from an orientation field read off the same pictures, the flow rows are circular:
 report them, judge by the other rows (mass and length first) and by eye.
 

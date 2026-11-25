@@ -44,7 +44,9 @@ meshes made from it. So it is built for the closest shot it must hold, and judge
       better. First check that the reference agrees with itself (`hair-reference-review` §1.5): views painted one at
       a time need not agree in 3D, and when they contradict, make the set again as one multi-view image. Where views
       still disagree, measure it and show the views side by side with both numbers; the art owner picks
-      (`hair-reference-review` §5), never you. Record the pick per zone and quantity.
+      (`hair-reference-review` §5), never you. Record the pick per zone and quantity. **Before using hairs matched
+      by hand between views as a depth target, compute the chance level**: how many matches random pairs give at the
+      same tolerance. Three matched hairs set a 7-8 mm depth target and were at chance level; two builds chased it.
    3. **Outline the zone where hair must be.** The outline is a guide, not a mould (§2).
    4. **The hair map.** In each view that shows the zone, trace real strokes lock by lock: root, course, tip, width,
       layer, what each crosses. Then write the logic in a few plain sentences a non-technical person can check. A

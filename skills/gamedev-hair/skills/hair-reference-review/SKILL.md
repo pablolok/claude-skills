@@ -147,6 +147,8 @@ Rules for the rows:
   against the old groom's outline, loose forward drapes included, passed a dense box jutting ahead of the lip. The
   next fix, scored only "better than the last build", overshot into a curtain over both lips. Score every round of a
   shape fix on the same reference rows (hull IoU per profile, fringe recall, lips left visible).
+- **Before comparing an outline between reference and groom, check which hair draws it in each** (the near side, the
+  far side, a tuft). A 3/4 outline shortfall compared different hair on the two sides and named a wrong cause.
 
 ## 3. Look, do not trust the number
 
@@ -210,7 +212,9 @@ change at a time before fixing anything.
 5. Conflicts left inside the reference after §1.5 (two views that still disagree in 3D, a painted feature off the
    model) are the art owner's to decide, region by region: name the region, show the views side by side with both
    numbers, and ask which view they prefer there. Never pick the winner yourself, even when one view seems
-   obviously right. A view that wins one region does not win the next. While the question is open, other pieces go on.
+   obviously right. **A question about shape or direction goes with one simple picture**: the reference beside ours,
+   strokes drawn on both, one sentence. A question in words was not understood; the picture removed the question.
+   The owner's own strokes outrank traced numbers. A view that wins one region does not win the next. While the question is open, other pieces go on.
    Past two failed pieces on contradicting views, read who owns each failing pixel (trace its flow into the area
    map); if the owners demand incompatible 3D, build candidates that favour each view and let the art owner choose on
    engine captures. A conflict a worker flags between the reference and a gauge goes to the art owner with the

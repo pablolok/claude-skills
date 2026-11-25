@@ -46,6 +46,12 @@ reference flow and its failed builds broke. Treat each row as a starting design 
   fronts differ, rooted at the corners where the collider counts them behind the lips, tips set under an edge that
   lies on the lip seam. Read those three before a fourth construction.
 
+## The mass under the nose
+
+- **It is a filled volume that leaves the skin forward, turns vertical part-way down, and turns back only at the
+  tips**, ending in separate tips with a gap over the lip. One shell that curls round to the lip reads as a ball in
+  profile even with the right volume.
+
 ## Standing parts (a drape, a point)
 
 - **A section loft on the masks** (front width by profile depth per section) is the default shape: in one case it put
