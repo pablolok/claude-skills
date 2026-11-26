@@ -388,6 +388,51 @@ class TestModels(unittest.TestCase):
         self.assertIn("reaches it only when the brief names its `SKILL.md` by absolute path", self.text)
 
 
+class TestQualitySkills(unittest.TestCase):
+    """Skills that set a bar for code, when the session has any, reach every piece that writes code; with none, the
+    flow is unchanged. Naming domain skills in a brief was not enough: workers on lean tiers loaded none."""
+
+    def setUp(self) -> None:
+        self.text = _flat(_read(PUBLISHED / "SKILL.md"))
+
+    def test_the_rule_is_generic_and_does_nothing_without_such_skills(self) -> None:
+        self.assertIn("## Quality skills", _read(PUBLISHED / "SKILL.md"))
+        self.assertIn("recognise them by their descriptions, never assume one", self.text)
+        self.assertIn("**With none installed, this section does nothing**", self.text)
+
+    def test_they_are_picked_when_planning_by_their_listed_names(self) -> None:
+        self.assertIn("**Find them when planning** (section 1)", self.text)
+        self.assertIn("Write each name exactly as the listing shows it (`plugin:skill` for a plugin's)", self.text)
+        self.assertIn("the **quality skills** it must load, when the session has any", self.text)
+
+    def test_every_code_brief_requires_them_each_at_its_moment(self) -> None:
+        self.assertIn("**Every brief that writes or changes code requires them** (section 4), each at its moment: the "
+                      "design review before the first edit", self.text)
+        self.assertIn("the diff review and the verification gates before the report", self.text)
+        self.assertIn("A brief that writes or changes code also requires the quality skills", self.text)
+
+    def test_code_leaves_the_lean_tiers_except_for_dictated_mechanical_edits(self) -> None:
+        self.assertIn("**Code goes to a tier that can load them.**", self.text)
+        self.assertIn("goes to Careful or above, or to a Codex or Gemini relay from Terra or Argon up with each "
+                      "skill's `SKILL.md` by absolute path", self.text)
+        self.assertIn("the purely mechanical edit whose every line the brief dictates", self.text)
+        self.assertIn("A code task cut below Careful goes to Terra or Argon with the paths, or waits", self.text)
+        self.assertIn("The floor wins over every other pick of a tier: the budget's cuts", self.text)
+
+    def test_review_checks_them_and_the_orchestrator_applies_them_to_itself(self) -> None:
+        self.assertIn("the quality skills it required against the ones the report says were loaded", self.text)
+        self.assertIn("**They hold for you too.** Before each commit you make, run the diff review on the staged diff",
+                      self.text)
+        self.assertIn("follows the architecture-documents skill when one is installed", self.text)
+
+    def test_the_workers_that_load_skills_report_the_ones_they_loaded(self) -> None:
+        for name in set(WORKERS) - set(LEAN_WORKERS) - set(RELAY_WORKERS):
+            with self.subTest(worker=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn("Load each skill the brief names before the step it names", body)
+                self.assertIn("name the skills you loaded in your report's Result line", body)
+
+
 class TestHostTools(unittest.TestCase):
     """A host's own task list, turn summary and sessions run alongside the flow, never in place of it."""
 

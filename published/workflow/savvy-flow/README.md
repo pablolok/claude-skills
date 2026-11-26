@@ -21,7 +21,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 
 | File | Role |
 | :--- | :--- |
-| `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
+| `SKILL.md` | The orchestrator's playbook: the model rule (every worker a savvy type, so none inherits the orchestrator's model), plan (tasks grouped by topic), quality skills (required in every code brief when the session has any), design (never delegated), tiering, delegation (one persistent worker per topic, rotated by context size), adversarial review, close; a host's own task list, turn summary and sessions run alongside it. |
 | `scripts/codex-status.mjs` | Bounded atomic status snapshots from JSON stdout and positioned rollout tails; no dependencies. |
 | `scripts/gemini-status.mjs` | Bounded atomic status snapshots from `agy -p --output-format stream-json`; no dependencies. |
 | `references/themes.md` | The chat themes, one section per month: each theme's window, its mascot per tier, the orchestrator's mark, the review marks and the closing line. The orchestrator reads the current month's section, or one theme's row. |
@@ -40,6 +40,14 @@ session tools (`disallowedTools: [mcp__ccd_turn, mcp__ccd_session]`): it reports
 host has no such tools the deny does nothing. Light and Medium also carry a tool allowlist (`tools`: files, the shell,
 `ToolSearch` and the savvy-progress tools): without the listing of every tool and skill a fresh worker starts at a
 fraction of the context, so a task that needs a skill, a browser or the web goes to Careful or above.
+
+**Quality skills.** When the session has skills installed that set a bar for code (a design review before the first
+edit, code and language standards, test standards, a diff review, verification gates, an architecture-docs method),
+the orchestrator picks the ones each task touches while planning, requires them in every brief that writes or changes
+code (each at its moment), sends code to tiers that can load them (Careful and above, or a Codex or Gemini relay given
+each `SKILL.md` by path; Light and Medium keep only work that writes no code and purely mechanical edits), checks the
+report names the skills loaded, and applies the diff review and the gates to its own commits. With none installed,
+nothing changes.
 
 ## A strong orchestrator, cheap workers
 

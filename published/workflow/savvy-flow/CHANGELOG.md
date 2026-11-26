@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.25.0] - 2026-11-26
+- Quality skills: when the session has skills that set a bar for code, the orchestrator picks them while planning, requires them in every brief that writes code (each at its moment), keeps code off Light and Medium except dictated mechanical edits, checks the report names them, and applies the diff review and gates to its own commits; with none installed, nothing changes
+
+
 ## [1.24.2] - 2026-11-25
 - Connected tools names the panel's fit gate and its why-not-tools line; Progress bar names the tools tier and the routing card
 

@@ -94,6 +94,38 @@ flow, never in place of it:
 - The workers' definitions deny the host's task-list and session tools (`disallowedTools`): a worker reports to you,
   never to the user's task list or to a session of its own.
 
+## Quality skills
+
+A session may have skills installed that set a bar for code, by role: a design review before the first edit, general
+code standards and a language's own, test-design standards, a review of the diff before a commit, verification gates
+before work is handed back, a method for architecture and design documents (for example `pre-implementation-review`,
+`clean-code-standards`, `diff-self-review`, `verification-gates`). They may come from a plugin, the project or the
+user's own folder, and which exist is the user's setup: recognise them by their descriptions, never assume one. **With
+none installed, this section does nothing** and the flow runs as the other sections say.
+
+- **Find them when planning** (section 1): read the session's skill listing and pick, for each task, the quality and
+  process skills its work touches (its language, whether it has tests). Write each name exactly as the listing shows
+  it (`plugin:skill` for a plugin's): a shortened name fails the worker's skill call. A project rule that names its
+  own skills (`CLAUDE.md`) wins over your pick.
+- **Every brief that writes or changes code requires them** (section 4), each at its moment: the design review before
+  the first edit; the general and the language standards while writing; the test standards when the task writes or
+  changes tests; the diff review and the verification gates before the report. The brief asks the worker to name in
+  its report the skills it loaded. A task that writes no code (an audit, a recipe run, running the gates and
+  reporting) names only what it uses.
+- **Code goes to a tier that can load them.** Light and Medium load no skills (section 3), and what several skills hold
+  does not fit in a few lines: while quality skills are installed, a task that writes or changes code goes to Careful
+  or above, or to a Codex or Gemini relay from Terra or Argon up with each skill's `SKILL.md` by absolute path, as
+  section 3 passes any skill to them. Light and Medium keep the work that writes no code, and the purely mechanical
+  edit whose every line the brief dictates (a rename, a given value, a version bump): that brief states the rule in a
+  few lines, and you run the diff review on its diff before accepting it. The floor wins over every other pick of a
+  tier: the budget's cuts (sections "Models" and 4), a `retier` advice, the routing card and `references/routing.md`.
+  A code task cut below Careful goes to Terra or Argon with the paths, or waits.
+- **Check it in review** (section 5): a code task whose report does not name the skills its brief required is
+  returned to apply them.
+- **They hold for you too.** Before each commit you make, run the diff review on the staged diff; before you close
+  (section 6), the verification gates on the final tree. A plan, spec or design-decision document you write, or brief
+  a worker to write, follows the architecture-documents skill when one is installed.
+
 ## 1. Understand and plan (orchestrator only)
 
 1. Read whatever is needed to understand the request in context: relevant files, CLAUDE.md, recent git history. Use an Explore subagent only for wide searches, with `model` set to `haiku` or `sonnet` in the call (left unset, it runs as you).
@@ -103,7 +135,8 @@ flow, never in place of it:
    - a clear, self-contained brief (what, where, constraints, definition of done, how to verify);
    - explicit dependencies between tasks;
    - a **topic**: the area the task works in (the files, the subsystem, the knowledge it must load);
-   - a **tier** per task (section 3).
+   - a **tier** per task (section 3);
+   - the **quality skills** it must load, when the session has any (section "Quality skills"), which may raise its tier.
 
    Then group by topic before delegating. Small tasks that share a topic and a tier become one brief for one worker:
    every fresh worker pays its fixed context again and re-reads the same files, so two near-identical workers cost
@@ -117,8 +150,8 @@ No delegation until the spec is approved. Workers cannot see this chat, so the s
 
 1. **Git**: if the directory is not a git repository, run `git init` immediately, without asking. Add a stack-appropriate `.gitignore`. Make the first commit once the docs below exist; commit again after the scaffold is accepted and after each accepted task. Never push without being asked.
 2. Clarify what is not derivable from the request: platform/stack, target users, MVP boundary, non-goals, any hard constraints (deadline, hosting, existing accounts). Ask in one batch, not one question per turn.
-3. Write `docs/SPEC.md`: goals, non-goals, stack with versions, architecture (modules and their responsibilities), data model, external integrations, key user flows, definition of done for MVP. Keep it as long as the substance needs and no longer.
-4. Write `docs/PLAN.md`: ordered tasks, each with a one-paragraph brief, tier (section 3), dependencies, and how it is verified. Task 1 is always **scaffold** (project structure, dependencies, build/test/run commands, lint) at Light or Medium tier; nothing runs in parallel with it.
+3. Write `docs/SPEC.md` (and `docs/PLAN.md` below) following the architecture-documents skill when the session has one (section "Quality skills"): goals, non-goals, stack with versions, architecture (modules and their responsibilities), data model, external integrations, key user flows, definition of done for MVP. Keep it as long as the substance needs and no longer.
+4. Write `docs/PLAN.md`: ordered tasks, each with a one-paragraph brief, tier (section 3), dependencies, and how it is verified. Task 1 is always **scaffold** (project structure, dependencies, build/test/run commands, lint) at Light or Medium tier (Careful while the session has quality skills, unless the brief dictates every file: section "Quality skills"); nothing runs in parallel with it.
 5. Write `CLAUDE.md` at the project root. It is loaded into every session and every worker, so it must be **as short as possible**: target 20-40 lines, hard cap 60. Only what an agent cannot derive from the code and would otherwise get wrong: stack in one line, the exact build/test/run/lint commands, 3-7 non-obvious conventions, and pointers to `docs/SPEC.md`, `docs/PLAN.md`, `filemap.md`. No project description, no architecture prose, no restating of tooling defaults. If a rule needs a paragraph, it goes to `docs/` and CLAUDE.md links it.
 6. Write `filemap.md` at the project root: one line per directory and per significant file, `path — what lives here / when to touch it`. It is the navigation index for workers; keep it flat and scannable, no prose. Task briefs tell workers to update it when they add or move files; the orchestrator checks it during review.
 7. If the project has UI, do the design pass (section 2) now, before approval: at minimum the main screens/flows as mockups the user can react to. Record the decisions in SPEC.md.
@@ -163,7 +196,8 @@ Light and Medium carry **lean tools**: files, the shell and progress reporting, 
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
 lean, it starts at a fraction of that, and the cheaper model halves what is left. A task that needs a skill or the
 web goes to Careful or above, or its brief states the rule it needs in a few lines; a task that needs a connected
-tool (an MCP server, an app the session drives) follows section "Connected tools".
+tool (an MCP server, an app the session drives) follows section "Connected tools". While the session has quality
+skills, a task that writes code leaves Light and Medium unless it is purely mechanical (section "Quality skills").
 
 Heuristics:
 - Uncertain between two tiers → take the higher one. Exception: Fable, Codex Astra and Gemini Carbon are for plans only and never picked alone (section "Models"): ask, and Heavy (or Sol, Hydrogen) takes anything else.
@@ -273,7 +307,8 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   tiers for the budget (the Fable, Astra and Carbon gate is unchanged: each launch still needs its own yes). Keep every family's
   5-hour and weekly projection at or under 100 %, the week aimed at 90-100 % at its reset, by yourself:
   - read the summary at every worker return; a `retier` verdict carries an `advice`, act on it before the next launch;
-  - cut tiers (Heavy → Careful → Medium, Sol → Terra → Luna); use a costly tier only where only it can do the step
+  - cut tiers (Heavy → Careful → Medium, Sol → Terra → Luna; with quality skills, code stops at Careful, Terra or
+    Argon, section "Quality skills"); use a costly tier only where only it can do the step
     (a tool or a depth no cheaper tier has); run one costly worker at a time; shrink briefs;
   - move work to the other family only while that family's own windows stay at or under 100 %;
   - a `spend` verdict (week under 90 % with the reset under two days away) means room: raise a tier or run more in
@@ -324,7 +359,8 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   instead of asking the worker to explore, and ask for no skill the task does not need: every read and every loaded
   skill stays in the worker's context for the rest of its life. Do name the domain skills the task does need, loaded
   before the first step (a lean tier gets their rule in a few lines, Codex the `SKILL.md` path): a rule a skill
-  already holds goes unapplied in a piece that never loaded it.
+  already holds goes unapplied in a piece that never loaded it. A brief that writes or changes code also requires the
+  quality skills, each at its moment, and asks for the ones loaded in the report (section "Quality skills").
 - Before delegating a task, check that nobody else already holds it — other people's open pull requests, branches and
   coordination notes when the work is shared; a duplicate is found only after both copies are done.
 - Parallel workers share one machine: anything that measures time (benchmarks, timing probes) runs alone, and each
@@ -387,7 +423,8 @@ Treat every worker report as a claim to be checked, not a fact.
 
 For each returned task:
 1. Read the actual diff/files, not just the report.
-2. Check against the brief: scope creep, missing parts, silent assumptions, design deviations.
+2. Check against the brief: scope creep, missing parts, silent assumptions, design deviations, and the quality skills
+   it required against the ones the report says were loaded (section "Quality skills").
 3. Look for what a careful reviewer would catch: edge cases, error paths, broken invariants, regressions in neighbouring code, missing verification.
 4. Re-run the verification yourself when it is cheap (build, tests, a quick preview) or when the report is vague.
 5. **A conflict the worker flags** (the reference against a gauge, two sources, two views), and any other choice that
@@ -408,6 +445,10 @@ take what the workers' worktrees hold that is still needed, then remove every wo
 `git branch -a` and the remote's heads to confirm. A worker's worktree is removed as soon as its diff is integrated,
 not left for the end: the user reads every leftover branch in their git client as work still open. Removing it also
 ends that worker — it can no longer be resumed — so give its topic's next task to a fresh worker from the start.
+
+When the session has quality skills, your own commits went through the diff review and the final tree goes through
+the verification gates before the report (section "Quality skills"); the report says which skills the workers and
+you applied.
 
 Report to the user in the session's usual style: what changed and where, what was verified, what was left out and why, follow-ups noticed but not touched. Mention which tiers ran, one line, no per-task narration, and the Codex or Gemini usage last reported when that tier ran.
 

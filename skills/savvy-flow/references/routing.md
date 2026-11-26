@@ -53,7 +53,9 @@ At the tier the task needs:
 1. An ambiguous bug that needs exploration → Fable (with the user's yes), else Heavy.
 2. A broad refactor, explaining or testing a large codebase → Opus (Careful or Heavy) before Codex.
 3. Standard code under a tight Claude budget → Codex Sol for delicate work, Terra for standard work.
-4. Terminal-heavy implementation (builds, scripts, CLIs) → Sonnet is a serious first choice at Medium.
+4. Terminal-heavy implementation (builds, scripts, CLIs) → Sonnet is a serious first choice at Medium; while the
+   session has quality skills, code that is not purely mechanical stays at Careful or a relay (`SKILL.md`, section
+   "Quality skills").
 5. Visible polish (a screen, a layout) → Fable or Opus; never a lean tier.
 6. Narrative, dialogue, game or story text → Opus.
 7. Many revision rounds that accumulate constraints → Codex Sol.
