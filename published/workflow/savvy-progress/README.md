@@ -83,10 +83,13 @@ the mod needs.
   time the file says the reading was taken (`updatedAt`), never when this session read it: a file two days old reads
   `2d ago`. Relays write one only when they run, so once a Gemini reading is five minutes old the panel asks
   `agy -p /usage --output-format json` itself (no model call, about four seconds, `~/.local/bin/agy` or `agy.exe` first,
-  else the one on `PATH`; stdin empty, 15-second limit): from the tick in the background, and before the `progress` and
-  `budget` tools answer and before the gate judges a Gemini tier. At most once per five minutes, never while one of the
-  session's Gemini relays runs, and only once a Gemini reading exists. A reading older than half an hour is stale: its
-  tile shows its age and no projection, and its windows decide no verdict until a fresh one comes. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
+  else the one on `PATH`; stdin empty, 10-second limit): from the tick in the background, and before the `progress` and
+  `budget` tools answer and before the gate judges a Gemini tier; those three wait for a run the tick has already
+  started, so they answer with what agy said. At most once per five minutes, never while one of the session's Gemini
+  relays runs, and only once a Gemini reading exists. After a failed run (signed out, missing, too slow) the tick stops
+  asking until a newer reading arrives; the tools and the gate still try. A reading older than half an hour is stale:
+  its tile shows its age and no projection, and its windows decide no verdict until a fresh one comes, except a window
+  already at 100 %, which still asks (within a window usage only grows). Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
   weekly uses a short weekday and time (`↻ Thu 02:00`). Resets more than six days away use a short date instead (`↻ 20 Nov 02:00`),
   avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows
   percentages, for example `Claude 41/94%  Codex 2/9%  Gemini 1/0%`, with one `!` after a family that is projected to exceed
@@ -231,7 +234,7 @@ the mod needs.
   away. Missing estimates are `null`, unavailable
   windows are omitted, and times are ISO timestamps. Each window also gives `readAt`, when the provider reported the
   reading (`null` when unknown), and `stale`, true when it is older than half an hour: a stale window has no
-  projection, so its verdict is `ok`. A window whose reset has passed is a new one: zero used, `resetsAt: null`, no
+  projection, so its verdict is `ok`, unless it is already at 100 %. A window whose reset has passed is a new one: zero used, `resetsAt: null`, no
   projection.
 - `mcp__savvy-progress__budget`: returns the string `budget: <compact JSON>` with the same summary, without changing
   the bar or state. Once a savvy Claude tier has a finished run, both tools add a last line,

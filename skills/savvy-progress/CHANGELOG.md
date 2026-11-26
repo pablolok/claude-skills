@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.26.1] - 2026-11-26
+- the budget tool and the gate wait for the agy reread a tick has started, the tick stops retrying a failed agy until a newer reading, a stale window already at 100 % still asks, agy timeout 10 s
+
+
 ## [1.26.0] - 2026-11-26
 - Truthful budget: Codex and Gemini readings carry the time the provider reported them; a reading older than half an hour is stale (shown with its age, no projection, no verdict); a stale Gemini reading is reread from agy -p /usage (tick, progress, budget and before the gate on a Gemini tier, at most every five minutes, never while a Gemini relay runs); a passed reset reads used 0 with resetsAt null; average pace divides by at least an hour (5h) or a day (week), and the weekly recent slope spans a day, so a window minutes old or one busy session no longer projects many times the limit; budget windows add readAt and stale; decide accepts the answer the user picked in AskUserQuestion; the routing card names the Codex and Gemini twin of each Claude tier
 

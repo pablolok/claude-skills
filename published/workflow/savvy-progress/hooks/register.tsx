@@ -426,7 +426,7 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, geminiCacheReadAt: _g, geminiStatusMtimes: _gm, geminiProbeAt: _gp, ...usage } = await read($, usageReadings)
+  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, geminiCacheReadAt: _g, geminiStatusMtimes: _gm, geminiProbeAt: _gp, geminiProbeFailedAt: _gf, ...usage } = await read($, usageReadings)
   const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlans(usage) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
@@ -900,8 +900,9 @@ export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary =
     for (const key of PLAN_WINDOWS) {
       const value = usage[family]?.[key]
       if (!value) continue
-      // A stale reading projects nothing and so decides no verdict; a passed reset is a new window whose reset is unknown.
-      const projection = stale ? undefined : projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
+      // A stale reading projects nothing and so decides no verdict, unless it is already at its limit (within a window
+      // usage only grows); a passed reset is a new window whose reset is unknown.
+      const projection = stale && value.percentUsed < 100 ? undefined : projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
       const verdict = windowVerdict(policy, key, value, projection, at)
       const reset = isReset(value, at)
       summary[family][key] = { used: reset ? 0 : value.percentUsed, resetsAt: reset ? null : value.resetsAt ?? null,
@@ -1352,7 +1353,10 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
 // a few seconds; it runs at most once per five minutes, never while one of this session's Gemini relays runs (that
 // relay's own snapshot is on its way), and only once a Gemini reading exists (no agy, no Gemini, nothing to reread).
 const GEMINI_REREAD_MS = 5 * MINUTE_MS
-const AGY_TIMEOUT_MS = 15_000
+const AGY_TIMEOUT_MS = 10_000
+// The run under way, so the budget tool and the gate wait for the answer a tick has just asked for. Runtime only:
+// a reload starts with none, and the usage atom keeps the readings.
+let agyInFlight: Promise<void> | undefined
 
 // `~/.local/bin/agy` (agy.exe on Windows) where the installer puts it, for a host launched without it on PATH; else PATH's.
 async function agyPath($: EngineInterface): Promise<string> {
@@ -1367,10 +1371,15 @@ async function agyPath($: EngineInterface): Promise<string> {
   return 'agy'
 }
 
-export async function rereadGemini($: EngineInterface): Promise<void> {
+// `fromTick`: the background tick gives up after a failed run until a newer reading arrives (signed out, agy waits
+// for a browser sign-in until it is killed: no session should start it every five minutes for nothing); the budget
+// tool and the gate still try, at most once per five minutes.
+export async function rereadGemini($: EngineInterface, fromTick = false): Promise<void> {
+  if (agyInFlight) return fromTick ? undefined : agyInFlight
   const at = await $.clock.now()
   const usage = await read($, usageReadings)
   if (!hasPlan(usage.gemini) || (usage.geminiUpdatedAt !== undefined && at - usage.geminiUpdatedAt < GEMINI_REREAD_MS)) return
+  if (fromTick && usage.geminiProbeFailedAt !== undefined && usage.geminiProbeFailedAt >= (usage.geminiUpdatedAt ?? 0)) return
   if ((await read($, agents)).some(a => a.geminiStatus && a.status === 'running')) return
   let claimed = false
   await update($, usageReadings, prev => {
@@ -1378,15 +1387,21 @@ export async function rereadGemini($: EngineInterface): Promise<void> {
     return claimed ? { ...prev, geminiProbeAt: at } : prev
   })
   if (!claimed) return
-  try {
-    const { exitCode, stdout } = await $.process.run([await agyPath($), '-p', '/usage', '--output-format', 'json'],
-      { stdin: '', timeoutMs: AGY_TIMEOUT_MS })
-    const plan = exitCode === 0 ? geminiUsageFrom(stdout) : undefined
-    if (!plan) return
+  const run = (async () => {
+    let plan: PlanUsage | undefined
+    try {
+      const { exitCode, stdout } = await $.process.run([await agyPath($), '-p', '/usage', '--output-format', 'json'],
+        { stdin: '', timeoutMs: AGY_TIMEOUT_MS })
+      plan = exitCode === 0 ? geminiUsageFrom(stdout) : undefined
+    } catch { /* Signed out, missing or slow: the reading keeps its age and, once stale, decides nothing. */ }
     const done = await $.clock.now()
-    await update($, usageReadings, prev => prev.geminiUpdatedAt !== undefined && prev.geminiUpdatedAt >= done ? prev
-      : { ...recordPlanUsage(prev, 'gemini', plan, done), geminiReadAt: done, geminiUpdatedAt: done, geminiSource: { name: 'agy', mtimeMs: done } })
-  } catch { /* Signed out, missing or slow: the reading keeps its age and, once stale, decides nothing. */ }
+    await update($, usageReadings, prev => !plan ? { ...prev, geminiProbeFailedAt: done }
+      : prev.geminiUpdatedAt !== undefined && prev.geminiUpdatedAt >= done ? prev
+      : { ...recordPlanUsage(prev, 'gemini', plan, done), geminiReadAt: done, geminiUpdatedAt: done,
+          geminiSource: { name: 'agy', mtimeMs: done }, geminiProbeFailedAt: undefined })
+  })()
+  agyInFlight = run.finally(() => { agyInFlight = undefined })
+  return agyInFlight
 }
 
 const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
@@ -2469,7 +2484,7 @@ export const register: Register = (on, options) => {
         await refreshClaudeUsage($)
         await refreshCodexUsage($)
         await refreshGeminiUsage($)
-        void rereadGemini($).catch(() => undefined)
+        void rereadGemini($, true).catch(() => undefined)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
           const at = await $.clock.now()

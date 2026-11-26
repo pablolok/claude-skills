@@ -4675,7 +4675,7 @@ test('case 1: the budget tool rereads a stale Gemini reading from agy and shows 
   await start($)
   state.seed('usage', STALE_GEMINI)
   const gemini = JSON.parse((await readBudget($)).result.split('\n')[0]!.slice('budget: '.length)).gemini
-  expect(calls).toEqual([{ argv: ['agy', '-p', '/usage', '--output-format', 'json'], stdin: '', timeoutMs: 15_000 }])
+  expect(calls).toEqual([{ argv: ['agy', '-p', '/usage', '--output-format', 'json'], stdin: '', timeoutMs: 10_000 }])
   expect(gemini.fiveHour).toMatchObject({ used: 16, stale: false, readAt: new Date(BUDGET_AT).toISOString(), verdict: 'ok' })
   expect(gemini.week).toMatchObject({ used: 4, stale: false, verdict: 'ok' })
   expect(state.usage()).toMatchObject({ geminiUpdatedAt: BUDGET_AT, geminiSource: { name: 'agy' } })
@@ -4754,4 +4754,45 @@ test('case 4: decide records a yes picked in AskUserQuestion after the gate refu
   expect((await decideWith($, { family: 'claude', answer: 'yes, go on with Heavy' })).deny).toBeDefined()
   expect((await decideWith($, { family: 'claude', answer: 'Sì, procedi con Heavy' })).result).toBe(`ok: Claude go until ${budgetWindow().resetsAt}`)
   expect(state.usage().decisions?.claude).toMatchObject({ words: 'Sì, procedi con Heavy' })
+})
+
+test('the budget tool waits for the agy run a tick has just started, and answers with what agy said', async ($, on) => {
+  const { state, clock } = budgetEngine(on)
+  let runs = 0
+  let release: () => void = () => undefined
+  const agyDone = new Promise<void>(resolve => { release = resolve })
+  on('process.run', async () => {
+    runs++
+    await agyDone
+    return { value: { exitCode: 0, stdout: agyNow(0.77, 0.94), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  await clock.advance(1000)
+  expect(runs).toBe(1)
+  const answer = readBudget($)
+  release()
+  const gemini = JSON.parse((await answer).result.split('\n')[0]!.slice('budget: '.length)).gemini
+  expect(gemini.fiveHour).toMatchObject({ used: 23, stale: false })
+  expect(runs).toBe(1)
+})
+
+test('after a failed agy run the tick stops asking until a newer reading comes; the budget tool still tries', async ($, on) => {
+  const { state, clock } = budgetEngine(on)
+  const calls = agyAnswers(on, () => new Error('signed out'))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  await readBudget($)
+  expect(calls).toHaveLength(1)
+  expect(state.usage().geminiProbeFailedAt).toBe(BUDGET_AT)
+  await clock.advance(30 * MINUTE)
+  expect(calls).toHaveLength(1)
+  await readBudget($)
+  expect(calls).toHaveLength(2)
+})
+
+test('a stale window already at its limit still asks: within a window usage only grows', () => {
+  const full: UsageReadings = { ...STALE_GEMINI, gemini: { ...STALE_GEMINI.gemini, week: { ...STALE_GEMINI.gemini!.week!, percentUsed: 100 } } }
+  expect(budgetSummary(full, BUDGET_AT).gemini.week).toMatchObject({ stale: true, verdict: 'ask' })
+  expect(budgetGate('savvy-flow:savvy-gemini-hydrogen', full, [], BUDGET_AT)).toContain('Budget gate')
 })

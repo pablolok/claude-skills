@@ -128,7 +128,7 @@ export type WindowBudget = {
   advice?: string
   /** When the provider reported this reading (ISO), null when unknown. */
   readAt: string | null
-  /** Older than half an hour: shown with its age, no projection, so the verdict is ok until a fresh reading. */
+  /** Older than half an hour: shown with its age and no projection (so verdict ok) until a fresh reading, unless already at 100 %. */
   stale: boolean
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
@@ -208,6 +208,8 @@ export type UsageReadings = {
   geminiCacheReadAt?: number
   /** Last time this session asked `agy -p /usage` for a fresh Gemini reading. */
   geminiProbeAt?: number
+  /** When that ask last failed (signed out, agy missing or slow); cleared by the next answer. */
+  geminiProbeFailedAt?: number
 }
 
 // What the agents panel shows, copied from the live values once a second: the
