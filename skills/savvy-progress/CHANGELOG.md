@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.25.0] - 2026-11-26
+- A worker that stops with its own step count open (done below total) is asked once per task, through SubagentStop's block, to close it with done equal to total and skipped, then to give its final report again unchanged; never while the host continues it from a stop hook, after a hand-back, or over another hook's block. A finished run whose count stayed open reads 'counter not closed' (contatore non chiuso) in grey, its partial bar grey and without the stale step note, apart from running and done rows.
+
+
 ## [1.24.0] - 2026-11-25
 - Tools tier: color, label, Medium's costume, estimates and a value of the plan's tier. Routing card: a progress call that sets tasks, and a compaction or a resume with a plan open, give the routing rules again. Fit gate: a Fable, Heavy or Careful launch whose brief reads as a ready run through a connected tool is refused and pointed at Tools, unless the prompt says why-not-tools with a reason
 

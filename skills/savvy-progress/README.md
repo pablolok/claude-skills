@@ -50,7 +50,8 @@ the mod needs.
   action as its step note. A fresh snapshot saying `running` keeps the row running after its Claude relay stops;
   once its heartbeat is older than 15 seconds, the next poll uses the relay's own state instead. A Gemini row does the
   same with its `geminiStatus` file, and shows its tokens with no cost.
-  A finished worker with declared but unfinished steps keeps its steps' ratio; it does not jump to a full bar.
+  A finished worker with declared but unfinished steps keeps its steps' ratio, drawn grey; it does not jump to a full
+  bar (see `step` below).
   An answered turn whose engine roster still reports `running` or `waiting` stays live, with its bar capped at
   99%, until the roster confirms completion. This applies to every worker, including relays with no `codexStatus`.
   A waiting worker finishes when its roster becomes `idle` or `completed`, and fails if it becomes `failed` or
@@ -236,6 +237,12 @@ the mod needs.
   `geminiStatus` in place of `codexStatus`. Declarations need no `done` and preserve the prior count and note. A worker
   calls it at the start of each step and before any command it expects to run longer than a minute. A note names the
   actual action, such as "reading CreatureProbe.cs" or "running EditMode tests", never "working".
+  A worker that stops (`classic.SubagentStop`) with its count still open (`done` below `total`) is asked once per
+  task, through the hook's block, to close it with `done` equal to `total` and `skipped`, then to give its final report
+  again unchanged, since its last message is what the orchestrator receives. There is no ask while the host is already
+  continuing it from a stop hook (`stop_hook_active`), after it handed back its report, or when another hook blocked
+  the stop. A finished run whose count stayed open reads `3/5 · counter not closed` in grey, its bar grey at its
+  partial length and without the stale note, so it reads neither as work under way nor as work left undone.
 
 Both costs are estimates from token counts and built-in tables (`PRICES` for Claude, `GPT_PRICES` for Codex in
 `hooks/register.tsx`). GPT family rates use current Standard short-context API prices, verified on 2026-11-12 in

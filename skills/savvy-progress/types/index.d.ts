@@ -83,6 +83,8 @@ export type AgentRun = {
   stepNote?: string
   /** Planned steps the worker left undone, as it reports them. */
   stepSkipped?: number
+  /** At its stop with its count still open, the worker was asked once to close it (SubagentStop). */
+  isCountNudged?: boolean
 }
 
 export type Panel = {

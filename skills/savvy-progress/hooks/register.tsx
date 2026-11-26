@@ -83,6 +83,7 @@ const STRINGS = {
     skipped: 'skipped',
     leftBackground: 'background work left running',
     waitingBackground: 'waiting on background work',
+    countOpen: 'counter not closed',
     tokensWord: 'tokens',
     agentsCount: 'agents',
     isRunning: 'running',
@@ -126,6 +127,9 @@ const STRINGS = {
     ignoredFlow: 'ignored: only the main session reports the flow',
     ignoredSteps: 'ignored: only subagents report steps',
     noRow: (agentId: string) => `ignored: no panel row for agent ${agentId}`,
+    closeCount: (done: number, total: number) =>
+      `Your step counter on the agents panel still reads ${done}/${total}. Before you stop, call mcp__savvy-progress__step once with done: ${total} and skipped set to the planned steps you left undone (leave skipped out when there are none). ` +
+      'Then end with your final report again, in full and unchanged: your last message is what the orchestrator receives.',
     ignoredDecision: "ignored: only the main session records the user's decision",
     badFamily: 'family must be claude, codex or gemini',
     badAnswer: "answer must quote the user's own words",
@@ -179,6 +183,7 @@ const STRINGS = {
     skipped: 'saltati',
     leftBackground: 'lavoro in background lasciato attivo',
     waitingBackground: 'in attesa del lavoro in background',
+    countOpen: 'contatore non chiuso',
     tokensWord: 'token',
     agentsCount: 'agenti',
     isRunning: 'in corso',
@@ -222,6 +227,9 @@ const STRINGS = {
     ignoredFlow: 'ignorato: solo la sessione principale riporta il flusso',
     ignoredSteps: 'ignorato: solo i sottoagenti riportano i passi',
     noRow: (agentId: string) => `ignorato: nessuna riga del pannello per l'agente ${agentId}`,
+    closeCount: (done: number, total: number) =>
+      `Il tuo contatore dei passi nel pannello agenti segna ancora ${done}/${total}. Prima di fermarti, chiama una volta mcp__savvy-progress__step con done: ${total} e skipped uguale ai passi pianificati che non hai fatto (omettilo se non ce ne sono). ` +
+      "Poi chiudi ripetendo il tuo resoconto finale, completo e invariato: l'orchestratore riceve il tuo ultimo messaggio.",
     ignoredDecision: "ignorato: solo la sessione principale registra la decisione dell'utente",
     badFamily: 'family deve essere claude, codex o gemini',
     badAnswer: "answer deve riportare le parole dell'utente",
@@ -1807,6 +1815,13 @@ const headerHeight = (title: string, W: number, usage: UsageReadings): number =>
 const stepCount = (a: AgentRun): string =>
   a.stepTotal ? `${a.stepDone ?? 0}/${a.stepTotal}${a.stepSkipped ? ` · ${a.stepSkipped} ${a.stepSkipped === 1 ? tr().skippedOne : tr().skipped}` : ''}` : ''
 
+// A worker whose own count is still open: it declared steps and has not closed them (done below total).
+const isCountOpen = (a: AgentRun): boolean => !!a.stepTotal && (a.stepDone ?? 0) < a.stepTotal
+
+// A finished run whose worker never closed its count: neither work under way nor work missing, so the row
+// says the count was left open, in a neutral colour, instead of a stale note of a step in progress.
+export const isCountLeftOpen = (a: AgentRun): boolean => a.status === 'done' && !a.pendingCompletion && isCountOpen(a)
+
 // A tool call shows on its worker's row once it has lasted this long: a long command reads
 // as work under way, with its time, between the worker's own step calls.
 const ACTIVITY_AFTER_MS = 30_000
@@ -1831,7 +1846,8 @@ const stepLine = (a: AgentRun, at: number): string => {
   const isLong = a.status === 'running' && !!a.activity && a.activityAt !== undefined && at - a.activityAt >= ACTIVITY_AFTER_MS
   const isParked = a.status === 'running' && a.isWaiting === true && !a.isHandedBack && a.waitingSince !== undefined
   const note = isLong ? `${a.activity} · ${fmtTime(at - a.activityAt!)}`
-    : isParked ? `${tr().waitingBackground} · ${fmtTime(at - a.waitingSince!)}` : a.stepNote
+    : isParked ? `${tr().waitingBackground} · ${fmtTime(at - a.waitingSince!)}`
+    : isCountLeftOpen(a) ? tr().countOpen : a.stepNote
   return [a.stepTotal ? stepCount(a) : '', note, a.isHandedBack && a.leftBackground ? tr().leftBackground : '']
     .filter(Boolean).join(' · ')
 }
@@ -1861,15 +1877,16 @@ const agentSvg = (W: number, a: AgentRun, at: number, hints: ModelHints, usage: 
   const stepsW = Math.max(0, barW - textWidth(stats, 11) - 12)
   // Without reported steps the bar falls back to the context, drawn grey.
   const fillW = Math.round(barW * (progress ?? ctx / 100))
+  const isNeutral = progress === null || isCountLeftOpen(a)
   return svg(
     W,
     66,
     `${crab(0, 14, costumeOf(a.type), false, a.status === 'running')}
 <text class="t" x="42" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(a.description || a.type, 13, textW))}</text>
 <text x="42" y="34" font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(tier === 'other' ? a.type : tier)}</tspan><tspan class="s">  ${xml(meta.join('  ·  '))}</tspan></text>
-${steps && stepsW > 30 ? `<text class="t" x="42" y="49" font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${xml(fitText(steps, 11, stepsW))}</text>` : ''}
+${steps && stepsW > 30 ? `<text class="${isCountLeftOpen(a) ? 's' : 't'}" x="42" y="49" font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${xml(fitText(steps, 11, stepsW))}</text>` : ''}
 <text class="s" x="${42 + barW}" y="49" text-anchor="end" font-family="${FONT}" font-size="11" font-variant-numeric="tabular-nums">${stats}</text>
-<rect class="k" x="42" y="55" width="${barW}" height="4" rx="2"/><rect${progress === null ? ' class="m"' : ''} x="42" y="55" width="${fillW}" height="4" rx="2"${progress === null ? '' : ` fill="${color}"`}/>
+<rect class="k" x="42" y="55" width="${barW}" height="4" rx="2"/><rect${isNeutral ? ' class="m"' : ''} x="42" y="55" width="${fillW}" height="4" rx="2"${isNeutral ? '' : ` fill="${color}"`}/>
 ${statusMark(W - 8, 16, a.status, color)}
 <line class="ln" x1="0" y1="65.5" x2="${W}" y2="65.5"/>`,
   )
@@ -2685,9 +2702,25 @@ export const register: Register = (on, options) => {
 
   // This event's background_tasks is session-wide; it is diagnostic evidence,
   // not proof that every stopping worker owns the listed background tasks.
+  // A worker stopping with its own count still open is asked, once per task, to close it and give its report
+  // again. Never when the host is already continuing it from a stop hook (stop_hook_active), so it cannot loop;
+  // never after SubagentHandback, whose report is already delivered (the panel says the count was left open).
   on('classic.SubagentStop', async ($, e, next) => {
     await debugResume($, 'classic.SubagentStop', e)
-    return next(e)
+    const result = await next(e)
+    const agentId = e.agent_id
+    if (!agentId || e.stop_hook_active || result.block !== undefined) return result
+    // Set on every run of the updater, which may run again on a conflict.
+    let asked: AgentRun | undefined
+    await update($, agents, list => {
+      asked = undefined
+      return list.map(a => {
+        if (a.agentId !== agentId || a.isCountNudged || a.isHandedBack || !isCountOpen(a)) return a
+        asked = a
+        return { ...a, isCountNudged: true }
+      })
+    })
+    return asked ? { ...result, block: tr().closeCount(asked.stepDone ?? 0, asked.stepTotal ?? 0) } : result
   })
 
   // The main session read again after a compaction or a resume: the skill's routing rules may be gone from it, the open
@@ -2938,7 +2971,9 @@ export const register: Register = (on, options) => {
           </Text>
           <Text wrap="truncate-end">
             {'  '}
-            {progress === null ? <Text dimColor>{ctxBar(ctx, barW)}</Text> : <Text color={color}>{ctxBar(progress * 100, barW)}</Text>}
+            {progress === null ? <Text dimColor>{ctxBar(ctx, barW)}</Text>
+              : isCountLeftOpen(a) ? <Text dimColor>{ctxBar(progress * 100, barW)}</Text>
+              : <Text color={color}>{ctxBar(progress * 100, barW)}</Text>}
             <Text dimColor>
               {' '}
               {steps}{rowStats(a, usage, at)}

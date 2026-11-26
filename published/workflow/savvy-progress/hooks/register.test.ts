@@ -4,7 +4,7 @@ import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
 import { budgetGate, budgetSummary, fitGate, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
-import { activityOf, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
+import { activityOf, isCountLeftOpen, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
 import { codexBody, crabBody, geminiBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
@@ -4426,4 +4426,137 @@ test('a SendMessage resume of a Carbon worker needs a yes with a use left', asyn
   await decideTier($, { tier: 'carbon' })
   expect((await resume('car')).deny).toBeUndefined()
   expect((await resume('car')).deny).toContain('used up')
+})
+
+// ---------------------------------------------------------------------------
+// A worker's count left open: asked once at its stop, and drawn apart from work under way and work done.
+
+const stopping = ($: Engine, agentId: string, over: Record<string, unknown> = {}) =>
+  $.classic.SubagentStop({ agent_id: agentId, agent_type: 'savvy-flow:savvy-medium', agent_transcript_path: '', stop_hook_active: false, ...over })
+
+test('a worker stopping with its count open is asked once to close it and give its report again', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  on('classic.SubagentStop', () => ({}))
+  await start($)
+  await spawn($, 'w1', 'savvy-flow:savvy-medium')
+  await stepped($, 'w1', { done: 0, total: 5 })
+  await stepped($, 'w1', { done: 3, note: 'NativeAOT pre-check' })
+
+  const asked = await stopping($, 'w1')
+  expect(asked.block).toContain('3/5')
+  expect(asked.block).toContain('done: 5')
+  expect(asked.block).toContain('skipped')
+  expect(asked.block).toContain('final report again, in full and unchanged')
+  expect(byId(state.agents(), 'w1')?.isCountNudged).toBe(true)
+  // Asked once: a worker that stops again with the count still open is let go.
+  expect((await stopping($, 'w1')).block).toBeUndefined()
+})
+
+test('the ask speaks Italian with the language option on it', { options: { language: 'it' } }, async ($, on) => {
+  engine(on, { infos: [] }, 0)
+  on('classic.SubagentStop', () => ({}))
+  await start($)
+  await spawn($, 'w1', 'savvy-flow:savvy-medium')
+  await stepped($, 'w1', { done: 3, total: 5 })
+  const { block } = await stopping($, 'w1')
+  expect(block).toContain('segna ancora 3/5')
+  expect(block).toContain('done: 5')
+})
+
+test('no ask while the host continues from a stop hook, with the count closed or never declared, or after a hand-back', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  on('classic.SubagentStop', () => ({}))
+  handingBack(on)
+  await start($)
+  for (const id of ['open', 'closed', 'silent']) await spawn($, id, 'savvy-flow:savvy-medium')
+  await stepped($, 'open', { done: 3, total: 5 })
+  await stepped($, 'closed', { done: 5, total: 5, skipped: 1 })
+
+  // stop_hook_active: the host is already continuing the worker from a stop hook, so an ask could loop.
+  expect((await stopping($, 'open', { stop_hook_active: true })).block).toBeUndefined()
+  expect(byId(state.agents(), 'open')?.isCountNudged).toBeUndefined()
+  expect((await stopping($, 'closed')).block).toBeUndefined()
+  expect((await stopping($, 'silent')).block).toBeUndefined()
+  expect((await stopping($, 'nobody')).block).toBeUndefined()
+  expect(byId(state.agents(), 'closed')?.isCountNudged).toBeUndefined()
+
+  state.seed(AGENTS, [...state.agents(), run('worker', { type: 'savvy-flow:savvy-medium', stepDone: 2, stepTotal: 4 })])
+  await $.tool.call(HANDBACK)
+  expect(byId(state.agents(), 'worker')?.isHandedBack).toBe(true)
+  expect((await stopping($, 'worker')).block).toBeUndefined()
+  // The stop the host did not continue still gets its one ask.
+  expect((await stopping($, 'open')).block).toContain('3/5')
+})
+
+test("another hook's block stands as it is and spends no ask", async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  on('classic.SubagentStop', () => ({ block: 'theirs' }))
+  await start($)
+  await spawn($, 'w1', 'savvy-flow:savvy-medium')
+  await stepped($, 'w1', { done: 3, total: 5 })
+  expect((await stopping($, 'w1')).block).toBe('theirs')
+  expect(byId(state.agents(), 'w1')?.isCountNudged).toBeUndefined()
+})
+
+test('a new task on the same agent may be asked again', async ($, on) => {
+  const { state } = engine(on, { infos: [] })
+  state.seed(AGENTS, [run('worker', { type: 'savvy-flow:savvy-medium', status: 'done', stepDone: 3, stepTotal: 5, isCountNudged: true })])
+  answering(on)
+  on('tool.call', { tool: 'SendMessage' }, () => ({ result: { success: true } }))
+  on('classic.SubagentStop', () => ({}))
+  await start($)
+  await $.tool.call(REUSED_RELAY_SEND)
+  await reusedStep($)
+  expect(byId(state.agents(), 'worker')?.isCountNudged).toBeUndefined()
+  await stepped($, 'worker', { done: 1, total: 4 })
+  expect((await stopping($, 'worker')).block).toContain('1/4')
+})
+
+test('a finished run with its count open reads counter not closed, in a neutral colour, apart from running and done rows', { options: { theme: 'classic' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  const medium = { type: 'savvy-flow:savvy-medium' }
+  state.seed(AGENTS, [
+    run('open', { ...medium, description: 'open', status: 'done', endedAt: 0, stepDone: 3, stepTotal: 5, stepNote: 'NativeAOT pre-check' }),
+    run('live', { ...medium, description: 'live', stepDone: 3, stepTotal: 5, stepNote: 'running the build' }),
+    run('closed', { ...medium, description: 'closed', status: 'done', endedAt: 0, stepDone: 5, stepTotal: 5, stepNote: 'report' }),
+  ])
+  await start($)
+
+  const { rows, terminal } = await panelOf($)
+  const open = rows.find(r => r.includes('>open<'))!
+  expect(open).toContain('<text class="s" x="42" y="49"')
+  expect(open).toContain('>3/5 · counter not closed<')
+  // The note of a step under way is stale once the run is over: it no longer reads as work in progress.
+  expect(open).not.toContain('NativeAOT pre-check')
+  // The bar keeps its partial length, drawn neutral rather than in the tier's colour.
+  expect(open).toMatch(/<rect class="m" x="42" y="55" width="\d+" height="4" rx="2"\/>/)
+  const live = rows.find(r => r.includes('>live<'))!
+  expect(live).toContain('>3/5 · running the build<')
+  expect(live).not.toContain('counter not closed')
+  expect(live).not.toMatch(/<rect class="m" x="42" y="55"/)
+  const closed = rows.find(r => r.includes('>closed<'))!
+  expect(closed).toContain('>5/5 · report<')
+  expect(closed).not.toContain('counter not closed')
+  expect(terminal).toContain('3/5 · counter not closed · ')
+  expect(terminal).toContain('3/5 · running the build · ')
+})
+
+test('the open count label speaks Italian, and a closing step clears it', { options: { theme: 'classic', language: 'it' } }, async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0)
+  state.seed(AGENTS, [run('w1', { type: 'savvy-flow:savvy-medium', description: 'w1', status: 'done', endedAt: 0, stepDone: 3, stepTotal: 5 })])
+  await start($)
+  expect((await panelOf($)).rows.find(r => r.includes('>w1<'))).toContain('>3/5 · contatore non chiuso<')
+  await stepped($, 'w1', { done: 5, skipped: 1 })
+  const row = (await panelOf($)).rows.find(r => r.includes('>w1<'))!
+  expect(row).toContain('>5/5 · 1 saltato<')
+  expect(row).not.toContain('contatore non chiuso')
+})
+
+test('an open count is left open only on a finished run, never on a failed or a pending one', () => {
+  expect(isCountLeftOpen(run('w', { status: 'done', stepDone: 3, stepTotal: 5 }))).toBe(true)
+  expect(isCountLeftOpen(run('w', { status: 'running', stepDone: 3, stepTotal: 5 }))).toBe(false)
+  expect(isCountLeftOpen(run('w', { status: 'failed', stepDone: 3, stepTotal: 5 }))).toBe(false)
+  expect(isCountLeftOpen(run('w', { status: 'done', pendingCompletion: true, stepDone: 3, stepTotal: 5 }))).toBe(false)
+  expect(isCountLeftOpen(run('w', { status: 'done', stepDone: 5, stepTotal: 5 }))).toBe(false)
+  expect(isCountLeftOpen(run('w', { status: 'done' }))).toBe(false)
 })
