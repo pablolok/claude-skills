@@ -41,7 +41,8 @@ S strong, G good, W weaker within this pool, U unknown. Letters name the sources
 | Gemini Carbon (gemini-4-carbon) | U | U | U | U | U | U | U | U |
 
 The Gemini rows stay U until a source is read for them or "Observed in use" has evidence; until then a Gemini
-family is picked for a second opinion from another family, or because the user asked for it, not for a rating.
+family is picked for a second opinion from another family, because the user asked for it, or for its share when the
+user asked to balance the families (below), not for a rating. U means unmeasured, not weaker.
 
 Numbers behind the main rules: SWE Atlas Fable 80.5, Opus 77.4, Astra 69.4, Sol 65.9 [F]; Arena creative writing
 Opus 1517, Astra 1451, Sol 1449 [H]; Terminal-Bench 4.0 Sonnet 70.6, Opus 66.4 [B]; MultiChallenge Sol 81.95, Terra
@@ -66,6 +67,32 @@ At the tier the task needs:
     Hydrogen checks a Claude implementation for edge cases and scope (both, for a high-risk diff); Opus checks a Codex
     or Gemini implementation for design and fit with the codebase.
 11. Whatever model writes it, "done" means execution evidence: no model's honesty is measured against another's.
+
+## Balancing the families
+
+When the user has asked to balance work across the families — in words in this flow, or as a standing default in
+their instructions — every signed-in family takes its share of the plan's tasks, not only the second opinions. A flow
+that sends nearly every task to Claude while Gemini or Codex has room is the failure this section exists for.
+
+1. **Calibrate by tier.** The same difficulty maps across families: Light ↔ Gemini Flash ↔ Codex Luna; Medium ↔
+   Gemini Argon ↔ Codex Terra; Careful ↔ Gemini Hydrogen (Neon for a long review pass) ↔ Codex Sol; Heavy ↔ Gemini
+   Hydrogen ↔ Codex Sol. The top tiers (Fable, Astra, Carbon) stay plans only, each on its own yes.
+2. **Capability first, then balance.** A rule above that names a family for a measured strength keeps it (an
+   ambiguous bug → Heavy, visible polish and narrative → Opus, accumulating constraints → Sol). Every other task —
+   standard and delicate implementation, tests, scripts, mechanical edits, investigations with a clear brief — may go
+   to any family at its tier. An unrated (U) Gemini intensity takes those tasks like the others, and its first tasks
+   of a kind become evidence for "Observed in use".
+3. **Share by headroom.** Read the `budget` summary for every family before the split. Give the self-contained tasks
+   so the families' weekly projections at reset come out close to one another, each at or under 100 %: the family with
+   the most room takes the most. A family projected over 100 % takes nothing costly until it fits; a window marked
+   `stale: true` is an old reading, so read it again (the `budget` tool rereads Gemini) before planning on it, and
+   never take an old or reset window as full.
+4. **Keep topics whole.** One family per topic (one worker's context is not rebuilt in another family): balance
+   across topics, not inside one.
+5. **Say the split.** The plan you present gives the tasks per family (for example `Claude 3 · Gemini 3 · Codex 1`)
+   and one line for a signed-in family that gets none, with the reason (a capability rule, its budget, a vendor rule).
+6. **Review across.** Each family's implementation is reviewed by another family (rule 10), so a balanced plan also
+   balances its reviews.
 
 ## Observed in use
 

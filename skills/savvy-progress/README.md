@@ -74,20 +74,31 @@ the mod needs.
   row of its own beneath them. Claude comes from the
   engine's `$.session.usage().rateLimits` (`five_hour`, `seven_day`), follows `session.measure`, and is polled
   at most once a minute while the panel runs. The engine reports the last API response, not a fresh server fetch;
-  the age is time since the panel last read the figures. Failed reads retain the last reading and its age. Codex comes only
+  the age is time since the panel last read the figures (the same windows Claude Code's own usage card shows).
+  Failed reads retain the last reading and its age. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
   is omitted, and a family read alone takes the whole row. Gemini comes from the newest small
   `~/.gemini/savvy-status/<name>.json` file's `rateLimits`: agy's `/usage` data, of which only the `Gemini Models`
-  group counts, each window used as `round((1 - remaining_fraction) * 100)` %. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
+  group counts, each window used as `round((1 - remaining_fraction) * 100)` %. For Codex and Gemini the age is the
+  time the file says the reading was taken (`updatedAt`), never when this session read it: a file two days old reads
+  `2d ago`. Relays write one only when they run, so once a Gemini reading is five minutes old the panel asks
+  `agy -p /usage --output-format json` itself (no model call, about four seconds, `~/.local/bin/agy` or `agy.exe` first,
+  else the one on `PATH`; stdin empty, 15-second limit): from the tick in the background, and before the `progress` and
+  `budget` tools answer and before the gate judges a Gemini tier. At most once per five minutes, never while one of the
+  session's Gemini relays runs, and only once a Gemini reading exists. A reading older than half an hour is stale: its
+  tile shows its age and no projection, and its windows decide no verdict until a fresh one comes. Wide tiles show local reset times: 5-hour uses `↻ 02:00`,
   weekly uses a short weekday and time (`↻ Thu 02:00`). Resets more than six days away use a short date instead (`↻ 20 Nov 02:00`),
   avoiding an ambiguous repeated weekday. A reset is omitted when it does not fit. The compact line shows
   percentages, for example `Claude 41/94%  Codex 2/9%  Gemini 1/0%`, with one `!` after a family that is projected to exceed
   either window under `within`, and truncates at smaller widths.
 - **Usage projection**: each family's 5-hour and weekly windows estimate whether the current pace fits before
-  reset. The start is the reset minus 300 or 10080 minutes. Average pace is used percentage divided by elapsed time;
-  recent pace uses the first-to-last observation slope within the last 30 minutes (5h) or six hours (7d), once
-  observations cover at least half that span. Otherwise it falls back to average pace. The usage atom keeps at most
-  one observation per minute, pruned to each span (at most 361 samples per window); Codex and Gemini observations use the
+  reset. The start is the reset minus 300 or 10080 minutes. Average pace is used percentage divided by the elapsed
+  time, never by less than an hour (5h) or a day (7d): Gemini's windows start at first use, and 3 % of a week eight
+  minutes old once projected 5065 %. Recent pace uses the first-to-last observation slope within the last 30 minutes
+  (5h), once observations cover at least half of it, or within the last day (7d), once they cover 90 % of it: a
+  slope of working hours alone, run on through the nights, projected a busy session at several times the limit.
+  Otherwise it falls back to average pace. The usage atom keeps at most one observation per minute (5h) or per five
+  minutes (7d), pruned to each span (at most 31 and 289 samples); Codex and Gemini observations use the
   status file's timestamp, so rereading an unchanged file adds nothing. A changed reset or a percentage drop clears
   that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
@@ -123,7 +134,8 @@ the mod needs.
   no bar and spends no yes; missing text or an error opens the gate; resumes (SendMessage) are not checked. The top-tier,
   budget and plan gates answer first, and the line opens none of them.
 - **Routing card**: a `progress` call that sets `tasks` on an open flow answers, after the budget and estimates lines,
-  with a card of at most eight lines: which tier takes what. The same card is added to the main session's context after
+  with a card of at most eight lines: which tier takes what, and the Codex and Gemini intensity that matches each
+  Claude tier, to share by budget headroom when the user asked to balance the families. The same card is added to the main session's context after
   a compaction or a resume (`classic.SessionStart`), while a plan is open.
 - **Tier estimates**: every model step of the session, the main session's included, adds its estimated price to a
   running Claude spend, stored with each plan reading. Over a window's recent history, the percent it moved per
@@ -217,13 +229,19 @@ the mod needs.
   does not fit under `full`, `ask` when it does not fit under `within`; under `pace`, `retier` (with an `advice`
   string) when it does not fit and `spend` for a weekly window projected under 90 % with its reset under two days
   away. Missing estimates are `null`, unavailable
-  windows are omitted, and times are ISO timestamps. Expired readings report zero used with no projection.
+  windows are omitted, and times are ISO timestamps. Each window also gives `readAt`, when the provider reported the
+  reading (`null` when unknown), and `stale`, true when it is older than half an hour: a stale window has no
+  projection, so its verdict is `ok`. A window whose reset has passed is a new one: zero used, `resetsAt: null`, no
+  projection.
 - `mcp__savvy-progress__budget`: returns the string `budget: <compact JSON>` with the same summary, without changing
   the bar or state. Once a savvy Claude tier has a finished run, both tools add a last line,
   `estimates: <compact JSON>`: per tier its `runs`, mean `usd`, and that cost as a percent of `fiveHour` and `week`
   (`null` until observed).
 - `mcp__savvy-progress__decide`: records the user's yes (`family`, `answer` quoting their words) to costly work on a
   family whose verdict is `ask`, opening the budget gate until that family's next reset. Ignored from a worker.
+  The words must come from a user message after the gate's refusal: their own text, or an option they picked or wrote
+  in an AskUserQuestion dialog (the dialog's stored answers and notes only, never the question the model wrote, nor
+  any other tool's result).
   With `tier` (`fable`, `astra` or `carbon`) and optional `uses` (`1` by default, a number, or `"session"`) it records the yes
   to a launch of that plans-only top tier instead.
   Both tools use the latest observations already taken by the panel. The flow reads this summary on progress

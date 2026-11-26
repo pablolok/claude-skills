@@ -9,6 +9,9 @@ on the plan that sign-in carries (its "Gemini Models" group, with its own 5-hour
 Gemini work together the way Claude and Codex do: you orchestrate, Claude workers and Gemini relays take tasks of the
 same plan, and Gemini gives second opinions. Use it for a second opinion, for a self-contained task the user wants done
 on Gemini, or to move work off the Claude limits when the user asks; never move work there on your own to spare Claude.
+When the user has asked to balance the families (in words, or as their standing default), Gemini takes its share of
+the plan at each tier by the rules of "Balancing the families" in `references/routing.md`: calibrated tier for tier
+(Flash ↔ Light, Argon ↔ Medium, Hydrogen ↔ Careful and Heavy, Neon for a long review pass), split by headroom.
 - **Pick the intensity like a Claude tier**, the cheapest that gets it right: Flash (`gemini-3.8-flash`, effort low)
   for mechanical work, Argon (`gemini-4-argon`, medium) for standard work, Hydrogen (`gemini-4-hydrogen`, high) for
   delicate or unfamiliar work and for second opinions, Neon (`gemini-4-neon`, medium) beside Hydrogen for Careful-sized

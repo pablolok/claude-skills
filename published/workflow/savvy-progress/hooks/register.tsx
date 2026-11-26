@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionRateLimit } from 'claude-code'
+import type { AgentInfo, CommandRunInput, EngineInterface, Register, SessionMessage, SessionRateLimit } from 'claude-code'
 
 import type { AgentRun, BudgetPolicy, GateRefusal, BudgetSummary, CodexStatus, CodexTokens, Flow, GeminiStatus, ModelHints, Panel, Phase, PlannedTask, PlanFamily, PlanHistory, PlanProjection, PlanUsage, PlanWindow, PlanWindowKey, TierEstimates, UsageReadings, WindowHistory } from '../types'
 import { readsAsRecipe, saysWhyNotTools } from './fit'
@@ -157,6 +157,7 @@ const STRINGS = {
       '- Light: mechanical edits, builds, tests. Medium: standard work in a few files.',
       '- Careful: a clear approach, delicate to carry out. Heavy: unfamiliar or messy work, an unclear cause, a new or broken recipe.',
       "- Fable: plans only, on the user's yes.",
+      '- Codex, Gemini: Luna/Flash = Light, Terra/Argon = Medium, Sol/Hydrogen = Careful-Heavy; if the user asked to balance, share by headroom.',
       '- You: design, judging images, the final review.',
     ].join('\n'),
     gate: (g: GateText) =>
@@ -257,6 +258,7 @@ const STRINGS = {
       '- Light: modifiche meccaniche, build, test. Medium: lavoro ordinario in pochi file.',
       '- Careful: approccio chiaro, esecuzione delicata. Heavy: lavoro sconosciuto o confuso, causa non chiara, ricetta nuova o rotta.',
       "- Fable: solo piani, col sì dell'utente.",
+      "- Codex, Gemini: Luna/Flash = Light, Terra/Argon = Medium, Sol/Hydrogen = Careful-Heavy; in equilibrio: per margine.",
       '- Tu: il design, il giudizio sulle immagini, la revisione finale.',
     ].join('\n'),
     gate: (g: GateText) =>
@@ -424,7 +426,7 @@ const PICK_HOLD_MS = 5 * 60_000
 async function showPanel($: EngineInterface, isForced = false): Promise<void> {
   const since = await read($, picking)
   if (!isForced && since && (await $.clock.now()) - since < PICK_HOLD_MS) return
-  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, geminiCacheReadAt: _g, geminiStatusMtimes: _gm, ...usage } = await read($, usageReadings)
+  const { cacheReadAt: _, statusMtimes: __, claudeCacheReadAt: ___, geminiCacheReadAt: _g, geminiStatusMtimes: _gm, geminiProbeAt: _gp, ...usage } = await read($, usageReadings)
   const view = { flow: await read($, flow), agents: await read($, agents), now: hasPlans(usage) ? await $.clock.now() : await read($, now), models: shownModels(await read($, models)), usage }
   const last = await read($, shown)
   if (JSON.stringify(last) !== JSON.stringify(view)) await update($, shown, () => view)
@@ -792,14 +794,21 @@ const nonnegative = (n: unknown): n is number => typeof n === 'number' && Number
 // The providers' rolling window lengths determine the start from the reset.
 const PLAN_WINDOW_MINUTES: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 300, week: 10080 }
 const MINUTE_MS = 60_000
-// Recent slopes smooth the short window over 30 minutes and the week over six hours.
-const RECENT_SPAN_MS: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 30 * MINUTE_MS, week: 6 * 60 * MINUTE_MS }
-// Half a span is enough evidence; the first five minutes of a window are too noisy.
-const RECENT_MIN_COVERAGE = 0.5
+// Recent slopes smooth the short window over 30 minutes and the week over a whole day: people sleep, so a slope
+// of working hours alone, run on through the nights to the weekly reset, projected a busy session at many times the limit.
+const RECENT_SPAN_MS: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 30 * MINUTE_MS, week: 24 * 60 * MINUTE_MS }
+// Half a span is enough evidence for the short window; the week's slope needs nearly the whole day.
+const RECENT_MIN_COVERAGE: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 0.5, week: 0.9 }
 const PROJECTION_MIN_ELAPSED_MS = 5 * MINUTE_MS
-// One sample per minute bounds three-second Codex updates to at most 361 weekly samples.
-const HISTORY_BUCKET_MS = MINUTE_MS
-const HISTORY_MAX_SAMPLES = RECENT_SPAN_MS.week / HISTORY_BUCKET_MS + 1
+// The average pace never divides by less than an hour (short window) or a day (week): a window minutes old,
+// as Gemini's are when its windows start at first use, projected 3% of a week at 50 times the limit.
+const PROJECTION_FLOOR_MS: Readonly<Record<PlanWindowKey, number>> = { fiveHour: 60 * MINUTE_MS, week: 24 * 60 * MINUTE_MS }
+// One sample per minute for the short window, one per five minutes for the week: at most 31 and 289 samples.
+const HISTORY_BUCKET_MS: Readonly<Record<PlanWindowKey, number>> = { fiveHour: MINUTE_MS, week: 5 * MINUTE_MS }
+const historyMaxSamples = (key: PlanWindowKey): number => RECENT_SPAN_MS[key] / HISTORY_BUCKET_MS[key] + 1
+// A reading older than this says what the provider said then, not now: it can be wrong both ways (other
+// processes spent more, or the provider reset the window early), so it shows its age and decides no verdict.
+export const READING_STALE_MS = 30 * MINUTE_MS
 const PLAN_WINDOWS: readonly PlanWindowKey[] = ['fiveHour', 'week']
 const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex', 'gemini']
 const BUDGET_RED = '#D0453F'
@@ -817,8 +826,9 @@ const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, ke
   const reset = previous?.resetsAt !== value.resetsAt || Boolean(last && value.percentUsed < last.percentUsed)
   const samples = (reset ? [] : previous?.samples ?? []).filter(sample => sample.at >= at - RECENT_SPAN_MS[key] && sample.at <= at)
   const sample = { at, percentUsed: value.percentUsed, ...(nonnegative(spentUsd) ? { spentUsd } : {}) }
-  const sameMinute = samples.length && Math.floor(samples[samples.length - 1]!.at / HISTORY_BUCKET_MS) === Math.floor(at / HISTORY_BUCKET_MS)
-  return { resetsAt: value.resetsAt, samples: [...(sameMinute ? samples.slice(0, -1) : samples), sample].slice(-HISTORY_MAX_SAMPLES) }
+  const bucket = HISTORY_BUCKET_MS[key]
+  const sameBucket = samples.length && Math.floor(samples[samples.length - 1]!.at / bucket) === Math.floor(at / bucket)
+  return { resetsAt: value.resetsAt, samples: [...(sameBucket ? samples.slice(0, -1) : samples), sample].slice(-historyMaxSamples(key)) }
 }
 
 const READ_AT: Readonly<Record<PlanFamily, 'claudeReadAt' | 'codexReadAt' | 'geminiReadAt'>> = {
@@ -840,7 +850,7 @@ const recentPace = (history: WindowHistory | undefined, value: PlanWindow, key: 
   if (history?.resetsAt !== value.resetsAt) return undefined
   const samples = history?.samples.filter(sample => sample.at >= at - RECENT_SPAN_MS[key] && sample.at <= at) ?? []
   const first = samples[0], last = samples.at(-1)
-  if (!first || !last || last.at - first.at < RECENT_SPAN_MS[key] * RECENT_MIN_COVERAGE) return undefined
+  if (!first || !last || last.at - first.at < RECENT_SPAN_MS[key] * RECENT_MIN_COVERAGE[key]) return undefined
   const slope = (last.percentUsed - first.percentUsed) / (last.at - first.at)
   return nonnegative(slope) ? slope : undefined
 }
@@ -851,7 +861,7 @@ export const projectPlanWindow = (value: PlanWindow | undefined, key: PlanWindow
   const elapsed = at - (resetAt - PLAN_WINDOW_MINUTES[key] * MINUTE_MS)
   if (!Number.isFinite(resetAt) || !Number.isFinite(at) || resetAt <= at || elapsed < PROJECTION_MIN_ELAPSED_MS) return undefined
   const recent = recentPace(history, value, key, at)
-  const rate = recent ?? value.percentUsed / elapsed
+  const rate = recent ?? value.percentUsed / Math.max(elapsed, PROJECTION_FLOOR_MS[key])
   const projectedAtReset = value.percentUsed + rate * (resetAt - at)
   const fits = projectedAtReset <= 100
   // A window already exhausted reports now, including a recent plateau above 100%.
@@ -878,18 +888,26 @@ const windowVerdict = (policy: BudgetPolicy, key: PlanWindowKey, value: PlanWind
   return projection.fits ? 'ok' : policy === 'within' ? 'ask' : 'over'
 }
 
+// When the family's reading was observed: for Codex and Gemini the source's own timestamp, never when this session read the file.
+export const isStale = (readAt: number | undefined, at: number): boolean => readAt !== undefined && at - readAt > READING_STALE_MS
+
 export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary => {
   const summary: BudgetSummary = { claude: {}, codex: {}, gemini: {} }
   for (const family of PLAN_FAMILIES) {
     const policy = budgetPolicy(usage, family)
+    const readAt = usage[READ_AT[family]]
+    const stale = isStale(readAt, at)
     for (const key of PLAN_WINDOWS) {
       const value = usage[family]?.[key]
       if (!value) continue
-      const projection = projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
+      // A stale reading projects nothing and so decides no verdict; a passed reset is a new window whose reset is unknown.
+      const projection = stale ? undefined : projectPlanWindow(value, key, at, usage.history?.[family]?.[key])
       const verdict = windowVerdict(policy, key, value, projection, at)
-      summary[family][key] = { used: isReset(value, at) ? 0 : value.percentUsed, resetsAt: value.resetsAt ?? null,
+      const reset = isReset(value, at)
+      summary[family][key] = { used: reset ? 0 : value.percentUsed, resetsAt: reset ? null : value.resetsAt ?? null,
         projectedAtReset: projection?.projectedAtReset ?? null, exhaustsAt: projection?.exhaustsAt ?? null,
         pace: projection?.pace ?? null, policy, verdict,
+        readAt: readAt === undefined || !Number.isFinite(readAt) ? null : new Date(readAt).toISOString(), stale,
         ...(verdict === 'retier' || verdict === 'spend' ? { advice: PACE_ADVICE[verdict] } : {}) }
     }
   }
@@ -1209,7 +1227,7 @@ async function refreshCodexUsage($: EngineInterface, force = false): Promise<voi
     const refreshed = { ...prev, statuses, statusMtimes }
     return latest && (prev.codexUpdatedAt === undefined || latest.updatedAt > prev.codexUpdatedAt)
       ? { ...recordPlanUsage(refreshed, 'codex', latest.rateLimits, latest.updatedAt),
-          codexReadAt: at, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : refreshed
+          codexReadAt: latest.updatedAt, codexUpdatedAt: latest.updatedAt, codexSource: latest.source } : refreshed
   })
   await syncRelayRuns($)
 }
@@ -1324,9 +1342,51 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
     const refreshed = seen ? { ...prev, geminiStatuses: statuses, geminiStatusMtimes: statusMtimes } : prev
     return latest && (prev.geminiUpdatedAt === undefined || latest.updatedAt > prev.geminiUpdatedAt)
       ? { ...recordPlanUsage(refreshed, 'gemini', latest.rateLimits, latest.updatedAt),
-          geminiReadAt: at, geminiUpdatedAt: latest.updatedAt, geminiSource: latest.source } : refreshed
+          geminiReadAt: latest.updatedAt, geminiUpdatedAt: latest.updatedAt, geminiSource: latest.source } : refreshed
   })
   if (seen) await syncRelayRuns($)
+}
+
+// agy's own answer, when the Gemini reading is older than five minutes: relays write one only when they run, so a
+// reading two days old stood for the current week after Google had reset it. `agy -p /usage` calls no model and takes
+// a few seconds; it runs at most once per five minutes, never while one of this session's Gemini relays runs (that
+// relay's own snapshot is on its way), and only once a Gemini reading exists (no agy, no Gemini, nothing to reread).
+const GEMINI_REREAD_MS = 5 * MINUTE_MS
+const AGY_TIMEOUT_MS = 15_000
+
+// `~/.local/bin/agy` (agy.exe on Windows) where the installer puts it, for a host launched without it on PATH; else PATH's.
+async function agyPath($: EngineInterface): Promise<string> {
+  try {
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
+    if (home) {
+      const directory = `${home.replace(/[\\/]+$/, '')}/.local/bin`
+      const names = new Set((await $.fs.list(directory)).filter(f => f.kind === 'file' || f.isLink).map(f => f.name))
+      for (const name of ['agy.exe', 'agy']) if (names.has(name)) return `${directory}/${name}`
+    }
+  } catch { /* No such folder: PATH's agy. */ }
+  return 'agy'
+}
+
+export async function rereadGemini($: EngineInterface): Promise<void> {
+  const at = await $.clock.now()
+  const usage = await read($, usageReadings)
+  if (!hasPlan(usage.gemini) || (usage.geminiUpdatedAt !== undefined && at - usage.geminiUpdatedAt < GEMINI_REREAD_MS)) return
+  if ((await read($, agents)).some(a => a.geminiStatus && a.status === 'running')) return
+  let claimed = false
+  await update($, usageReadings, prev => {
+    claimed = prev.geminiProbeAt === undefined || at - prev.geminiProbeAt >= GEMINI_REREAD_MS
+    return claimed ? { ...prev, geminiProbeAt: at } : prev
+  })
+  if (!claimed) return
+  try {
+    const { exitCode, stdout } = await $.process.run([await agyPath($), '-p', '/usage', '--output-format', 'json'],
+      { stdin: '', timeoutMs: AGY_TIMEOUT_MS })
+    const plan = exitCode === 0 ? geminiUsageFrom(stdout) : undefined
+    if (!plan) return
+    const done = await $.clock.now()
+    await update($, usageReadings, prev => prev.geminiUpdatedAt !== undefined && prev.geminiUpdatedAt >= done ? prev
+      : { ...recordPlanUsage(prev, 'gemini', plan, done), geminiReadAt: done, geminiUpdatedAt: done, geminiSource: { name: 'agy', mtimeMs: done } })
+  } catch { /* Signed out, missing or slow: the reading keeps its age and, once stale, decides nothing. */ }
 }
 
 const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
@@ -1751,7 +1811,7 @@ export const planTile = (x: number, y: number, width: number, name: string, plan
     const time = formattedReset ? `  ${formattedReset}` : ''
     const suffix = value ? age : ''
     const available = width - PLAN_TEXT_INSET * 2
-    const candidate = projectionMarker(projectPlanWindow(value, key, at, options?.history?.[key]), policy, at, options)
+    const candidate = isStale(readAt, at) ? undefined : projectionMarker(projectPlanWindow(value, key, at, options?.history?.[key]), policy, at, options)
     // Drop the projection first; keep the existing reset and reading age whenever they fit.
     const marker = candidate && textWidth(percent + time + candidate.text + suffix, PLAN_TEXT_SIZE) <= available ? candidate : undefined
     const text = textWidth(percent + time + suffix, PLAN_TEXT_SIZE) <= available ? percent + time : percent
@@ -2147,6 +2207,7 @@ async function runBudgetCommand($: EngineInterface, e: CommandRunInput): Promise
 const formatBudgetText = (budget: BudgetSummary): string => `budget: ${JSON.stringify(budget)}`
 
 async function budgetLines($: EngineInterface): Promise<string> {
+  await rereadGemini($)
   const usage = await read($, usageReadings), at = await $.clock.now()
   const estimates = tierEstimates(await read($, agents), usage, at)
   return [formatBudgetText(budgetSummary(usage, at)),
@@ -2157,10 +2218,39 @@ async function readBudgetResult($: EngineInterface): Promise<{ result: string }>
   return { result: await budgetLines($) }
 }
 
-// What the user has written this session: user messages with text of their own (tool results are no words of theirs).
+// What the user picked or typed in an AskUserQuestion dialog: the values of its stored `answers` (and any notes in
+// `annotations`), never the result's text, which carries the question the model wrote.
+const askedAnswers = (record: unknown): string[] => {
+  const { answers, annotations } = (record && typeof record === 'object' ? record : {}) as { answers?: unknown; annotations?: unknown }
+  const values = (value: unknown): unknown[] => value && typeof value === 'object' ? Object.values(value) : []
+  return [...values(answers), ...values(annotations).map(note => (note as { notes?: unknown } | null)?.notes)]
+    .filter((text): text is string => typeof text === 'string' && Boolean(text.trim()))
+}
+
+// What the user has written this session, one entry per user message: their own text, or what they answered in an
+// AskUserQuestion dialog. Every other tool result is no words of theirs.
+export const userWordsOf = (messages: readonly SessionMessage[]): string[] => {
+  const asked = new Map<string, unknown>()
+  const said: string[] = []
+  for (const m of messages) {
+    if (m.role === 'assistant') {
+      for (const use of m.toolUses ?? []) if (use.tool === 'AskUserQuestion') asked.set(use.tool_use_id, use.result)
+      continue
+    }
+    if (!m.toolResults?.length) {
+      if (m.text.trim()) said.push(m.text)
+      continue
+    }
+    const answers = m.toolResults.filter(r => asked.has(r.tool_use_id) && !r.isError)
+      .flatMap(r => askedAnswers(r.result ?? asked.get(r.tool_use_id)))
+    if (answers.length) said.push(answers.join('\n'))
+  }
+  return said
+}
+
 async function userWords($: EngineInterface): Promise<string[]> {
   try {
-    return (await $.session.messages()).filter(m => m.role === 'user' && !m.toolResults?.length && m.text.trim()).map(m => m.text)
+    return userWordsOf(await $.session.messages())
   } catch {
     return []
   }
@@ -2296,7 +2386,7 @@ export const register: Register = (on, options) => {
       name: 'decide',
       description: 'Record the user\'s yes to costly work on a family whose budget verdict is ask: it opens the budget gate on that family\'s ' +
         'costly tiers (Fable, Heavy, Careful; Codex Sol, Astra; Gemini Hydrogen, Carbon) until the family\'s next reset. Call it only after the user said yes in chat, ' +
-        'quoting their words in answer; never on your own judgment. Main session only. ' +
+        'quoting their words in answer (an option they picked or wrote in AskUserQuestion counts, quoted as they chose it); never on your own judgment. Main session only. ' +
         "With tier (fable, astra or carbon) it instead records the user's yes to launching that top tier, which is for PLANS only: it holds for one launch " +
         'or resume by default, uses sets a number or "session" when the user\'s words allow more; it does not open the budget gate. ' +
         'With policy "pace" (and family) it instead records the user\'s standing word to keep working inside the budget by re-tiering, ' +
@@ -2379,6 +2469,7 @@ export const register: Register = (on, options) => {
         await refreshClaudeUsage($)
         await refreshCodexUsage($)
         await refreshGeminiUsage($)
+        void rereadGemini($).catch(() => undefined)
         const list = await read($, agents)
         if (list.some(a => a.status === 'running')) {
           const at = await $.clock.now()
@@ -2565,6 +2656,7 @@ export const register: Register = (on, options) => {
       await noteRefusal($, { tier: topTierKey(subagent, e.model)! })
       return { deny: topRefusal }
     }
+    if (isSavvy(subagent) && GATED_TIERS[tierOf(subagent)] === 'gemini') await rereadGemini($)
     const budgetRefusal = budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
     if (budgetRefusal) {
       await noteRefusal($, { family: GATED_TIERS[tierOf(subagent)]! })

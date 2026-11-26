@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.26.0] - 2026-11-26
+- Balancing the families: when the user asks to balance work (in words or as a standing default), every signed-in family takes its share tier for tier (Flash/Light, Argon/Medium, Hydrogen/Careful and Heavy, Neon for long reviews), split by budget headroom and said in the plan; an unrated Gemini model is unmeasured, not weaker; stale budget windows are reread, never planned on
+
+
 ## [1.25.0] - 2026-11-26
 - Quality skills: when the session has skills that set a bar for code, the orchestrator picks them while planning, requires them in every brief that writes code (each at its moment), keeps code off Light and Medium except dictated mechanical edits, checks the report names them, and applies the diff review and gates to its own commits; with none installed, nothing changes
 

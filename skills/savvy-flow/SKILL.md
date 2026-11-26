@@ -210,8 +210,10 @@ Heuristics:
 - Never delegate final judgment (section 5) to any tier. Design is delegated only as section 2 allows.
 - The tier sets the difficulty; **the capability the task depends on picks the family** when two could take it
   (narrative text, visible polish, terminal-heavy work, accumulating constraints, a second opinion's direction):
-  `references/routing.md`, read when planning. At the close of a flow, add what this flow showed about a family to
-  its "Observed in use".
+  `references/routing.md`, read when planning. When the user has asked to balance the families (in words, or as their
+  standing default), every signed-in family takes its share by that file's "Balancing the families": calibrated tier
+  for tier, split by each family's budget headroom, the split said in the plan. At the close of a flow, add what this
+  flow showed about a family to its "Observed in use".
 
 ### The Codex tier
 
@@ -321,7 +323,9 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   and the reset time, each to the minute in the user's local time, with the day when it is not today, and the time of
   the reading. The progress tool's timestamps (`resetsAt`, `exhaustsAt`, the gate's refusal) are UTC (`...Z`): read
   the machine's local time and offset first (the shell's date command), convert, and never present a UTC time as
-  local. For example: `Claude 5h: 62% at 14:05, runs out 16:40, resets 17:00`.
+  local. For example: `Claude 5h: 62% at 14:05, runs out 16:40, resets 17:00`. A window with `stale: true` is a
+  reading older than half an hour (`readAt` says when): give its time, plan on no projection from it, and read the
+  `budget` tool again (it rereads Gemini from `agy -p /usage`); a passed reset reads `used: 0` with `resetsAt: null`.
 - **A week projected past its limit is the scarcer budget**, even under `full`: a short window comes back in hours,
   the week in days. While it lasts, take that family's legwork one tier down (Careful work to Medium with a precise
   brief, Medium to Light), and ask before every Fable, Codex Astra or Gemini Carbon task, whatever was said for the short window (those tiers are plans only in any case).

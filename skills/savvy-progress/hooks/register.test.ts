@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
-import { budgetGate, budgetSummary, fitGate, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate } from './register'
+import { budgetGate, budgetSummary, fitGate, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate, userWordsOf } from './register'
 import { activityOf, isCountLeftOpen, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
 import { geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
 import { codexBody, crabBody, geminiBody, pixels, withBody } from './sprite'
@@ -1718,11 +1718,11 @@ test('a plan parser does not accept a malformed full run status', () => {
   expect(codexPlanFrom(JSON.stringify({ ...STATUS_ONE, totalTokenUsage: null }))).toBeUndefined()
 })
 
-test('a successful Codex reading persists the time it was read', async ($, on) => {
+test('a successful Codex reading persists the time Codex observed it, not the time the file was read', async ($, on) => {
   const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
   statusFiles(on)
   await start($)
-  expect(state.usage()).toMatchObject({ codex: READINGS.codex, codexReadAt: 10_000, codexUpdatedAt: 100 })
+  expect(state.usage()).toMatchObject({ codex: READINGS.codex, codexReadAt: 100, codexUpdatedAt: 100 })
 })
 
 test('an unchanged status never refreshes the saved reading age', async ($, on) => {
@@ -1730,7 +1730,7 @@ test('an unchanged status never refreshes the saved reading age', async ($, on) 
   statusFiles(on)
   await start($)
   await clock.advance(6000)
-  expect(state.usage().codexReadAt).toBe(0)
+  expect(state.usage().codexReadAt).toBe(100)
 })
 
 test('Codex usage survives a restart with no status directory or relays', async ($, on) => {
@@ -1773,7 +1773,7 @@ test('a newer plan snapshot replaces the persisted reading', async ($, on) => {
   files.files.snapshot = { text: JSON.stringify({ ...SNAPSHOT, rateLimits: { ...CODEX_LIMITS, primary: { ...CODEX_LIMITS.primary, used_percent: 57 } } }), mtimeMs: 300 }
   state.seed('usage', SAVED_CODEX)
   await start($)
-  expect(state.usage()).toMatchObject({ codex: { fiveHour: { percentUsed: 57 } }, codexReadAt: 10_000, codexUpdatedAt: 200 })
+  expect(state.usage()).toMatchObject({ codex: { fiveHour: { percentUsed: 57 } }, codexReadAt: 200, codexUpdatedAt: 200 })
 })
 
 test('a plan-only snapshot supplies usage before any relay runs', async ($, on) => {
@@ -2870,29 +2870,29 @@ test('recent five-hour pace starts at fifteen minutes of coverage', () => {
   expect(projectPlanWindow(plan.fiveHour, 'fiveHour', BUDGET_AT, notEnough.history?.claude?.fiveHour)?.pace).toBe('average')
 })
 
-test('weekly recent pace needs three hours and a plateau projects no further spending', () => {
+test('weekly recent pace needs most of a day and a plateau projects no further spending', () => {
   const plan = { week: budgetWindow(40, 'week') }
-  const previous = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 180 * MINUTE)
+  const previous = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 1296 * MINUTE)
   const usage = recordPlanUsage(previous, 'codex', plan, BUDGET_AT)
   expect(projectPlanWindow(plan.week, 'week', BUDGET_AT, usage.history?.codex?.week)).toEqual({
     projectedAtReset: 40, pace: 'recent', fits: true,
   })
-  const short = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 180 * MINUTE + 1)
+  const short = recordPlanUsage({ statuses: {} }, 'codex', plan, BUDGET_AT - 1296 * MINUTE + 1)
   expect(projectPlanWindow(plan.week, 'week', BUDGET_AT, recordPlanUsage(short, 'codex', plan, BUDGET_AT).history?.codex?.week)?.pace).toBe('average')
 })
 
-test('history is immutable, bounded by age and sampled once per minute even for frequent Codex files', () => {
+test('history is immutable, bounded by age and sampled once per minute (week: five) even for frequent Codex files', () => {
   const original: UsageReadings = { statuses: {} }
   let usage = original
   const plan = { fiveHour: budgetWindow(10), week: budgetWindow(10, 'week') }
-  for (let seconds = 0; seconds <= 7 * 60 * 60; seconds += 3) {
-    usage = recordPlanUsage(usage, 'codex', plan, BUDGET_AT - 7 * 60 * MINUTE + seconds * 1000)
+  for (let seconds = 0; seconds <= 25 * 60 * 60; seconds += 3) {
+    usage = recordPlanUsage(usage, 'codex', plan, BUDGET_AT - 25 * 60 * MINUTE + seconds * 1000)
   }
   expect(original).toEqual({ statuses: {} })
   expect(usage.history?.codex?.fiveHour?.samples.length).toBeLessThanOrEqual(31)
-  expect(usage.history?.codex?.week?.samples.length).toBeLessThanOrEqual(361)
+  expect(usage.history?.codex?.week?.samples.length).toBeLessThanOrEqual(289)
   expect(usage.history?.codex?.fiveHour?.samples[0]?.at).toBeGreaterThanOrEqual(BUDGET_AT - 30 * MINUTE)
-  expect(usage.history?.codex?.week?.samples[0]?.at).toBeGreaterThanOrEqual(BUDGET_AT - 360 * MINUTE)
+  expect(usage.history?.codex?.week?.samples[0]?.at).toBeGreaterThanOrEqual(BUDGET_AT - 1440 * MINUTE)
 })
 
 test('each window clears its own history on a changed reset or decreasing percentage', () => {
@@ -2921,13 +2921,13 @@ test('the budget summary exposes per-window values and user policy verdicts', ()
   expect(budgetSummary(usage, BUDGET_AT)).toEqual({
     claude: {
       fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
-        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'within', verdict: 'ask' },
-      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'within', verdict: 'ok' },
+        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'within', verdict: 'ask', readAt: null, stale: false },
+      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'within', verdict: 'ok', readAt: null, stale: false },
     },
     codex: {
       fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
-        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over' },
-      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok' },
+        exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over', readAt: null, stale: false },
+      week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok', readAt: null, stale: false },
     },
     gemini: {},
   })
@@ -2936,8 +2936,9 @@ test('the budget summary exposes per-window values and user policy verdicts', ()
 test('budget summary leaves absent windows out and unknown projections null', () => {
   expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {}, gemini: {} })
   expect(budgetSummary({ statuses: {}, claude: { fiveHour: { percentUsed: 12 } }, codex: { week: budgetWindow(90, 'week', 10081) } }, BUDGET_AT)).toEqual({
-    claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
-    codex: { week: { used: 0, resetsAt: budgetWindow(90, 'week', 10081).resetsAt, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok' } },
+    claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok', readAt: null, stale: false } },
+    // A passed reset is a new window: nothing used yet, its reset not known until the next reading.
+    codex: { week: { used: 0, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok', readAt: null, stale: false } },
     gemini: {},
   })
 })
@@ -3962,7 +3963,7 @@ test('a Gemini reading gives the header its tile and stamps its own reading age'
   const { state } = engine(on, { infos: [] }, 10_000, { HOME: '/home/worker' })
   geminiFiles(on)
   await start($)
-  expect(state.usage()).toMatchObject({ gemini: GEMINI_PLAN, geminiReadAt: 10_000, geminiUpdatedAt: 100 })
+  expect(state.usage()).toMatchObject({ gemini: GEMINI_PLAN, geminiReadAt: 100, geminiUpdatedAt: 100 })
   expect(state.usage().codexReadAt).toBeUndefined()
   const { header } = await panelOf($)
   expect(header).toContain('Gemini · plan · pace')
@@ -4077,8 +4078,8 @@ test('the budget summary gives Gemini its own windows and policy verdicts', () =
   const usage: UsageReadings = { statuses: {}, gemini: { fiveHour: budgetWindow(), week: budgetWindow(20, 'week') }, policies: { gemini: 'full' } }
   expect(budgetSummary(usage, BUDGET_AT).gemini).toEqual({
     fiveHour: { used: 60, resetsAt: budgetWindow().resetsAt, projectedAtReset: 120,
-      exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over' },
-    week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok' },
+      exhaustsAt: new Date(BUDGET_AT + 100 * MINUTE).toISOString(), pace: 'average', policy: 'full', verdict: 'over', readAt: null, stale: false },
+    week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok', readAt: null, stale: false },
   })
   expect(budgetSummary(usage, BUDGET_AT).codex).toEqual({})
 })
@@ -4232,6 +4233,8 @@ test('a call that sets tasks ends with the routing card, short, after the budget
   expect(card.length).toBeLessThanOrEqual(700)
   expect(card).toContain('- Tools')
   expect(card).toContain('judging images')
+  // The other families keep their tier twins on the card, so a resumed plan does not drift back to Claude alone.
+  expect(card).toContain('Sol/Hydrogen = Careful-Heavy')
 })
 
 test('the routing card speaks the panel language, within the same bound', { options: { language: 'it' } }, async ($, on) => {
@@ -4559,4 +4562,196 @@ test('an open count is left open only on a finished run, never on a failed or a 
   expect(isCountLeftOpen(run('w', { status: 'done', pendingCompletion: true, stepDone: 3, stepTotal: 5 }))).toBe(false)
   expect(isCountLeftOpen(run('w', { status: 'done', stepDone: 5, stepTotal: 5 }))).toBe(false)
   expect(isCountLeftOpen(run('w', { status: 'done' }))).toBe(false)
+})
+
+// ---------------------------------------------------------------------------
+// CS-20: the limits the panel and the budget tool show are the providers' own, and no verdict is inflated.
+
+const HOUR = 60 * MINUTE
+// The kit has no toBeCloseTo: projections are floating point, so compare to a millionth.
+const expectNear = (actual: number | null | undefined, expected: number): void =>
+  expect(Math.round((actual ?? NaN) * 1e6) / 1e6).toBe(Math.round(expected * 1e6) / 1e6)
+// A window that started `minutesAgo` minutes before BUDGET_AT, as Gemini's do at first use.
+const freshWindow = (percentUsed: number, key: keyof PlanUsage, minutesAgo: number) => budgetWindow(percentUsed, key, minutesAgo)
+
+test('case 2: Gemini windows eight minutes old project the pace of an hour and a day, so 10% and 3% ask nothing', () => {
+  // Live 2026-11-26: 5h 10% → 502%, week 3% → 5065%, ask on Hydrogen and Neon.
+  const usage: UsageReadings = { statuses: {}, policies: { gemini: 'within' },
+    gemini: { fiveHour: freshWindow(10, 'fiveHour', 8), week: freshWindow(3, 'week', 8) } }
+  const summary = budgetSummary(usage, BUDGET_AT).gemini
+  expect(summary.fiveHour).toMatchObject({ used: 10, verdict: 'ok', exhaustsAt: null })
+  expectNear(summary.fiveHour?.projectedAtReset, 10 + 10 / 60 * 292)
+  expect(summary.week).toMatchObject({ used: 3, verdict: 'ok', exhaustsAt: null })
+  expectNear(summary.week?.projectedAtReset, 3 + 3 / 1440 * 10072)
+  for (const type of ['savvy-flow:savvy-gemini-hydrogen', 'savvy-flow:savvy-gemini-neon']) expect(budgetGate(type, usage, [], BUDGET_AT)).toBeUndefined()
+})
+
+test('case 3: Claude at 2% of a week begun 105 minutes ago projects 16%, not 240%', () => {
+  const usage: UsageReadings = { statuses: {}, policies: { claude: 'within' },
+    claude: { fiveHour: freshWindow(14, 'fiveHour', 63), week: freshWindow(2, 'week', 105) } }
+  const summary = budgetSummary(usage, BUDGET_AT).claude
+  expectNear(summary.week?.projectedAtReset, 2 + 2 / 1440 * (10080 - 105))
+  expect(summary.week).toMatchObject({ verdict: 'ok', exhaustsAt: null, pace: 'average' })
+  // The short window keeps its own pace once it is an hour old: 14% in 63 minutes is 67% at reset, as before.
+  expectNear(summary.fiveHour?.projectedAtReset, 14 * 300 / 63)
+  expect(budgetGate('savvy-flow:savvy-heavy', usage, [], BUDGET_AT)).toBeUndefined()
+})
+
+test('case 3: a six-hour session of parallel workers early in the week is not run on through the nights', () => {
+  let usage: UsageReadings = { statuses: {}, policies: { claude: 'within' } }
+  for (let minutes = 360; minutes >= 0; minutes -= 5) {
+    usage = recordPlanUsage(usage, 'claude', { week: freshWindow(8 - 8 * minutes / 360, 'week', 360) }, BUDGET_AT - minutes * MINUTE)
+  }
+  const week = budgetSummary(usage, BUDGET_AT).claude.week
+  // Six hours of samples are no day's slope: the average over a whole day, 8% → 62%, not 8%/6h × 162h = 224%.
+  expect(week).toMatchObject({ pace: 'average', verdict: 'ok' })
+  expectNear(week?.projectedAtReset, 8 + 8 / 1440 * (10080 - 360))
+})
+
+test('a real overrun still asks: 40% in the first ten hours, and a day of faster spending three days in', () => {
+  const early: UsageReadings = { statuses: {}, policies: { claude: 'within' }, claude: { week: freshWindow(40, 'week', 600) } }
+  expect(budgetSummary(early, BUDGET_AT).claude.week).toMatchObject({ verdict: 'ask', pace: 'average' })
+  expect(budgetGate('savvy-flow:savvy-heavy', early, [], BUDGET_AT)).toContain('Budget gate')
+  let usage: UsageReadings = { statuses: {}, policies: { claude: 'within' } }
+  for (let hours = 22; hours >= 0; hours--) {
+    usage = recordPlanUsage(usage, 'claude', { week: freshWindow(30 - 20 * hours / 22, 'week', 4320) }, BUDGET_AT - hours * HOUR)
+  }
+  // The day's slope, 20% in 22 hours, runs to 117% at reset; the average since the start would say 70%.
+  const week = budgetSummary(usage, BUDGET_AT).claude.week
+  expect(week).toMatchObject({ pace: 'recent', verdict: 'ask' })
+  expectNear(week?.projectedAtReset, 30 + 20 / 22 * 96)
+})
+
+const STALE_GEMINI: UsageReadings = { statuses: {}, policies: { gemini: 'within' },
+  // The panel's last reading, two days old: week 50% to a reset Google has since moved, the 5h window long reset.
+  gemini: { fiveHour: { percentUsed: 36, resetsAt: new Date(BUDGET_AT - 2 * 1440 * MINUTE + 4 * HOUR).toISOString() },
+    week: { percentUsed: 98, resetsAt: new Date(BUDGET_AT + 4 * 1440 * MINUTE).toISOString() } },
+  geminiReadAt: BUDGET_AT - 2 * 1440 * MINUTE, geminiUpdatedAt: BUDGET_AT - 2 * 1440 * MINUTE }
+
+test('case 1: a two-day-old reading shows its age and decides nothing; a passed reset is a new window', () => {
+  const summary = budgetSummary(STALE_GEMINI, BUDGET_AT).gemini
+  expect(summary.week).toMatchObject({ used: 98, stale: true, projectedAtReset: null, verdict: 'ok',
+    readAt: new Date(BUDGET_AT - 2 * 1440 * MINUTE).toISOString() })
+  expect(summary.fiveHour).toMatchObject({ used: 0, resetsAt: null, stale: true, verdict: 'ok' })
+  expect(budgetGate('savvy-flow:savvy-gemini-hydrogen', STALE_GEMINI, [], BUDGET_AT)).toBeUndefined()
+  const tile = planTile(0, 0, 600, 'Gemini', STALE_GEMINI.gemini, '#000', BUDGET_AT, STALE_GEMINI.geminiReadAt, BUDGET_FORMAT)
+  expect(tile).toContain('2d ago')
+  expect(tile).not.toContain('↯')
+  expect(tile).not.toContain('→')
+  // Half an hour is still current.
+  expect(budgetSummary({ ...STALE_GEMINI, geminiReadAt: BUDGET_AT - 30 * MINUTE }, BUDGET_AT).gemini.week?.stale).toBe(false)
+})
+
+test('case 1: a status file written two days ago is a reading two days old, however recently the panel read it', async ($, on) => {
+  const twoDays = 2 * 1440 * MINUTE
+  const { state } = engine(on, { infos: [] }, twoDays + 10_000, { HOME: '/home/worker' })
+  geminiFiles(on, { ...GEMINI_ONE, updatedAt: 10_000 })
+  await start($)
+  expect(state.usage()).toMatchObject({ geminiReadAt: 10_000, geminiUpdatedAt: 10_000 })
+  expect((await panelOf($)).header).toContain('2d ago')
+})
+
+// `agy -p /usage` as it answered at 21:45Z on 2026-11-26: 84% of the 5 hours left and 96% of the week.
+const agyNow = (fiveHourLeft: number, weekLeft: number) => JSON.stringify({ ...AGY_USAGE, command: { ...AGY_USAGE.command, data: { ...AGY_USAGE.command.data,
+  groups: [{ name: 'Gemini Models', buckets: [
+    { id: 'gemini-weekly', window: 'weekly', remaining_fraction: weekLeft, reset_time: new Date(BUDGET_AT + 7 * 1440 * MINUTE - 20 * MINUTE).toISOString() },
+    { id: 'gemini-5h', window: '5h', remaining_fraction: fiveHourLeft, reset_time: new Date(BUDGET_AT + 280 * MINUTE).toISOString() },
+  ] }, AGY_USAGE.command.data.groups[1]] } } })
+
+const agyAnswers = (on: On, answer: () => string | Error) => {
+  const calls: { argv: readonly string[]; stdin?: string; timeoutMs?: number }[] = []
+  on('process.run', ($, e) => {
+    calls.push({ argv: e.argv, stdin: e.init?.stdin, timeoutMs: e.init?.timeoutMs })
+    const out = answer()
+    if (out instanceof Error) throw out
+    return { value: { exitCode: 0, stdout: out, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
+  return calls
+}
+
+test('case 1: the budget tool rereads a stale Gemini reading from agy and shows what agy says', async ($, on) => {
+  const { state } = budgetEngine(on)
+  const calls = agyAnswers(on, () => agyNow(0.84, 0.96))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  const gemini = JSON.parse((await readBudget($)).result.split('\n')[0]!.slice('budget: '.length)).gemini
+  expect(calls).toEqual([{ argv: ['agy', '-p', '/usage', '--output-format', 'json'], stdin: '', timeoutMs: 15_000 }])
+  expect(gemini.fiveHour).toMatchObject({ used: 16, stale: false, readAt: new Date(BUDGET_AT).toISOString(), verdict: 'ok' })
+  expect(gemini.week).toMatchObject({ used: 4, stale: false, verdict: 'ok' })
+  expect(state.usage()).toMatchObject({ geminiUpdatedAt: BUDGET_AT, geminiSource: { name: 'agy' } })
+  // Once fresh, no second run within five minutes.
+  await readBudget($)
+  expect(calls).toHaveLength(1)
+})
+
+test('a failed agy keeps the stale reading out of the verdict and is not retried for five minutes', async ($, on) => {
+  const { state, clock } = budgetEngine(on)
+  const calls = agyAnswers(on, () => new Error('agy: command not found'))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  const first = JSON.parse((await readBudget($)).result.slice('budget: '.length)).gemini
+  expect(first.week).toMatchObject({ used: 98, stale: true, verdict: 'ok' })
+  await readBudget($)
+  expect(calls).toHaveLength(1)
+  await clock.advance(5 * MINUTE)
+  await readBudget($)
+  expect(calls).toHaveLength(2)
+})
+
+test('the gate rereads Gemini before it judges a Gemini tier, and agy is never asked while a Gemini relay runs', async ($, on) => {
+  const { state } = budgetEngine(on)
+  launching($, on)
+  const calls = agyAnswers(on, () => agyNow(0.97, 0.99))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  expect((await launch($, 'review', { subagent_type: 'savvy-flow:savvy-gemini-hydrogen' })).deny).toBeUndefined()
+  expect(calls).toHaveLength(1)
+  expect(state.usage().gemini?.week?.percentUsed).toBe(1)
+  state.seed('usage', { ...STALE_GEMINI, geminiProbeAt: undefined })
+  state.seed(AGENTS, [run('relay', { type: 'savvy-gemini-argon', geminiStatus: 'gem-live', status: 'running' })])
+  await readBudget($)
+  expect(calls).toHaveLength(1)
+})
+
+test('agy is looked for in ~/.local/bin first, agy.exe on Windows', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, BUDGET_AT, { USERPROFILE: 'C:\\Users\\worker' })
+  on('fs.list', ($, e) => ({ value: e.path.replace(/\\/g, '/').endsWith('/.local/bin')
+    ? [{ name: 'agy.exe', kind: 'file', size: 1, mtimeMs: 0, isLink: false }] : [] }))
+  on('session.messages', () => ({ value: [] }))
+  on('session.usage', () => ({ value: { startedAt: BUDGET_AT, context: { window: 1_000_000 }, rateLimits: [] } }))
+  const calls = agyAnswers(on, () => agyNow(0.84, 0.96))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  await readBudget($)
+  expect(calls[0]?.argv[0]?.replace(/\\/g, '/')).toBe('C:/Users/worker/.local/bin/agy.exe')
+})
+
+// Case 4: the transcript an AskUserQuestion answer leaves, as Claude Code stores it.
+const asked = (id: string, question: string, answer: string) => [
+  { role: 'assistant' as const, text: '', toolUses: [{ tool_use_id: id, tool: 'AskUserQuestion', input: { questions: [{ question }] } }] },
+  { role: 'user' as const, text: '', toolUses: [], toolResults: [{ tool_use_id: id, isError: false,
+    text: `The user answered: "${question}"="${answer}". You can now continue with the user's answers in mind.`,
+    result: { questions: [{ question }], answers: { [question]: answer } } }] },
+]
+
+test('case 4: an option the user picked in AskUserQuestion is their words; the question and other tool results are not', () => {
+  const messages = [
+    { role: 'user' as const, text: 'go on', toolUses: [] },
+    ...asked('toolu_ask', 'Gemini asks: say yes to keep using Hydrogen?', 'No, use Argon'),
+    { role: 'assistant' as const, text: '', toolUses: [{ tool_use_id: 'toolu_bash', tool: 'Bash', input: {} }] },
+    { role: 'user' as const, text: '', toolUses: [], toolResults: [{ tool_use_id: 'toolu_bash', isError: false, text: 'yes', result: { answers: { q: 'yes' } } }] },
+  ]
+  expect(userWordsOf(messages as never)).toEqual(['go on', 'No, use Argon'])
+})
+
+test('case 4: decide records a yes picked in AskUserQuestion after the gate refused', async ($, on) => {
+  const { state, seed } = gatedLaunch($, on, askUsage())
+  await start($)
+  seed()
+  expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
+  // The model's own question holds the word yes; quoting it is refused, the user's pick is recorded.
+  ;(transcript as unknown[]).push(...asked('toolu_gate', 'Claude asks: yes, go on with Heavy, or move to Medium?', 'Sì, procedi con Heavy'))
+  expect((await decideWith($, { family: 'claude', answer: 'yes, go on with Heavy' })).deny).toBeDefined()
+  expect((await decideWith($, { family: 'claude', answer: 'Sì, procedi con Heavy' })).result).toBe(`ok: Claude go until ${budgetWindow().resetsAt}`)
+  expect(state.usage().decisions?.claude).toMatchObject({ words: 'Sì, procedi con Heavy' })
 })

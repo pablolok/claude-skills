@@ -374,6 +374,17 @@ class TestModels(unittest.TestCase):
         self.assertIn("never move work there on your own to spare Claude", gemini)
         self.assertIn("each launch on the user's explicit yes recorded with `decide` (`tier: \"carbon\"`)", gemini)
 
+    def test_a_balanced_plan_gives_every_signed_in_family_its_share_tier_for_tier(self) -> None:
+        routing = _flat(_read(PUBLISHED / "references" / "routing.md"))
+        gemini = _flat(_read(PUBLISHED / GEMINI))
+        self.assertIn("## Balancing the families", routing)
+        self.assertIn("Light ↔ Gemini Flash ↔ Codex Luna; Medium ↔ Gemini Argon ↔ Codex Terra", routing)
+        self.assertIn("U means unmeasured, not weaker.", routing)
+        self.assertIn("the families' weekly projections at reset come out close to one another", routing)
+        self.assertIn("a window marked `stale: true` is an old reading", routing)
+        self.assertIn("Gemini takes its share of the plan at each tier", gemini)
+        self.assertIn("every signed-in family takes its share", self.text)
+
     def test_a_gemini_second_opinion_runs_tests_and_read_only_git_but_writes_nothing(self) -> None:
         gemini = _flat(_read(PUBLISHED / GEMINI))
         self.assertIn("a second opinion runs read-only, with `--sandbox` and settings that deny every file write "

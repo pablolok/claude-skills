@@ -126,6 +126,10 @@ export type WindowBudget = {
   verdict: 'ok' | 'over' | 'ask' | 'retier' | 'spend'
   /** Under pace, with retier or spend: what to do about it. */
   advice?: string
+  /** When the provider reported this reading (ISO), null when unknown. */
+  readAt: string | null
+  /** Older than half an hour: shown with its age, no projection, so the verdict is ok until a fresh reading. */
+  stale: boolean
 }
 export type BudgetSummary = Record<PlanFamily, Partial<Record<PlanWindowKey, WindowBudget>>>
 /** The user's yes to costly work despite an ask verdict, until the family's soonest reset. */
@@ -186,7 +190,7 @@ export type UsageReadings = {
   claudeReadAt?: number
   claudeCacheReadAt?: number
   codex?: PlanUsage
-  /** Last valid Codex plan observation, retained when status files disappear. */
+  /** When the last valid Codex plan observation was made (its status file's updatedAt), retained when status files disappear. */
   codexReadAt?: number
   codexUpdatedAt?: number
   codexSource?: { name: string; mtimeMs: number }
@@ -194,7 +198,7 @@ export type UsageReadings = {
   statusMtimes?: Record<string, number>
   cacheReadAt?: number
   gemini?: PlanUsage
-  /** Last valid Gemini plan observation, retained when status files disappear. */
+  /** When the last valid Gemini plan observation was made (its file's updatedAt, or agy's answer), retained when status files disappear. */
   geminiReadAt?: number
   geminiUpdatedAt?: number
   geminiSource?: { name: string; mtimeMs: number }
@@ -202,6 +206,8 @@ export type UsageReadings = {
   geminiStatuses?: Record<string, GeminiStatus>
   geminiStatusMtimes?: Record<string, number>
   geminiCacheReadAt?: number
+  /** Last time this session asked `agy -p /usage` for a fresh Gemini reading. */
+  geminiProbeAt?: number
 }
 
 // What the agents panel shows, copied from the live values once a second: the
