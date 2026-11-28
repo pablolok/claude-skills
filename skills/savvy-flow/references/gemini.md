@@ -79,8 +79,11 @@ Rules of the tier:
 - **The quota is small for Claude models.** Measured on 2026-11-28 with one trivial task (read a file, answer in a
   word): `claude-opus-5-5` high, 14.4k tokens, moved the 5-hour window by 3.3 % and the week by 1.6 %;
   `claude-sonnet-5-5` low, 12.3k tokens, by 1.4 % and 0.7 %; `gpt-oss-120b` medium, 9.5k tokens, by 0.04 % and 0.02 %.
-  The week holds about two full 5-hour windows, so it is the binding limit: give this tier short, self-contained
-  tasks (a handful of Opus runs per window), never long loops, and keep GPT-OSS for the bulk of mechanical work.
+  That is about 440k Opus tokens or 900k Sonnet tokens per 5-hour window as agy counts them (input and output,
+  cache reads apart), and the week holds about two such windows, so it is the binding limit. One Careful-sized task,
+  which often reads a few hundred thousand tokens, can take most of a window: give this tier short, self-contained
+  tasks sized by that cost, one Opus task at a time, never long loops, and keep GPT-OSS for the bulk of mechanical
+  work. Its percent headroom is not comparable to the other families' when balancing (`references/routing.md`).
 - **Same family as Claude.** Opus and Sonnet through agy are Anthropic's models: their check of a Claude worker's
   diff is not a second opinion from another family (that stays Codex Sol or Gemini Hydrogen). They move load off the
   Claude plan and off Gemini's windows, nothing more.

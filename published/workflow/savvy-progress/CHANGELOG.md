@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.27.1] - 2026-11-28
+- an account with no Claude and GPT group reads only the newest Gemini status file again; the agy /usage reread is tested
+
+
 ## [1.27.0] - 2026-11-28
 - the agy family — Antigravity's "Claude and GPT models" quota read beside Gemini's from the same status files and agy /usage, its own tile, budget, gate and /savvy-budget agy; the agy relays' rows and tokens
 

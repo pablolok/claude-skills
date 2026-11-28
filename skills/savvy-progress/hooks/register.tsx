@@ -1370,8 +1370,8 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
       wanted.add('snapshot')
       for (const file of files) {
         const name = file.name.slice(0, -5)
-        // Older files than both newest readings add nothing; a file with no agy group never ends the search for one.
-        if (!wanted.has(name) && latest && latestAgy && file.mtimeMs <= Math.min(latest.updatedAt, latestAgy.updatedAt)) continue
+        // An older file adds nothing: agy's /usage writes both groups into every file, the agy one when the account has it.
+        if (!wanted.has(name) && latest && file.mtimeMs <= latest.updatedAt) continue
         const cached = previous.geminiStatuses?.[name]
         let status = cached
         let plan = cached?.rateLimits ? { rateLimits: cached.rateLimits, updatedAt: cached.updatedAt } : undefined

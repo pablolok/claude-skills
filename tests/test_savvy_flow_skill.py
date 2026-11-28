@@ -251,6 +251,8 @@ class TestWorkers(unittest.TestCase):
         self.assertIn("is not a second opinion from another family", gemini)
         self.assertIn("budget family `agy`", gemini)
         self.assertIn("Careful ↔ Gemini Hydrogen (Neon for a long review pass) ↔ Codex Sol ↔ Agy Opus", routing)
+        self.assertIn("The `agy` family's percent is not comparable to the others'", routing,
+                      "a free agy window is small for Opus and Sonnet: headroom alone would send it the largest share")
 
     def test_every_worker_closes_its_step_count_before_reporting(self) -> None:
         # The report itself is rarely reported as a step: without a closing call a finished worker stays at 5/7.

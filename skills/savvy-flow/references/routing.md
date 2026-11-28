@@ -91,7 +91,10 @@ that sends nearly every task to Claude while Gemini or Codex has room is the fai
    of a kind become evidence for "Observed in use".
 3. **Share by headroom.** Read the `budget` summary for every family before the split. Give the self-contained tasks
    so the families' weekly projections at reset come out close to one another, each at or under 100 %: the family with
-   the most room takes the most. A family projected over 100 % takes nothing costly until it fits; a window marked
+   the most room takes the most. The `agy` family's percent is not comparable to the others': its windows are small
+   for Opus and Sonnet (about 440k Opus or 900k Sonnet tokens per 5-hour window, `references/gemini.md`), so a free
+   `agy` window still takes only the Opus and Sonnet tasks that fit it by that measured cost, never the largest share;
+   Agy GPT costs next to nothing there. A family projected over 100 % takes nothing costly until it fits; a window marked
    `stale: true` is an old reading, so read it again (the `budget` tool rereads Gemini and `agy`) before planning on it, and
    never take an old or reset window as full.
 4. **Keep topics whole.** One family per topic (one worker's context is not rebuilt in another family): balance

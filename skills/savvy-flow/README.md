@@ -137,7 +137,7 @@ The same sign-in also serves Claude Opus 5.5, Claude Sonnet 5.5 and GPT-OSS 120B
 them, the relays `savvy-agy-opus` (Careful-sized work, effort high, no xhigh), `savvy-agy-sonnet` (Medium) and
 `savvy-agy-gpt` (Light, mechanical work) run them exactly as the Gemini relays run Gemini. The savvy-progress panel
 budgets that quota as its own family, `agy`. The quota is small for Claude models (one trivial Opus run took about
-3 % of the 5-hour window), so the tier takes short, self-contained tasks, and Opus or Sonnet through it never counts
+3 % of the 5-hour window, about 440k Opus tokens per window), so the tier takes short, self-contained tasks, and Opus or Sonnet through it never counts
 as a second opinion from another family on Claude work. The rules are in `references/gemini.md`.
 
 ## Themes

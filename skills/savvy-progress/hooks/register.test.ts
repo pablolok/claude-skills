@@ -4845,6 +4845,28 @@ test('a Gemini status file sets the agy family\'s plan beside Gemini\'s', async 
   expect(planUsageText(state.usage(), Date.parse('2026-11-24T00:00:00Z'))).toContain('Agy 50/0%')
 })
 
+test('an account with no Claude and GPT group still reads only the newest status file, and gets no agy plan', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  const geminiOnly = { ...AGY_USAGE.command.data, groups: [AGY_USAGE.command.data.groups[0]] }
+  const files = geminiFiles(on, { ...GEMINI_ONE, rateLimits: geminiOnly })
+  files.files.older = { text: JSON.stringify({ ...GEMINI_ONE, rateLimits: geminiOnly, updatedAt: 50 }), mtimeMs: 60 }
+  state.seed(AGENTS, [geminiRelay()])
+  await start($)
+  expect(files.reads).toEqual(['gem-one'])
+  expect(state.usage().gemini).toEqual(GEMINI_PLAN)
+  expect(state.usage().agy).toBeUndefined()
+})
+
+test("agy's /usage reread records the agy family beside Gemini", async ($, on) => {
+  const { state } = budgetEngine(on)
+  agyAnswers(on, () => agyNow(0.77, 0.94))
+  await start($)
+  state.seed('usage', STALE_GEMINI)
+  await readBudget($)
+  expect(state.usage().agy).toEqual(AGY_PLAN)
+  expect(state.usage().agyReadAt).toBe(BUDGET_AT)
+})
+
 const AGY_ASKS: UsageReadings = { statuses: {}, agy: { fiveHour: budgetWindow() }, policies: { agy: 'within' } }
 
 test("the gate holds agy's Claude relays while agy asks, and only them", () => {

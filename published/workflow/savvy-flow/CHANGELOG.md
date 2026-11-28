@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.27.1] - 2026-11-28
+- the agy family's percent headroom is not comparable when balancing: its Opus and Sonnet tasks are sized by the measured cost (about 440k Opus or 900k Sonnet tokens per 5-hour window)
+
+
 ## [1.27.0] - 2026-11-28
 - relays for the Claude and GPT models of the Antigravity CLI (savvy-agy-opus / sonnet / gpt) on its own "Claude and GPT models" quota, documented and balanced as a family of their own (budget family agy)
 
