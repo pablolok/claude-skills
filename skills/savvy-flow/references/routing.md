@@ -39,10 +39,13 @@ S strong, G good, W weaker within this pool, U unknown. Letters name the sources
 | Gemini Neon (gemini-4-neon) | U | U | U | U | U | U | U | U |
 | Gemini Hydrogen (gemini-4-hydrogen) | U | U | U | U | U | U | U | U |
 | Gemini Carbon (gemini-4-carbon) | U | U | U | U | U | U | U | U |
+| Agy GPT (gpt-oss-120b) | U | U | U | U | U | U | U | U |
 
 The Gemini rows stay U until a source is read for them or "Observed in use" has evidence; until then a Gemini
 family is picked for a second opinion from another family, because the user asked for it, or for its share when the
-user asked to balance the families (below), not for a rating. U means unmeasured, not weaker.
+user asked to balance the families (below), not for a rating. U means unmeasured, not weaker. Agy Opus and Agy
+Sonnet are the Opus 5.5 and Sonnet 5.5 rows above, run through the Antigravity CLI on its own quota; Agy GPT is
+OpenAI's open-weight GPT-OSS 120B, unrated.
 
 Numbers behind the main rules: SWE Atlas Fable 80.5, Opus 77.4, Astra 69.4, Sol 65.9 [F]; Arena creative writing
 Opus 1517, Astra 1451, Sol 1449 [H]; Terminal-Bench 4.0 Sonnet 70.6, Opus 66.4 [B]; MultiChallenge Sol 81.95, Terra
@@ -65,7 +68,8 @@ At the tier the task needs:
 9. Cheap narrow work → Light (Sonnet) or Codex Luna; Haiku leads Luna on terminal work [C].
 10. A second opinion comes from another family, in the direction where the families differ: Codex Sol or Gemini
     Hydrogen checks a Claude implementation for edge cases and scope (both, for a high-risk diff); Opus checks a Codex
-    or Gemini implementation for design and fit with the codebase.
+    or Gemini implementation for design and fit with the codebase (Careful, or Agy Opus to spare the Claude plan). Agy
+    Opus and Agy Sonnet are Claude models: never the other family for a Claude implementation.
 11. Whatever model writes it, "done" means execution evidence: no model's honesty is measured against another's.
 
 ## Balancing the families
@@ -74,9 +78,12 @@ When the user has asked to balance work across the families — in words in this
 their instructions — every signed-in family takes its share of the plan's tasks, not only the second opinions. A flow
 that sends nearly every task to Claude while Gemini or Codex has room is the failure this section exists for.
 
-1. **Calibrate by tier.** The same difficulty maps across families: Light ↔ Gemini Flash ↔ Codex Luna; Medium ↔
-   Gemini Argon ↔ Codex Terra; Careful ↔ Gemini Hydrogen (Neon for a long review pass) ↔ Codex Sol; Heavy ↔ Gemini
-   Hydrogen ↔ Codex Sol. The top tiers (Fable, Astra, Carbon) stay plans only, each on its own yes.
+1. **Calibrate by tier.** The same difficulty maps across families: Light ↔ Gemini Flash ↔ Codex Luna ↔ Agy GPT;
+   Medium ↔ Gemini Argon ↔ Codex Terra ↔ Agy Sonnet; Careful ↔ Gemini Hydrogen (Neon for a long review pass) ↔ Codex Sol ↔ Agy Opus; Heavy ↔ Gemini
+   Hydrogen ↔ Codex Sol. The top tiers (Fable, Astra, Carbon) stay plans only, each on its own yes. The Antigravity
+   Claude and GPT tier (budget family `agy`, `references/gemini.md`) is a family of its own for the budget: its quota
+   is apart from Gemini's, and small for Opus and Sonnet, so it takes short self-contained tasks, Agy GPT the
+   mechanical bulk.
 2. **Capability first, then balance.** A rule above that names a family for a measured strength keeps it (an
    ambiguous bug → Heavy, visible polish and narrative → Opus, accumulating constraints → Sol). Every other task —
    standard and delicate implementation, tests, scripts, mechanical edits, investigations with a clear brief — may go
@@ -85,11 +92,11 @@ that sends nearly every task to Claude while Gemini or Codex has room is the fai
 3. **Share by headroom.** Read the `budget` summary for every family before the split. Give the self-contained tasks
    so the families' weekly projections at reset come out close to one another, each at or under 100 %: the family with
    the most room takes the most. A family projected over 100 % takes nothing costly until it fits; a window marked
-   `stale: true` is an old reading, so read it again (the `budget` tool rereads Gemini) before planning on it, and
+   `stale: true` is an old reading, so read it again (the `budget` tool rereads Gemini and `agy`) before planning on it, and
    never take an old or reset window as full.
 4. **Keep topics whole.** One family per topic (one worker's context is not rebuilt in another family): balance
    across topics, not inside one.
-5. **Say the split.** The plan you present gives the tasks per family (for example `Claude 3 · Gemini 3 · Codex 1`)
+5. **Say the split.** The plan you present gives the tasks per family (for example `Claude 3 · Gemini 3 · Codex 1 · Agy 2`)
    and one line for a signed-in family that gets none, with the reason (a capability rule, its budget, a vendor rule).
 6. **Review across.** Each family's implementation is reviewed by another family (rule 10), so a balanced plan also
    balances its reviews.

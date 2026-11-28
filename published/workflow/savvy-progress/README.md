@@ -78,8 +78,10 @@ the mod needs.
   Failed reads retain the last reading and its age. Codex comes only
   from the newest small `~/.codex/savvy-status/<name>.json` file's `rateLimits`; a family or window with no reading
   is omitted, and a family read alone takes the whole row. Gemini comes from the newest small
-  `~/.gemini/savvy-status/<name>.json` file's `rateLimits`: agy's `/usage` data, of which only the `Gemini Models`
-  group counts, each window used as `round((1 - remaining_fraction) * 100)` %. For Codex and Gemini the age is the
+  `~/.gemini/savvy-status/<name>.json` file's `rateLimits`: agy's `/usage` data, whose `Gemini Models` group is the
+  Gemini family and whose `Claude and GPT models` group is the `agy` family (Antigravity's own quota for the Claude
+  and GPT models it serves, tile `Agy Claude/GPT`), each window used as `round((1 - remaining_fraction) * 100)` %; a
+  window not started yet (`reset_time` 1970-01-01) reads unused. The `agy -p /usage` reread below refreshes both. For Codex and Gemini the age is the
   time the file says the reading was taken (`updatedAt`), never when this session read it: a file two days old reads
   `2d ago`. Relays write one only when they run, so once a Gemini reading is five minutes old the panel asks
   `agy -p /usage --output-format json` itself (no model call, about four seconds, `~/.local/bin/agy` or `agy.exe` first,
@@ -106,7 +108,7 @@ the mod needs.
   that window's history. Zero usage, the first five minutes, missing reset times and expired windows have no
   projection. Tiles show `→ 72%` when usage fits, or `100% ↯ Thu 14:00` when it runs out early. The projection drops
   before the reset when space is tight.
-- **Budget policy**: `/savvy-budget <claude|codex|gemini> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists all three.
+- **Budget policy**: `/savvy-budget <claude|codex|gemini|agy> <within|full|pace|once>` sets a family's policy; `/savvy-budget` lists all four.
   A family nobody set is on `pace`, so nobody has to type the command: the orchestrator keeps the family inside its
   windows by re-tiering, without asking. The gate never refuses for the budget, a projection over 100 % has verdict
   `retier` with an `advice`, a weekly one under 90 % with the reset under two days away has verdict `spend`. The
@@ -117,7 +119,7 @@ the mod needs.
   title includes the policy (`Claude · plan · full`); early exhaustion is red under `within`, amber under `full`.
 - **Budget gate**: while a family's verdict is `ask`, the Agent tool refuses its costly tiers (`savvy-fable`,
   `savvy-heavy`, `savvy-careful` for Claude; `savvy-codex-sol`, `savvy-codex-astra` for Codex;
-  `savvy-gemini-hydrogen`, `savvy-gemini-carbon` for Gemini) with a message that
+  `savvy-gemini-hydrogen`, `savvy-gemini-carbon` for Gemini; `savvy-agy-opus`, `savvy-agy-sonnet` for agy) with a message that
   gives the projection, the reset and the way out. Cheaper tiers, other agents and the other family pass, and so
   does a family with no projection yet. The user's yes opens it until the family's soonest reset: they type
   `/savvy-budget <family> once`, or the orchestrator records their answer, quoted, with the `decide` tool (main
@@ -163,7 +165,10 @@ the mod needs.
 - **Family totals**: cost reads `Claude $x · Codex $y · Gemini —`, and tokens split the same way; the Codex part
   appears only when Codex is in use (a Codex worker in the list or a Codex plan reading), the Gemini part likewise, so
   a session without them shows Claude alone. Gemini tokens are input, cache reads and output, the largest cumulative
-  snapshot once per conversation; with no verified Gemini price table its cost stays `—`. Claude totals include all
+  snapshot once per conversation; with no verified Gemini price table its cost stays `—`. The agy relays
+  (`savvy-agy-opus`, `-sonnet`, `-gpt`) write the same status files: their rows show the model they ran (`Opus 5.5 ·
+  high`, `GPT-OSS 120B · medium`) and their tokens go to an `Agy` part of their own, shown when one is in the list,
+  never to Gemini's. Claude totals include all
   engine-reported subagent requests, including Codex's Claude relays. Claude cache reads contribute to cost and
   context but not to the token total. A writer adds each completed turn's `usage` to prior instrumented snapshots of
   the same session, including resumes under a new status name. The panel counts the largest cumulative snapshot
@@ -226,7 +231,7 @@ the mod needs.
   task waits at its tier's model and effort, or at the `effort` and `model` the plan declares for it (what its Agent
   call will pass); an agent that is no savvy worker is planned with `tier: "other"` and `agent`, its type. A run
   shows the effort its Agent call asked for, then the one the engine reports for each request. Its result is a
-  string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude`, `codex` and `gemini`,
+  string: `ok: <label>` first, then `budget: <compact JSON>` on the next line. The JSON groups `claude`, `codex`, `gemini` and `agy`,
   each with observed `fiveHour` and `week` windows. Each window returns `used`, `resetsAt`, `projectedAtReset`, `exhaustsAt`,
   `pace` (`recent` or `average`), `policy`, and `verdict`: `ok` when it fits or has no projection yet, `over` when it
   does not fit under `full`, `ask` when it does not fit under `within`; under `pace`, `retier` (with an `advice`

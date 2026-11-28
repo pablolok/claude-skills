@@ -113,7 +113,7 @@ const STRINGS = {
     windowReset: 'reset',
     ago: (minutes: number) => minutes < 60 ? `${minutes}m ago` : minutes < 1440 ? `${Math.floor(minutes / 60)}h ago` : `${Math.floor(minutes / 1440)}d ago`,
     budget: 'Budget',
-    budgetUsage: 'Usage: /savvy-budget <claude|codex|gemini> <within|full|pace|once>',
+    budgetUsage: 'Usage: /savvy-budget <claude|codex|gemini|agy> <within|full|pace|once>',
     goUntil: (family: string, time: string) => `${family}: go until ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} go until ${until}`,
     pacing: (family: string) => `ok: ${family} pace`,
@@ -122,7 +122,7 @@ const STRINGS = {
     savvyTheme: "Pick the figures' theme (a holiday, a period, a season, classic) or auto for the calendar; no name lists them",
     themeHint: '[theme|auto]',
     savvyBudget: 'Set a family budget policy: within the rolling windows, full when you accept using a reset, pace to keep working by re-tiering without asking, once for costly work until the next reset; no arguments lists policies',
-    budgetHint: '[claude|codex|gemini] [within|full|pace|once]',
+    budgetHint: '[claude|codex|gemini|agy] [within|full|pace|once]',
     themeNote: (theme: string, id: string) => `savvy-progress: the theme is now ${theme} (\`${id}\`); savvy-flow's chat follows it from the next message.`,
     ignoredFlow: 'ignored: only the main session reports the flow',
     ignoredSteps: 'ignored: only subagents report steps',
@@ -131,7 +131,7 @@ const STRINGS = {
       `Your step counter on the agents panel still reads ${done}/${total}. Before you stop, call mcp__savvy-progress__step once with done: ${total} and skipped set to the planned steps you left undone (leave skipped out when there are none). ` +
       'Then end with your final report again, in full and unchanged: your last message is what the orchestrator receives.',
     ignoredDecision: "ignored: only the main session records the user's decision",
-    badFamily: 'family must be claude, codex or gemini',
+    badFamily: 'family must be claude, codex, gemini or agy',
     badAnswer: "answer must quote the user's own words",
     staleAnswer: "Not recorded: those words are not a reply to this gate's refusal (the user said them earlier, or never). Ask the user now, and quote their reply.",
     badModel: 'model and effort must be strings',
@@ -214,7 +214,7 @@ const STRINGS = {
     windowReset: 'azzerata',
     ago: (minutes: number) => minutes < 60 ? `${minutes} min fa` : minutes < 1440 ? `${Math.floor(minutes / 60)} h fa` : `${Math.floor(minutes / 1440)} g fa`,
     budget: 'Budget',
-    budgetUsage: 'Uso: /savvy-budget <claude|codex|gemini> <entro|pieno|ritmo|una-volta>',
+    budgetUsage: 'Uso: /savvy-budget <claude|codex|gemini|agy> <entro|pieno|ritmo|una-volta>',
     goUntil: (family: string, time: string) => `${family}: via libera fino a ${time}.`,
     decided: (family: string, until: string) => `ok: ${family} via libera fino a ${until}`,
     pacing: (family: string) => `ok: ${family} ritmo`,
@@ -223,7 +223,7 @@ const STRINGS = {
     savvyTheme: 'Sceglie il tema delle figure (una festa, un periodo, una stagione, classico) o auto per il calendario; senza nome li elenca',
     themeHint: '[tema|auto]',
     savvyBudget: 'Imposta il budget di una famiglia: entro le finestre, pieno se accetti di usare un azzeramento, una-volta per il lavoro costoso fino al prossimo azzeramento; senza argomenti li elenca',
-    budgetHint: '[claude|codex|gemini] [entro|pieno|una-volta]',
+    budgetHint: '[claude|codex|gemini|agy] [entro|pieno|una-volta]',
     themeNote: (theme: string, id: string) => `savvy-progress: il tema ora è ${theme} (\`${id}\`); la chat di savvy-flow lo segue dal prossimo messaggio.`,
     ignoredFlow: 'ignorato: solo la sessione principale riporta il flusso',
     ignoredSteps: 'ignorato: solo i sottoagenti riportano i passi',
@@ -232,7 +232,7 @@ const STRINGS = {
       `Il tuo contatore dei passi nel pannello agenti segna ancora ${done}/${total}. Prima di fermarti, chiama una volta mcp__savvy-progress__step con done: ${total} e skipped uguale ai passi pianificati che non hai fatto (omettilo se non ce ne sono). ` +
       "Poi chiudi ripetendo il tuo resoconto finale, completo e invariato: l'orchestratore riceve il tuo ultimo messaggio.",
     ignoredDecision: "ignorato: solo la sessione principale registra la decisione dell'utente",
-    badFamily: 'family deve essere claude, codex o gemini',
+    badFamily: 'family deve essere claude, codex, gemini o agy',
     badAnswer: "answer deve riportare le parole dell'utente",
     staleAnswer: "Non registrato: quelle parole non sono una risposta al blocco appena avvenuto (l'utente le ha dette prima, o mai). Chiedi ora all'utente, e riporta la sua risposta.",
     badModel: 'model ed effort devono essere stringhe',
@@ -648,6 +648,10 @@ const TIER_COLOR: Record<string, string> = {
   'gemini-neon': '#F2542D',
   'gemini-hydrogen': '#2BA6C6',
   'gemini-carbon': '#3F51B5',
+  // The Antigravity relays for its Claude and GPT models, on that quota of its own.
+  'agy-opus': '#B5651D',
+  'agy-sonnet': '#C98B5A',
+  'agy-gpt': '#5E8C7B',
   other: '#888780',
 }
 
@@ -670,6 +674,9 @@ const TIER_MODEL: Record<string, string> = {
   'gemini-neon': 'Gemini · Neon',
   'gemini-hydrogen': 'Gemini · Hydrogen',
   'gemini-carbon': 'Gemini · Carbon',
+  'agy-opus': 'Agy · Opus',
+  'agy-sonnet': 'Agy · Sonnet',
+  'agy-gpt': 'Agy · GPT-OSS',
 }
 
 // A Claude tier with no costume of its own wears that of the tier on its model and effort, in its own color.
@@ -699,6 +706,17 @@ const GEMINI_WEARS: Record<string, string> = {
   'gemini-flash': 'light',
 }
 
+// An Antigravity Claude or GPT figure wears the costume of the Claude tier its model and effort match, on the crab.
+const AGY_WEARS: Record<string, string> = {
+  'agy-opus': 'careful',
+  'agy-sonnet': 'medium',
+  'agy-gpt': 'light',
+}
+const AGY_EFFORT: Record<string, string> = { opus: 'high', sonnet: 'medium', gpt: 'medium' }
+const AGY_LABEL: Record<string, string> = { opus: 'Opus', sonnet: 'Sonnet', gpt: 'GPT-OSS' }
+// Every relay that runs `agy -p` and writes ~/.gemini/savvy-status: its row's state, tokens and model come from there.
+const AGY_RELAYS: Record<string, string> = { ...GEMINI_WEARS, ...AGY_WEARS }
+
 // What each Gemini relay passes to `agy --effort`.
 const GEMINI_EFFORT: Record<string, string> = { flash: 'low', argon: 'medium', neon: 'medium', hydrogen: 'high', carbon: 'high' }
 
@@ -709,7 +727,7 @@ export const geminiModelName = (slug: string): string => {
 }
 
 // The Claude tier whose costume a tier's figure wears (one of CLAUDE_WEARS, or a relay of either family), or undefined.
-const wornBy = (tier: string): string | undefined => CLAUDE_WEARS[tier] ?? CODEX_WEARS[tier] ?? GEMINI_WEARS[tier]
+const wornBy = (tier: string): string | undefined => CLAUDE_WEARS[tier] ?? CODEX_WEARS[tier] ?? GEMINI_WEARS[tier] ?? AGY_WEARS[tier]
 
 // Same rule as the relays: the lowest priority among visible models of the family.
 export const codexModelsFrom = (cache: unknown): Record<string, string> => {
@@ -742,6 +760,16 @@ const geminiModel = (tier: string, declared?: string, effort?: string, withEffor
   const label = declared ? geminiModelName(declared) : family.charAt(0).toUpperCase() + family.slice(1)
   return `${label}${withEffort && (declared || effort) ? ` · ${effort || GEMINI_EFFORT[family]}` : ''}`
 }
+
+// An Antigravity Claude or GPT relay names its declared model (`claude-opus-5-5` → `Opus 5.5`), else its bare model.
+const agyModel = (tier: string, declared?: string, effort?: string, withEffort = true): string => {
+  const family = tier.replace(/^agy-/, '')
+  const gpt = declared ? /^gpt-oss-(\d+)b$/i.exec(declared) : null
+  const label = gpt ? `GPT-OSS ${gpt[1]}B` : declared ? modelName(declared) : AGY_LABEL[family] ?? family
+  return `${label}${withEffort && (declared || effort) ? ` · ${effort || AGY_EFFORT[family]}` : ''}`
+}
+const relayModel = (tier: string, declared?: string, effort?: string, withEffort = true): string =>
+  tier in AGY_WEARS ? agyModel(tier, declared, effort, withEffort) : geminiModel(tier, declared, effort, withEffort)
 
 // Cache attempts, including failures, are limited across ticks and module reloads.
 async function refreshCodexModels($: EngineInterface): Promise<void> {
@@ -810,7 +838,7 @@ const historyMaxSamples = (key: PlanWindowKey): number => RECENT_SPAN_MS[key] / 
 // processes spent more, or the provider reset the window early), so it shows its age and decides no verdict.
 export const READING_STALE_MS = 30 * MINUTE_MS
 const PLAN_WINDOWS: readonly PlanWindowKey[] = ['fiveHour', 'week']
-const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex', 'gemini']
+const PLAN_FAMILIES: readonly PlanFamily[] = ['claude', 'codex', 'gemini', 'agy']
 const BUDGET_RED = '#D0453F'
 const BUDGET_AMBER = '#E0A526'
 const PLAN_TEXT_SIZE = 11
@@ -831,8 +859,8 @@ const recordWindow = (previous: WindowHistory | undefined, value: PlanWindow, ke
   return { resetsAt: value.resetsAt, samples: [...(sameBucket ? samples.slice(0, -1) : samples), sample].slice(-historyMaxSamples(key)) }
 }
 
-const READ_AT: Readonly<Record<PlanFamily, 'claudeReadAt' | 'codexReadAt' | 'geminiReadAt'>> = {
-  claude: 'claudeReadAt', codex: 'codexReadAt', gemini: 'geminiReadAt',
+const READ_AT: Readonly<Record<PlanFamily, 'claudeReadAt' | 'codexReadAt' | 'geminiReadAt' | 'agyReadAt'>> = {
+  claude: 'claudeReadAt', codex: 'codexReadAt', gemini: 'geminiReadAt', agy: 'agyReadAt',
 }
 
 // Pure: all histories live in the existing usage atom, never module-level mutable state.
@@ -892,7 +920,7 @@ const windowVerdict = (policy: BudgetPolicy, key: PlanWindowKey, value: PlanWind
 export const isStale = (readAt: number | undefined, at: number): boolean => readAt !== undefined && at - readAt > READING_STALE_MS
 
 export const budgetSummary = (usage: UsageReadings, at: number): BudgetSummary => {
-  const summary: BudgetSummary = { claude: {}, codex: {}, gemini: {} }
+  const summary: BudgetSummary = { claude: {}, codex: {}, gemini: {}, agy: {} }
   for (const family of PLAN_FAMILIES) {
     const policy = budgetPolicy(usage, family)
     const readAt = usage[READ_AT[family]]
@@ -923,8 +951,9 @@ const CLAUDE_TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 
 const GATED_TIERS: Readonly<Record<string, PlanFamily>> = {
   fable: 'claude', heavy: 'claude', careful: 'claude', 'codex-sol': 'codex', 'codex-astra': 'codex',
   'gemini-neon': 'gemini', 'gemini-hydrogen': 'gemini', 'gemini-carbon': 'gemini',
+  'agy-opus': 'agy', 'agy-sonnet': 'agy',
 }
-const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini' }
+const FAMILY_NAME: Readonly<Record<PlanFamily, string>> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', agy: 'Agy' }
 const WINDOW_NAME: Readonly<Record<PlanWindowKey, string>> = { fiveHour: '5h', week: 'week' }
 const roundTo = (n: number, digits: number): number => Math.round(n * 10 ** digits) / 10 ** digits
 
@@ -1233,15 +1262,17 @@ async function refreshCodexUsage($: EngineInterface, force = false): Promise<voi
   await syncRelayRuns($)
 }
 
-// agy's `/usage` data ({ groups: [{ name, buckets: [{ window, remaining_fraction, reset_time }] }] }): the
-// family is the group named "Gemini Models"; the other groups are Antigravity's quota for third-party models.
+// agy's `/usage` data ({ groups: [{ name, buckets: [{ window, remaining_fraction, reset_time }] }] }): the Gemini
+// family is the group named "Gemini Models"; the agy family is "Claude and GPT models", Antigravity's own quota for
+// the third-party models it serves. A window not started yet has `reset_time` 1970-01-01: a reset passed, so it reads unused.
 const GEMINI_GROUP = 'Gemini Models'
+const AGY_GROUP = 'Claude and GPT models'
 const GEMINI_WINDOWS: Readonly<Record<string, PlanWindowKey>> = { '5h': 'fiveHour', weekly: 'week' }
 
-export const geminiLimitsFrom = (data: unknown): PlanUsage | undefined => {
+export const geminiLimitsFrom = (data: unknown, name = GEMINI_GROUP): PlanUsage | undefined => {
   const groups = (data as { groups?: unknown } | null | undefined)?.groups
   if (!Array.isArray(groups)) return undefined
-  const group = groups.find(g => g && typeof g === 'object' && (g as { name?: unknown }).name === GEMINI_GROUP) as { buckets?: unknown } | undefined
+  const group = groups.find(g => g && typeof g === 'object' && (g as { name?: unknown }).name === name) as { buckets?: unknown } | undefined
   if (!Array.isArray(group?.buckets)) return undefined
   const plan: PlanUsage = {}
   for (const bucket of group.buckets as { window?: unknown; remaining_fraction?: unknown; reset_time?: unknown }[]) {
@@ -1254,13 +1285,16 @@ export const geminiLimitsFrom = (data: unknown): PlanUsage | undefined => {
   return plan.fiveHour || plan.week ? plan : undefined
 }
 
+export const agyLimitsFrom = (data: unknown): PlanUsage | undefined => geminiLimitsFrom(data, AGY_GROUP)
+
 // The whole output of `agy -p "/usage" --output-format json`.
-export const geminiUsageFrom = (text: string): PlanUsage | undefined => {
+export const geminiUsageFrom = (text: string, name = GEMINI_GROUP): PlanUsage | undefined => {
   try {
     const value = JSON.parse(text)
-    return value?.command?.name === 'usage' ? geminiLimitsFrom(value.command.data) : undefined
+    return value?.command?.name === 'usage' ? geminiLimitsFrom(value.command.data, name) : undefined
   } catch { return undefined }
 }
+export const agyUsageFrom = (text: string): PlanUsage | undefined => geminiUsageFrom(text, AGY_GROUP)
 
 const nullableCount = (n: unknown): boolean => n === undefined || n === null || nonnegative(n)
 
@@ -1279,7 +1313,7 @@ export const geminiStatusFrom = (text: string): GeminiStatus | undefined => {
     return { version: 1, sessionId: value.sessionId, model: value.model, state: value.state, action: value.action,
       totalTokenUsage: { input_tokens: u.input_tokens, output_tokens: u.output_tokens, cache_read_tokens: u.cache_read_tokens,
         thinking_tokens: u.thinking_tokens ?? null, total_tokens: u.total_tokens ?? null },
-      rateLimits: geminiLimitsFrom(value.rateLimits), updatedAt: value.updatedAt }
+      rateLimits: geminiLimitsFrom(value.rateLimits), agyRateLimits: agyLimitsFrom(value.rateLimits), updatedAt: value.updatedAt }
   } catch { return undefined }
 }
 
@@ -1299,6 +1333,22 @@ export const geminiPlanFrom = (text: string): { rateLimits: PlanUsage; updatedAt
   } catch { return undefined }
 }
 
+// The agy family's reading in the same file: a relay's status or a manual snapshot.
+export const agyPlanFrom = (text: string): { rateLimits: PlanUsage; updatedAt: number } | undefined => {
+  try {
+    if (text.length > STATUS_MAX_BYTES) return undefined
+    const value = JSON.parse(text)
+    if (!value || !nonnegative(value.updatedAt)) return undefined
+    if ('version' in value) {
+      const status = geminiStatusFrom(text)
+      return status?.agyRateLimits ? { rateLimits: status.agyRateLimits, updatedAt: status.updatedAt } : undefined
+    }
+    if (!(value.model === null || typeof value.model === 'string' && value.model.length <= 120)) return undefined
+    const rateLimits = agyLimitsFrom(value.rateLimits)
+    return rateLimits ? { rateLimits, updatedAt: value.updatedAt } : undefined
+  } catch { return undefined }
+}
+
 // The Codex reader's mirror for ~/.gemini/savvy-status, with its own statuses and poll stamp.
 async function refreshGeminiUsage($: EngineInterface, force = false): Promise<void> {
   const at = await $.clock.now()
@@ -1307,6 +1357,8 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
   await update($, usageReadings, prev => ({ ...prev, geminiCacheReadAt: at }))
   const statuses: Record<string, GeminiStatus> = {}, statusMtimes: Record<string, number> = {}
   let latest: { rateLimits: PlanUsage; updatedAt: number; source: { name: string; mtimeMs: number } } | undefined
+  // The agy family's newest reading, from the same files.
+  let latestAgy: { rateLimits: PlanUsage; updatedAt: number } | undefined
   try {
     const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE'))
     if (home) {
@@ -1318,10 +1370,12 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
       wanted.add('snapshot')
       for (const file of files) {
         const name = file.name.slice(0, -5)
-        if (!wanted.has(name) && latest && file.mtimeMs <= latest.updatedAt) continue
+        // Older files than both newest readings add nothing; a file with no agy group never ends the search for one.
+        if (!wanted.has(name) && latest && latestAgy && file.mtimeMs <= Math.min(latest.updatedAt, latestAgy.updatedAt)) continue
         const cached = previous.geminiStatuses?.[name]
         let status = cached
         let plan = cached?.rateLimits ? { rateLimits: cached.rateLimits, updatedAt: cached.updatedAt } : undefined
+        let agyPlan = cached?.agyRateLimits ? { rateLimits: cached.agyRateLimits, updatedAt: cached.updatedAt } : undefined
         const savedSnapshot = name === 'snapshot' && previous.gemini && previous.geminiUpdatedAt !== undefined &&
           previous.geminiSource?.name === name && previous.geminiSource.mtimeMs === file.mtimeMs
         if (savedSnapshot) plan = { rateLimits: previous.gemini!, updatedAt: previous.geminiUpdatedAt! }
@@ -1330,10 +1384,12 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
             const text = await $.fs.read(`${directory}/${file.name}`)
             status = geminiStatusFrom(text)
             plan = geminiPlanFrom(text)
-          } catch { status = undefined; plan = undefined }
+            agyPlan = agyPlanFrom(text)
+          } catch { status = undefined; plan = undefined; agyPlan = undefined }
         }
         if (status) { statuses[name] = status; statusMtimes[name] = file.mtimeMs }
         if (plan && (!latest || plan.updatedAt > latest.updatedAt)) latest = { ...plan, source: { name, mtimeMs: file.mtimeMs } }
+        if (agyPlan && (!latestAgy || agyPlan.updatedAt > latestAgy.updatedAt)) latestAgy = agyPlan
       }
     }
   } catch { /* Keep the panel's last plan reading across filesystem gaps. */ }
@@ -1341,9 +1397,11 @@ async function refreshGeminiUsage($: EngineInterface, force = false): Promise<vo
   const seen = Object.keys(statuses).length > 0 || previous.geminiStatuses !== undefined
   await update($, usageReadings, prev => {
     const refreshed = seen ? { ...prev, geminiStatuses: statuses, geminiStatusMtimes: statusMtimes } : prev
-    return latest && (prev.geminiUpdatedAt === undefined || latest.updatedAt > prev.geminiUpdatedAt)
+    const withGemini = latest && (prev.geminiUpdatedAt === undefined || latest.updatedAt > prev.geminiUpdatedAt)
       ? { ...recordPlanUsage(refreshed, 'gemini', latest.rateLimits, latest.updatedAt),
           geminiReadAt: latest.updatedAt, geminiUpdatedAt: latest.updatedAt, geminiSource: latest.source } : refreshed
+    return latestAgy && (prev.agyReadAt === undefined || latestAgy.updatedAt > prev.agyReadAt)
+      ? recordPlanUsage(withGemini, 'agy', latestAgy.rateLimits, latestAgy.updatedAt) : withGemini
   })
   if (seen) await syncRelayRuns($)
 }
@@ -1378,7 +1436,7 @@ export async function rereadGemini($: EngineInterface, fromTick = false): Promis
   if (agyInFlight) return fromTick ? undefined : agyInFlight
   const at = await $.clock.now()
   const usage = await read($, usageReadings)
-  if (!hasPlan(usage.gemini) || (usage.geminiUpdatedAt !== undefined && at - usage.geminiUpdatedAt < GEMINI_REREAD_MS)) return
+  if (!(hasPlan(usage.gemini) || hasPlan(usage.agy)) || (usage.geminiUpdatedAt !== undefined && at - usage.geminiUpdatedAt < GEMINI_REREAD_MS)) return
   if (fromTick && usage.geminiProbeFailedAt !== undefined && usage.geminiProbeFailedAt >= (usage.geminiUpdatedAt ?? 0)) return
   if ((await read($, agents)).some(a => a.geminiStatus && a.status === 'running')) return
   let claimed = false
@@ -1388,39 +1446,44 @@ export async function rereadGemini($: EngineInterface, fromTick = false): Promis
   })
   if (!claimed) return
   const run = (async () => {
-    let plan: PlanUsage | undefined
+    let plan: PlanUsage | undefined, agyPlan: PlanUsage | undefined
     try {
       const { exitCode, stdout } = await $.process.run([await agyPath($), '-p', '/usage', '--output-format', 'json'],
         { stdin: '', timeoutMs: AGY_TIMEOUT_MS })
       plan = exitCode === 0 ? geminiUsageFrom(stdout) : undefined
+      agyPlan = exitCode === 0 ? agyUsageFrom(stdout) : undefined
     } catch { /* Signed out, missing or slow: the reading keeps its age and, once stale, decides nothing. */ }
     const done = await $.clock.now()
-    await update($, usageReadings, prev => !plan ? { ...prev, geminiProbeFailedAt: done }
-      : prev.geminiUpdatedAt !== undefined && prev.geminiUpdatedAt >= done ? prev
-      : { ...recordPlanUsage(prev, 'gemini', plan, done), geminiReadAt: done, geminiUpdatedAt: done,
-          geminiSource: { name: 'agy', mtimeMs: done }, geminiProbeFailedAt: undefined })
+    await update($, usageReadings, prev => {
+      if (!plan && !agyPlan) return { ...prev, geminiProbeFailedAt: done }
+      const withGemini = !plan || prev.geminiUpdatedAt !== undefined && prev.geminiUpdatedAt >= done ? prev
+        : { ...recordPlanUsage(prev, 'gemini', plan, done), geminiReadAt: done, geminiUpdatedAt: done,
+            geminiSource: { name: 'agy', mtimeMs: done }, geminiProbeFailedAt: undefined }
+      return !agyPlan || prev.agyReadAt !== undefined && prev.agyReadAt >= done ? withGemini
+        : recordPlanUsage(withGemini, 'agy', agyPlan, done)
+    })
   })()
   agyInFlight = run.finally(() => { agyInFlight = undefined })
   return agyInFlight
 }
 
 const hasPlan = (plan?: PlanUsage): boolean => Boolean(plan?.fiveHour || plan?.week)
-const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini'>): boolean =>
-  hasPlan(usage.claude) || hasPlan(usage.codex) || hasPlan(usage.gemini)
+const hasPlans = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini' | 'agy'>): boolean =>
+  hasPlan(usage.claude) || hasPlan(usage.codex) || hasPlan(usage.gemini) || hasPlan(usage.agy)
 
 // Keep the observed usage at the reset instant; it becomes expired strictly after it.
 const isReset = (value: PlanUsage['fiveHour'], at: number): boolean => Boolean(value?.resetsAt && at > Date.parse(value.resetsAt))
 const planAt = (plan: PlanUsage | undefined, at: number): PlanUsage | undefined => plan && Object.fromEntries(
   Object.entries(plan).map(([key, value]) => [key, isReset(value, at) ? { ...value, percentUsed: 0 } : value]))
 
-export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini' | 'policies' | 'history'>, at = 0): string => {
+export const planUsageText = (usage: Pick<UsageReadings, 'claude' | 'codex' | 'gemini' | 'agy' | 'policies' | 'history'>, at = 0): string => {
   if (!hasPlans(usage)) return ''
   const budget = budgetSummary({ ...usage, statuses: {} }, at)
   // A family with no reading is left out, as its plan tile is.
   const family = (name: string, key: PlanFamily, plan?: PlanUsage) => hasPlan(plan)
     ? `${name}${Object.values(budget[key]).some(window => window.verdict === 'ask') ? '!' : ''} ${plan?.fiveHour?.percentUsed ?? '—'}/${plan?.week?.percentUsed ?? '—'}%` : ''
   return [family('Claude', 'claude', planAt(usage.claude, at)), family('Codex', 'codex', planAt(usage.codex, at)),
-    family('Gemini', 'gemini', planAt(usage.gemini, at))].filter(Boolean).join('  ')
+    family('Gemini', 'gemini', planAt(usage.gemini, at)), family('Agy', 'agy', planAt(usage.agy, at))].filter(Boolean).join('  ')
 }
 
 const codexAccount = (a: AgentRun, usage: UsageReadings) => {
@@ -1439,7 +1502,7 @@ const geminiAccount = (a: AgentRun, usage: UsageReadings) => {
 const hasClaudeUsage = (a: AgentRun): boolean => a.steps > 0 || a.tokens > 0 || a.contextTokens > 0 || a.costUsd > 0
 
 const rowAccount = (a: AgentRun, usage: UsageReadings) => tierOf(a.type) in CODEX_WEARS ? codexAccount(a, usage)
-  : tierOf(a.type) in GEMINI_WEARS ? geminiAccount(a, usage)
+  : tierOf(a.type) in AGY_RELAYS ? geminiAccount(a, usage)
   : { tokens: hasClaudeUsage(a) ? a.contextTokens : undefined, cost: hasClaudeUsage(a) ? a.costUsd : undefined }
 
 const accountText = (a: AgentRun, usage: UsageReadings): string => {
@@ -1530,7 +1593,7 @@ async function rememberClaudeModels($: EngineInterface, ids: string[]): Promise<
 export const runModel = (a: AgentRun, withEffort = true, hints: ModelHints = EMPTY_MODELS): string => {
   const tier = tierOf(a.type)
   if (tier in CODEX_WEARS) return codexModel(tier, hints, a.codexModel, a.codexEffort, withEffort)
-  if (tier in GEMINI_WEARS) return geminiModel(tier, a.geminiModel, a.geminiEffort, withEffort)
+  if (tier in AGY_RELAYS) return relayModel(tier, a.geminiModel, a.geminiEffort, withEffort)
   return withEffort && a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)
 }
 
@@ -1572,7 +1635,7 @@ export const plannedModel = (p: PlannedTask, hints: ModelHints = EMPTY_MODELS): 
   const tier = plannedTier(p)
   const ofTier = TIER_MODEL[tier] ?? ''
   if (tier in CODEX_WEARS) return codexModel(tier, hints, undefined, undefined, false)
-  if (tier in GEMINI_WEARS) return geminiModel(tier, undefined, undefined, false)
+  if (tier in AGY_RELAYS) return relayModel(tier, undefined, undefined, false)
   const [model = '', effort = ''] = ofTier.split(' · ')
   const declared = p.model ? `${p.model.charAt(0).toUpperCase()}${p.model.slice(1)}` : model
   return [hints.claude[declared.toLowerCase()] || declared, p.effort ?? effort].filter(Boolean).join(' · ')
@@ -1619,12 +1682,23 @@ export const totals = (list: AgentRun[], at: number, usage: UsageReadings = EMPT
     if (own !== undefined && own >= (conversations.get(status.sessionId) ?? -1)) conversations.set(status.sessionId, own)
   }
   for (const tokens of conversations.values()) gemini.tokens = (gemini.tokens ?? 0) + tokens
+  // The Antigravity Claude and GPT relays likewise, on their own line: another quota.
+  const agy: { cost: number | undefined; tokens: number | undefined } = { cost: undefined, tokens: undefined }
+  const agyConversations = new Map<string, number>()
+  for (const a of list) {
+    const status = a.geminiStatus && usage.geminiStatuses?.[a.geminiStatus]
+    if (!(tierOf(a.type) in AGY_WEARS) || !status || !status.sessionId) continue
+    const own = geminiAccount(a, usage).tokens
+    if (own !== undefined && own >= (agyConversations.get(status.sessionId) ?? -1)) agyConversations.set(status.sessionId, own)
+  }
+  for (const tokens of agyConversations.values()) agy.tokens = (agy.tokens ?? 0) + tokens
   const start = Math.min(...list.map(a => a.startedAt))
   const end = Math.max(...list.map(a => a.endedAt ?? Math.max(at, a.startedAt)))
   // Codex shows only where it is used: a Codex worker in the list or a Codex plan reading.
   const showsCodex = list.some(a => tierOf(a.type) in CODEX_WEARS) || hasPlan(usage.codex)
   const showsGemini = list.some(a => tierOf(a.type) in GEMINI_WEARS) || hasPlan(usage.gemini)
-  return { claude, codex, gemini, showsCodex, showsGemini, time: list.length ? end - start : 0 }
+  const showsAgy = list.some(a => tierOf(a.type) in AGY_WEARS)
+  return { claude, codex, gemini, agy, showsCodex, showsGemini, showsAgy, time: list.length ? end - start : 0 }
 }
 
 const knownCost = (cost?: number): string => cost === undefined ? '—' : fmtCost(cost)
@@ -1633,9 +1707,11 @@ const codexCost = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Code
 const codexTokens = (t: ReturnType<typeof totals>): string => t.showsCodex ? `Codex ${knownTokens(t.codex.tokens)}` : ''
 const geminiCost = (t: ReturnType<typeof totals>): string => t.showsGemini ? `Gemini ${knownCost(t.gemini.cost)}` : ''
 const geminiTokens = (t: ReturnType<typeof totals>): string => t.showsGemini ? `Gemini ${knownTokens(t.gemini.tokens)}` : ''
+const agyCost = (t: ReturnType<typeof totals>): string => t.showsAgy ? `Agy ${knownCost(t.agy.cost)}` : ''
+const agyTokens = (t: ReturnType<typeof totals>): string => t.showsAgy ? `Agy ${knownTokens(t.agy.tokens)}` : ''
 // The relays' families, on the line beneath Claude's.
-const relayCosts = (t: ReturnType<typeof totals>): string => [codexCost(t), geminiCost(t)].filter(Boolean).join(' · ')
-const relayTokens = (t: ReturnType<typeof totals>): string => [codexTokens(t), geminiTokens(t)].filter(Boolean).join(' · ')
+const relayCosts = (t: ReturnType<typeof totals>): string => [codexCost(t), geminiCost(t), agyCost(t)].filter(Boolean).join(' · ')
+const relayTokens = (t: ReturnType<typeof totals>): string => [codexTokens(t), geminiTokens(t), agyTokens(t)].filter(Boolean).join(' · ')
 const familyCosts = (t: ReturnType<typeof totals>) => [`Claude ${knownCost(t.claude.cost)}`, relayCosts(t)].filter(Boolean).join(' · ')
 const familyTokens = (t: ReturnType<typeof totals>) => [`Claude ${knownTokens(t.claude.tokens)}`, relayTokens(t)].filter(Boolean).join(' · ')
 
@@ -1876,7 +1952,8 @@ type PlanRow = [string, PlanUsage | undefined, string, number | undefined, PlanF
 
 const planFamilies = (usage: UsageReadings): PlanRow[] =>
   ([['Claude', usage.claude, CLAY, usage.claudeReadAt, 'claude'], ['Codex', usage.codex, colorOf('codex-sol'), usage.codexReadAt, 'codex'],
-    ['Gemini', usage.gemini, colorOf('gemini-hydrogen'), usage.geminiReadAt, 'gemini']] as PlanRow[])
+    ['Gemini', usage.gemini, colorOf('gemini-hydrogen'), usage.geminiReadAt, 'gemini'],
+    ['Agy Claude/GPT', usage.agy, colorOf('agy-opus'), usage.agyReadAt, 'agy']] as PlanRow[])
     .filter(([, plan]) => hasPlan(plan))
 
 const headerHeight = (title: string, W: number, usage: UsageReadings): number => {
@@ -2367,7 +2444,7 @@ export const register: Register = (on, options) => {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
                 tier: {
                   type: 'string',
-                  enum: [...CLAUDE_TIERS, ...Object.keys(GEMINI_WEARS), ...Object.keys(CODEX_WEARS), 'other'],
+                  enum: [...CLAUDE_TIERS, ...Object.keys(GEMINI_WEARS), ...Object.keys(CODEX_WEARS), ...Object.keys(AGY_WEARS), 'other'],
                   description: 'The savvy tier; `other` for an agent of the project that is no savvy worker, named in `agent`.',
                 },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
@@ -2391,7 +2468,7 @@ export const register: Register = (on, options) => {
     })
     await $.tool.register({
       name: 'budget',
-      description: 'Read the current budget summary per family (claude, codex, gemini) and window (fiveHour, week), without changing the progress bar. ' +
+      description: 'Read the current budget summary per family (claude, codex, gemini, agy — Antigravity\'s Claude and GPT models quota) and window (fiveHour, week), without changing the progress bar. ' +
         'Returns a string: a budget: line with compact JSON containing used, resetsAt, projectedAtReset, exhaustsAt, pace, policy and verdict (ok, over, ask, retier, spend) and, for retier and spend, an advice string. ' +
         'Null projection fields mean no estimate yet; ask needs the user\'s decision before long work. Policies are set by /savvy-budget, or by decide with policy pace. ' +
         'Once a tier has finished runs, a second line, estimates:, gives per tier the runs, their mean cost in USD and that cost as a percent of each Claude window (null until observed).',
@@ -2436,7 +2513,7 @@ export const register: Register = (on, options) => {
           model: { type: 'string', description: 'Codex and Gemini relays: the exact model slug passed to codex exec or agy (for example gpt-6.1-sol, gemini-4-argon).' },
           effort: { type: 'string', description: 'Codex and Gemini relays: the reasoning effort passed to codex exec or agy.' },
           codexStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Codex relays: the unique name of this invocation in ~/.codex/savvy-status/<name>.json.' },
-          geminiStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Gemini relays: the unique name of this invocation in ~/.gemini/savvy-status/<name>.json.' },
+          geminiStatus: { type: 'string', pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$', description: 'Gemini and Antigravity Claude/GPT relays: the unique name of this invocation in ~/.gemini/savvy-status/<name>.json.' },
           skipped: {
             type: 'integer',
             minimum: 0,
@@ -2576,7 +2653,7 @@ export const register: Register = (on, options) => {
             ...(input.effort?.trim() ? { codexEffort: input.effort.trim() } : {}),
             ...(input.codexStatus?.trim() ? { codexStatus: input.codexStatus.trim() } : {}),
           } : {}),
-          ...(tierOf(a.type) in GEMINI_WEARS ? {
+          ...(tierOf(a.type) in AGY_RELAYS ? {
             ...(input.model?.trim() ? { geminiModel: input.model.trim() } : {}),
             ...(input.effort?.trim() ? { geminiEffort: input.effort.trim() } : {}),
             ...(input.geminiStatus?.trim() ? { geminiStatus: input.geminiStatus.trim() } : {}),
@@ -2671,7 +2748,7 @@ export const register: Register = (on, options) => {
       await noteRefusal($, { tier: topTierKey(subagent, e.model)! })
       return { deny: topRefusal }
     }
-    if (isSavvy(subagent) && GATED_TIERS[tierOf(subagent)] === 'gemini') await rereadGemini($)
+    if (isSavvy(subagent) && ['gemini', 'agy'].includes(GATED_TIERS[tierOf(subagent)] ?? '')) await rereadGemini($)
     const budgetRefusal = budgetGate(subagent, await read($, usageReadings), await read($, agents), await $.clock.now(), lang)
     if (budgetRefusal) {
       await noteRefusal($, { family: GATED_TIERS[tierOf(subagent)]! })

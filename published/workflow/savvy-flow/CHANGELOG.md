@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.27.0] - 2026-11-28
+- relays for the Claude and GPT models of the Antigravity CLI (savvy-agy-opus / sonnet / gpt) on its own "Claude and GPT models" quota, documented and balanced as a family of their own (budget family agy)
+
+
 ## [1.26.0] - 2026-11-26
 - Balancing the families: when the user asks to balance work (in words or as a standing default), every signed-in family takes its share tier for tier (Flash/Light, Argon/Medium, Hydrogen/Careful and Heavy, Neon for long reviews), split by budget headroom and said in the plan; an unrated Gemini model is unmeasured, not weaker; stale budget windows are reread, never planned on
 

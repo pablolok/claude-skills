@@ -1,6 +1,6 @@
 ---
 name: savvy-flow
-description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light, and savvy-codex-luna / terra / sol / astra for OpenAI models through the Codex CLI, savvy-gemini-flash / argon / neon / hydrogen / carbon for Google's Gemini through the Antigravity CLI, each when signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
+description: Orchestrated delivery flow. The session model plans, owns design, delegates every task to tiered worker subagents pinned to their own models (savvy-fable / heavy / careful / medium / light; savvy-codex-* for OpenAI models through the Codex CLI; savvy-gemini-* for Gemini and savvy-agy-* for the Claude and GPT models of the Antigravity CLI, each when signed in) and adversarially reviews their output. Invoke with /savvy-flow <task>.
 disable-model-invocation: true
 argument-hint: <task description>
 ---
@@ -14,11 +14,14 @@ Task from the user: $ARGUMENTS
 ## 0. Preconditions
 
 - **You are the session's model.** The orchestrator runs on the model and effort the user selected for the session: Fable when the session is on Fable, Opus when it is on Opus. Never switch the session's model or effort, and never propose another. The flow is designed around a strong model at high effort, but that is the user's call, not a precondition you check. You orchestrate: you do not take the workers' tasks yourself.
-- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra`, and the Gemini relays `savvy-gemini-flash`, `savvy-gemini-argon`, `savvy-gemini-neon`, `savvy-gemini-hydrogen`, `savvy-gemini-carbon` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
+- Worker agents must exist: `savvy-fable`, `savvy-heavy`, `savvy-careful`, `savvy-medium`, `savvy-light`, the Codex relays `savvy-codex-luna`, `savvy-codex-terra`, `savvy-codex-sol`, `savvy-codex-astra`, the Gemini relays `savvy-gemini-flash`, `savvy-gemini-argon`, `savvy-gemini-neon`, `savvy-gemini-hydrogen`, `savvy-gemini-carbon`, and the Antigravity Claude and GPT relays `savvy-agy-opus`, `savvy-agy-sonnet`, `savvy-agy-gpt` (in `~/.claude/agents/`, or shipped with the savvy-flow plugin, in which case the Agent tool lists them as `savvy-flow:savvy-careful` and so on). If the Agent tool does not list them, stop and tell the user.
 - **Codex** (OpenAI models through the Codex CLI): one shell call at the start, `codex login status`. Signed in, the Codex tier (section 3) is available for the rest of the flow; missing or signed out, it does not exist and nothing else changes. A project instruction that keeps code away from other vendors removes it too.
 - **Gemini** (Google's models through the Antigravity CLI): one shell call at the start, `agy models < /dev/null`
   (`agy` from the PATH, else `~/.local/bin/agy`): exit 0 means signed in, and it spends no quota. Missing or signed
   out, the Gemini tier (section 3) does not exist and nothing else changes; the same vendor rule removes it.
+  The same call lists the Claude and GPT models the Antigravity account serves on its own quota ("Claude and GPT
+  models", apart from Gemini's): each relay of the Antigravity Claude and GPT tier (section 3) exists only when its
+  model is listed (`claude-opus-5-5-*`, `claude-sonnet-5-5-*`, `gpt-oss-120b-*`); the same vendor rule removes it.
 
 ## Models: every worker runs at its tier's model
 
@@ -191,6 +194,9 @@ Pick the cheapest tier that will get the task right the first time. Two axes: **
 | Gemini Neon | `savvy-gemini-neon` | `gemini-4-neon`, effort medium | Careful-sized work beside Hydrogen: it reasons longer (slower, fewer tokens on the same review); an exhaustive review or a second opinion where latency does not matter |
 | Gemini Hydrogen | `savvy-gemini-hydrogen` | `gemini-4-hydrogen`, effort high | Careful- or Heavy-sized work; a **second opinion** from another family, beside Codex Sol |
 | Gemini Carbon | `savvy-gemini-carbon` | `gemini-4-carbon`, effort high | **Plans only**, each launch on the user's explicit yes, recorded with `decide` (`tier: "carbon"`), as for Fable; other Fable-sized work goes to Hydrogen |
+| Agy Opus | `savvy-agy-opus` | `claude-opus-5-5` through the Antigravity CLI, effort high (no xhigh); a Sonnet relay | Only when its model is listed (section 0), on the Antigravity "Claude and GPT models" quota: short Careful-sized work off the Claude plan's and Gemini's windows; Opus's check of a Codex or Gemini implementation. Never a second opinion on Claude work (same model family) |
+| Agy Sonnet | `savvy-agy-sonnet` | `claude-sonnet-5-5`, effort medium | Medium-sized work on the same quota (effort low for Light-sized work) |
+| Agy GPT | `savvy-agy-gpt` | `gpt-oss-120b`, effort medium (its only one) | Light-sized mechanical work; nearly free on that quota. No reviews or second opinions until "Observed in use" has evidence |
 
 Light and Medium carry **lean tools**: files, the shell and progress reporting, nothing else (no skills, browser, web
 or other connected tools). Most of a fresh worker's fixed context is the listing of every tool and skill it may call:
@@ -246,6 +252,13 @@ Read `references/gemini.md` before planning a task on the Gemini tier: Google's 
 (`agy -p`), under the user's own Google sign-in, launched by a Claude relay (`savvy-gemini-<intensity>`) the way the
 Codex tier is.
 
+### The Antigravity Claude and GPT tier
+
+The same Antigravity sign-in also serves Claude Opus and Sonnet and OpenAI's GPT-OSS on a quota of their own, the
+"Claude and GPT models" group with its own 5-hour and weekly windows (budget family `agy`), launched by the relays
+`savvy-agy-opus`, `savvy-agy-sonnet` and `savvy-agy-gpt` exactly as the Gemini relays run. That quota is small for
+Claude models: read the Antigravity Claude and GPT section of `references/gemini.md` before planning a task on it.
+
 ### Connected tools
 
 A connected tool is anything the session drives beyond files and the shell: an MCP server for an editor, a browser, a
@@ -290,7 +303,7 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
 
 - Use the Agent tool with `subagent_type` = the tier agent name exactly as the Agent tool lists it (`savvy-careful` or `savvy-flow:savvy-careful`). Run tasks in sequence through their topic's worker; start parallel workers only for tasks that are independent and long.
 - **Pace the costly tiers against the plan's rolling usage windows.** Before starting or resuming a long worker at
-  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows, Gemini Neon, Hydrogen or Carbon for Gemini's), read the `budget` summary returned by the
+  Fable, Heavy or Careful (Codex Sol or Astra for Codex's own windows, Gemini Neon, Hydrogen or Carbon for Gemini's, Agy Opus or Sonnet for the `agy` windows), read the `budget` summary returned by the
   progress tool; its read-only `budget` tool can refresh your view without changing the bar. Its `estimates` line,
   once a tier has finished runs, gives what one run of that tier has cost as a share of each Claude window. For a
   family with any `ask` verdict (only a family the user set to `within`: `pace` is the default), ask the user before starting or resuming long work on it, giving the projection
@@ -309,7 +322,7 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   tiers for the budget (the Fable, Astra and Carbon gate is unchanged: each launch still needs its own yes). Keep every family's
   5-hour and weekly projection at or under 100 %, the week aimed at 90-100 % at its reset, by yourself:
   - read the summary at every worker return; a `retier` verdict carries an `advice`, act on it before the next launch;
-  - cut tiers (Heavy → Careful → Medium, Sol → Terra → Luna; with quality skills, code stops at Careful, Terra or
+  - cut tiers (Heavy → Careful → Medium, Sol → Terra → Luna, Agy Opus → Sonnet → GPT; with quality skills, code stops at Careful, Terra or
     Argon, section "Quality skills"); use a costly tier only where only it can do the step
     (a tool or a depth no cheaper tier has); run one costly worker at a time; shrink briefs;
   - move work to the other family only while that family's own windows stay at or under 100 %;
@@ -325,7 +338,7 @@ design or 3D tool, a device. Which ones exist depends on the user's setup; the r
   the machine's local time and offset first (the shell's date command), convert, and never present a UTC time as
   local. For example: `Claude 5h: 62% at 14:05, runs out 16:40, resets 17:00`. A window with `stale: true` is a
   reading older than half an hour (`readAt` says when): give its time, plan on no projection from it, and read the
-  `budget` tool again (it rereads Gemini from `agy -p /usage`); a passed reset reads `used: 0` with `resetsAt: null`.
+  `budget` tool again (it rereads Gemini and `agy` from `agy -p /usage`); a passed reset reads `used: 0` with `resetsAt: null`.
 - **A week projected past its limit is the scarcer budget**, even under `full`: a short window comes back in hours,
   the week in days. While it lasts, take that family's legwork one tier down (Careful work to Medium with a precise
   brief, Medium to Light), and ask before every Fable, Codex Astra or Gemini Carbon task, whatever was said for the short window (those tiers are plans only in any case).
@@ -481,7 +494,7 @@ choice needs and nothing more, once, when the theme is chosen or changes:
 - a theme named by the user or pinned by the panel: its row alone (the first line starting with its id between
   backticks, `` | `winter` | ``).
 
-- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra; the Gemini intensities keep theirs: ⚡ Flash, 💡 Argon, 🔆 Neon, 💧 Hydrogen, 💎 Carbon. The mascots follow the
+- Each tier's mascot leads its tasks in the plan and its name in the close's tiers line; the Codex intensities keep their sky in every theme: 🌙 Luna, 🌍 Terra, ☀️ Sol, ✨ Astra; the Gemini intensities keep theirs: ⚡ Flash, 💡 Argon, 🔆 Neon, 💧 Hydrogen, 💎 Carbon; the Antigravity Claude and GPT relays theirs: 🎼 Opus, 🎵 Sonnet, 🧩 GPT. The mascots follow the
   roles: Fable the rare one, Heavy who digs and finds, Careful the delicate work, Medium the everyday work, Light the
   fast one.
 - A review verdict carries its mark: accepted, returned (with its defects), escalated.

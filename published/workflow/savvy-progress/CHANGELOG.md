@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.27.0] - 2026-11-28
+- the agy family — Antigravity's "Claude and GPT models" quota read beside Gemini's from the same status files and agy /usage, its own tile, budget, gate and /savvy-budget agy; the agy relays' rows and tokens
+
+
 ## [1.26.1] - 2026-11-26
 - the budget tool and the gate wait for the agy reread a tick has started, the tick stops retrying a failed agy until a newer reading, a stale window already at 100 % still asks, agy timeout 10 s
 

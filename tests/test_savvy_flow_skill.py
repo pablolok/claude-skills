@@ -25,13 +25,19 @@ CODEX_RELAYS = ("savvy-codex-astra", "savvy-codex-luna", "savvy-codex-sol", "sav
 GEMINI_MODELS = {"savvy-gemini-argon": ("gemini-4-argon", "medium"), "savvy-gemini-carbon": ("gemini-4-carbon", "high"),
                  "savvy-gemini-flash": ("gemini-3.8-flash", "low"),
                  "savvy-gemini-hydrogen": ("gemini-4-hydrogen", "high"), "savvy-gemini-neon": ("gemini-4-neon", "medium")}
+#: The relays that run Claude and GPT models through the Antigravity CLI, on its "Claude and GPT models" quota.
+AGY_MODELS = {"savvy-agy-gpt": ("gpt-oss-120b", "medium"), "savvy-agy-opus": ("claude-opus-5-5", "high"),
+              "savvy-agy-sonnet": ("claude-sonnet-5-5", "medium")}
+AGY_RELAYS = tuple(AGY_MODELS)
+#: Every relay that runs `agy -p`, with the same status writer and the same settings.
+ANTIGRAVITY_MODELS = {**GEMINI_MODELS, **AGY_MODELS}
 GEMINI_RELAYS = tuple(GEMINI_MODELS)
-WORKERS = ("savvy-careful", *CODEX_RELAYS, "savvy-fable", *GEMINI_RELAYS, "savvy-heavy", "savvy-light", "savvy-medium",
-           "savvy-tools")
+WORKERS = (*AGY_RELAYS, "savvy-careful", *CODEX_RELAYS, "savvy-fable", *GEMINI_RELAYS, "savvy-heavy", "savvy-light",
+           "savvy-medium", "savvy-tools")
 #: The tiers that run with a tool allowlist rather than every tool the parent has.
 LEAN_WORKERS = ("savvy-light", "savvy-medium")
 #: The relays that run Codex or Gemini: lean too, and they edit no project file themselves.
-RELAY_WORKERS = (*CODEX_RELAYS, *GEMINI_RELAYS)
+RELAY_WORKERS = (*AGY_RELAYS, *CODEX_RELAYS, *GEMINI_RELAYS)
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.
 COPYRIGHT = "Copyright (c) 2026 johnnyvizz"
 PERMISSION = "The above copyright notice and this permission notice shall be included in all"
@@ -188,7 +194,7 @@ class TestWorkers(unittest.TestCase):
         self.assertIn("`codexStatus: <name>`", body, "the relay declares its status file to the agents panel")
 
     def test_the_gemini_relays_run_agy_and_edit_nothing_themselves(self) -> None:
-        for name, (model, effort) in GEMINI_MODELS.items():
+        for name, (model, effort) in ANTIGRAVITY_MODELS.items():
             with self.subTest(relay=name):
                 fields = frontmatter(_read(PUBLISHED / "agents" / f"{name}.md"))
                 tools = _flow_list(fields.get("tools", ""))
@@ -224,6 +230,27 @@ class TestWorkers(unittest.TestCase):
                 self.assertIn("`geminiStatus: <name>`", body, "the relay declares its status file to the agents panel")
                 self.assertIn("names a model wins", body)
                 self.assertNotIn("SAVVY_RELAY", body, "no hook guard: the run is an ordinary headless agy -p")
+
+    def test_the_antigravity_claude_and_gpt_relays_read_their_own_quota(self) -> None:
+        # The Claude and GPT models agy serves draw on the "Claude and GPT models" group, apart from Gemini's windows.
+        for name, (model, _) in AGY_MODELS.items():
+            with self.subTest(relay=name):
+                body = _flat(_read(PUBLISHED / "agents" / f"{name}.md"))
+                self.assertIn('the group named "Claude and GPT models" (not "Gemini Models"', body)
+                self.assertIn("`1970-01-01T00:00:00Z` means the window has not started", body)
+                self.assertIn(f"`{model}-<effort>` missing from the list", body)
+                self.assertNotIn("Gemini does", body, "the relay names the model it runs, not Gemini")
+
+    def test_the_antigravity_claude_and_gpt_tier_is_documented_and_budgeted_apart(self) -> None:
+        gemini = _flat(_read(PUBLISHED / GEMINI))
+        routing = _flat(_read(PUBLISHED / "references" / "routing.md"))
+        skill = _flat(_read(PUBLISHED / "SKILL.md"))
+        for name in AGY_RELAYS:
+            self.assertIn(f"`{name}`", skill, "the tier table lists every relay")
+        self.assertIn("### The Antigravity Claude and GPT tier", gemini)
+        self.assertIn("is not a second opinion from another family", gemini)
+        self.assertIn("budget family `agy`", gemini)
+        self.assertIn("Careful ↔ Gemini Hydrogen (Neon for a long review pass) ↔ Codex Sol ↔ Agy Opus", routing)
 
     def test_every_worker_closes_its_step_count_before_reporting(self) -> None:
         # The report itself is rarely reported as a step: without a closing call a finished worker stays at 5/7.
@@ -378,7 +405,7 @@ class TestModels(unittest.TestCase):
         routing = _flat(_read(PUBLISHED / "references" / "routing.md"))
         gemini = _flat(_read(PUBLISHED / GEMINI))
         self.assertIn("## Balancing the families", routing)
-        self.assertIn("Light ↔ Gemini Flash ↔ Codex Luna; Medium ↔ Gemini Argon ↔ Codex Terra", routing)
+        self.assertIn("Light ↔ Gemini Flash ↔ Codex Luna ↔ Agy GPT; Medium ↔ Gemini Argon ↔ Codex Terra ↔ Agy Sonnet", routing)
         self.assertIn("U means unmeasured, not weaker.", routing)
         self.assertIn("the families' weekly projections at reset come out close to one another", routing)
         self.assertIn("a window marked `stale: true` is an old reading", routing)

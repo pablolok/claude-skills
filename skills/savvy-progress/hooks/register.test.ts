@@ -5,7 +5,7 @@ import type { Engine } from 'claude-code/testing'
 import type { AgentRun, Flow, PlanUsage, UsageReadings } from '../types'
 import { budgetGate, budgetSummary, fitGate, planGate, clearFinished, decideBudget, projectPlanWindow, recordPlanUsage, tierEstimates, topTierGate, userWordsOf } from './register'
 import { activityOf, isCountLeftOpen, textWidth, planTile, formatPlanReset, claudePlanUsage, codexCostOf, codexPlanFrom, codexRun, codexStatusFrom, codexModelName, codexModelsFrom, costOf, figureSvg, fmtTokens, learnClaudeModels, plannedModel, planUsageText, progressOf, runModel, themeNamed, totals, windowOf } from './register'
-import { geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
+import { agyLimitsFrom, agyPlanFrom, agyUsageFrom, geminiLimitsFrom, geminiModelName, geminiPlanFrom, geminiRun, geminiStatusFrom, geminiUsageFrom } from './register'
 import { codexBody, crabBody, geminiBody, pixels, withBody } from './sprite'
 import { DRESSES, FLURRY_MS, THEMES, THEME_CSS, easter, themeOf, themeOn } from './themes'
 
@@ -1519,14 +1519,14 @@ test('with the language on it, the plan tiles, the budget command, the gate and 
   expect(header).toContain('0 min fa')
   expect(header).not.toContain(' plan ')
   expect(header).not.toContain('ago')
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro · Gemini ritmo.' })
-  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex|gemini> <entro|pieno|ritmo|una-volta>' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude entro · Codex entro · Gemini ritmo · Agy ritmo.' })
+  expect(await budgetCommand($, 'claude sempre')).toMatchObject({ text: 'Uso: /savvy-budget <claude|codex|gemini|agy> <entro|pieno|ritmo|una-volta>' })
   const refused = (await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny ?? ''
   expect(refused).toContain('Blocco del budget')
   expect(refused).toContain('/savvy-budget claude una-volta')
   expect(refused).not.toContain('Ask the user')
-  expect((await budgetCommand($, 'codex pieno')).text).toBe('Budget: Claude entro · Codex pieno · Gemini ritmo.')
-  expect((await budgetCommand($, 'claude una-volta')).text).toMatch(/^Budget: Claude entro · Codex pieno · Gemini ritmo\. Claude: via libera fino a /)
+  expect((await budgetCommand($, 'codex pieno')).text).toBe('Budget: Claude entro · Codex pieno · Gemini ritmo · Agy ritmo.')
+  expect((await budgetCommand($, 'claude una-volta')).text).toMatch(/^Budget: Claude entro · Codex pieno · Gemini ritmo · Agy ritmo\. Claude: via libera fino a /)
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
   expect(commands.find(c => c.name === 'savvy-budget')?.description).toContain('Imposta il budget')
   expect(commands.find(c => c.name === 'agents-info')?.description).toContain('Mostra o nasconde')
@@ -2930,16 +2930,18 @@ test('the budget summary exposes per-window values and user policy verdicts', ()
       week: { used: 20, resetsAt: budgetWindow(20, 'week').resetsAt, projectedAtReset: 40, exhaustsAt: null, pace: 'average', policy: 'full', verdict: 'ok', readAt: null, stale: false },
     },
     gemini: {},
+    agy: {},
   })
 })
 
 test('budget summary leaves absent windows out and unknown projections null', () => {
-  expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {}, gemini: {} })
+  expect(budgetSummary({ statuses: {} }, BUDGET_AT)).toEqual({ claude: {}, codex: {}, gemini: {}, agy: {} })
   expect(budgetSummary({ statuses: {}, claude: { fiveHour: { percentUsed: 12 } }, codex: { week: budgetWindow(90, 'week', 10081) } }, BUDGET_AT)).toEqual({
     claude: { fiveHour: { used: 12, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok', readAt: null, stale: false } },
     // A passed reset is a new window: nothing used yet, its reset not known until the next reading.
     codex: { week: { used: 0, resetsAt: null, projectedAtReset: null, exhaustsAt: null, pace: null, policy: 'pace', verdict: 'ok', readAt: null, stale: false } },
     gemini: {},
+    agy: {},
   })
 })
 
@@ -2960,19 +2962,19 @@ test('budget command lists defaults and persists only the chosen family through 
   const { state, registered } = budgetEngine(on)
   await start($)
   expect(registered.some(tool => tool.name === 'budget')).toBe(true)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
-  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace · Agy pace.' })
+  expect(await budgetCommand($, 'codex full')).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace · Agy pace.' })
   expect(state.usage().policies).toEqual({ codex: 'full' })
   await start($)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace.' })
-  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude pace · Codex within · Gemini pace.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex full · Gemini pace · Agy pace.' })
+  expect(await budgetCommand($, 'codex within')).toMatchObject({ text: 'Budget: Claude pace · Codex within · Gemini pace · Agy pace.' })
 })
 
 test('budget command rejects missing, extra or invalid arguments without changing policies', async ($, on) => {
   const { state } = budgetEngine(on)
   await start($)
   for (const args of ['claude', 'both full', 'claude unlimited', 'claude full extra']) {
-    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex|gemini> <within|full|pace|once>' })
+    expect(await budgetCommand($, args)).toMatchObject({ text: 'Usage: /savvy-budget <claude|codex|gemini|agy> <within|full|pace|once>' })
   }
   expect(state.usage().policies).toBeUndefined()
 })
@@ -3218,7 +3220,7 @@ test('the user opens the gate with /savvy-budget <family> once until the next re
   seed()
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeDefined()
   const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
-  expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within · Gemini pace. Claude: go until ${until}.` })
+  expect(await budgetCommand($, 'claude once')).toMatchObject({ text: `Budget: Claude within · Codex within · Gemini pace · Agy pace. Claude: go until ${until}.` })
   expect(state.usage().decisions?.claude).toMatchObject({ by: 'user', until: budgetWindow().resetsAt })
   expect(state.usage().policies).toEqual({ claude: 'within', codex: 'within' })
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-heavy' })).deny).toBeUndefined()
@@ -3627,7 +3629,7 @@ test('the bar title shows the pace policy', async ($, on) => {
 test('/savvy-budget <family> pace sets the policy and lists it', async ($, on) => {
   const { state } = budgetEngine(on)
   await start($)
-  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
+  expect(await budgetCommand($, 'claude pace')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace · Agy pace.' })
   expect(state.usage().policies).toEqual({ claude: 'pace' })
 })
 
@@ -3676,8 +3678,8 @@ test('a policy the user stored as within still refuses, and /savvy-budget within
   expect(budgetGate('savvy-heavy', within, [], BUDGET_AT)).toContain('/savvy-budget claude once')
   const { state } = budgetEngine(on)
   await start($)
-  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace.' })
-  expect(await budgetCommand($, 'claude within')).toMatchObject({ text: 'Budget: Claude within · Codex pace · Gemini pace.' })
+  expect(await budgetCommand($)).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini pace · Agy pace.' })
+  expect(await budgetCommand($, 'claude within')).toMatchObject({ text: 'Budget: Claude within · Codex pace · Gemini pace · Agy pace.' })
   expect(state.usage().policies).toEqual({ claude: 'within' })
 })
 
@@ -3700,6 +3702,11 @@ const AGY_USAGE = { conversation_id: '', status: 'SUCCESS', duration_seconds: 0,
 const GEMINI_PLAN: PlanUsage = {
   fiveHour: { percentUsed: 1, resetsAt: '2026-11-24T02:24:13.000Z' },
   week: { percentUsed: 0, resetsAt: '2026-11-30T21:24:13.000Z' },
+}
+// The same reading's "Claude and GPT models" group: the agy family.
+const AGY_PLAN: PlanUsage = {
+  fiveHour: { percentUsed: 50, resetsAt: '2026-11-24T03:21:10.000Z' },
+  week: { percentUsed: 0, resetsAt: '2026-11-30T22:21:10.000Z' },
 }
 // The stream-json `result.usage` of a live flash run: cache reads are apart from the input.
 const GEMINI_USAGE = { input_tokens: 13534, output_tokens: 460, thinking_tokens: 276, cache_read_tokens: 9099, total_tokens: 13994 }
@@ -3829,7 +3836,7 @@ test('the progress tool takes the Gemini tiers, and decide takes carbon', async 
   expect(schema.properties.tasks.items.properties.tier.enum).toEqual(expect.arrayContaining(GEMINI.map(([tier]) => tier)))
   const decide = registered.find(t => t.name === 'decide')?.inputSchema as { properties: { tier: { enum: string[] }; family: { enum: string[] } } }
   expect(decide.properties.tier.enum).toEqual(['fable', 'astra', 'carbon'])
-  expect(decide.properties.family.enum).toEqual(['claude', 'codex', 'gemini'])
+  expect(decide.properties.family.enum).toEqual(['claude', 'codex', 'gemini', 'agy'])
 })
 
 test('a Gemini slug names its family and version; any other is shown as given', () => {
@@ -3921,7 +3928,7 @@ test('an invalid Gemini bucket is skipped, and the first bucket of a window wins
 })
 
 test('a bounded Gemini status parses its windows and counters, cache reads above the input included', () => {
-  expect(geminiStatusFrom(JSON.stringify(GEMINI_ONE))).toEqual({ ...GEMINI_ONE, rateLimits: GEMINI_PLAN })
+  expect(geminiStatusFrom(JSON.stringify(GEMINI_ONE))).toEqual({ ...GEMINI_ONE, rateLimits: GEMINI_PLAN, agyRateLimits: AGY_PLAN })
   expect(geminiStatusFrom(JSON.stringify({ ...GEMINI_ONE, rateLimits: null }))?.rateLimits).toBeUndefined()
 })
 
@@ -4105,12 +4112,12 @@ test('/savvy-budget gemini sets its policy alone, and once opens its gate until 
   const { state } = budgetEngine(on)
   launching($, on)
   await start($)
-  expect(await budgetCommand($, 'gemini full')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini full.' })
+  expect(await budgetCommand($, 'gemini full')).toMatchObject({ text: 'Budget: Claude pace · Codex pace · Gemini full · Agy pace.' })
   expect(state.usage().policies).toEqual({ gemini: 'full' })
   state.seed('usage', GEMINI_ASKS)
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-gemini-hydrogen' })).deny).toContain('/savvy-budget gemini once')
   const until = formatPlanReset(budgetWindow(), true, BUDGET_AT, { locale: 'en-GB' }).slice(2)
-  expect(await budgetCommand($, 'gemini once')).toMatchObject({ text: `Budget: Claude pace · Codex pace · Gemini within. Gemini: go until ${until}.` })
+  expect(await budgetCommand($, 'gemini once')).toMatchObject({ text: `Budget: Claude pace · Codex pace · Gemini within · Agy pace. Gemini: go until ${until}.` })
   expect((await launch($, 'dig', { subagent_type: 'savvy-flow:savvy-gemini-hydrogen' })).deny).toBeUndefined()
 })
 
@@ -4795,4 +4802,76 @@ test('a stale window already at its limit still asks: within a window usage only
   const full: UsageReadings = { ...STALE_GEMINI, gemini: { ...STALE_GEMINI.gemini, week: { ...STALE_GEMINI.gemini!.week!, percentUsed: 100 } } }
   expect(budgetSummary(full, BUDGET_AT).gemini.week).toMatchObject({ stale: true, verdict: 'ask' })
   expect(budgetGate('savvy-flow:savvy-gemini-hydrogen', full, [], BUDGET_AT)).toContain('Budget gate')
+})
+
+// ---------------------------------------------------------------------------
+// The agy family: Antigravity's "Claude and GPT models" quota, read beside Gemini's from the same files and /usage.
+
+test('agy\'s /usage output gives the Claude and GPT models group as the agy family, never as Gemini', () => {
+  expect(agyLimitsFrom(AGY_USAGE.command.data)).toEqual(AGY_PLAN)
+  expect(agyUsageFrom(JSON.stringify(AGY_USAGE))).toEqual(AGY_PLAN)
+  expect(geminiUsageFrom(JSON.stringify(AGY_USAGE))).toEqual(GEMINI_PLAN)
+  expect(agyLimitsFrom({ groups: [AGY_USAGE.command.data.groups[0]] })).toBeUndefined()
+})
+
+test('an agy window not started yet (reset 1970) reads unused, with no reset and no projection', () => {
+  // As measured live before any Claude or GPT run: both buckets full, reset_time at the epoch.
+  const unused = agyLimitsFrom({ groups: [{ name: 'Claude and GPT models', buckets: [
+    { id: '3p-weekly', window: 'weekly', remaining_fraction: 1, reset_time: '1970-01-01T00:00:00Z' },
+    { id: '3p-5h', window: '5h', remaining_fraction: 1, reset_time: '1970-01-01T00:00:00Z' },
+  ] }] })
+  expect(unused).toBeDefined()
+  const summary = budgetSummary({ statuses: {}, agy: unused, policies: { agy: 'within' } }, BUDGET_AT)
+  for (const key of ['fiveHour', 'week'] as const) {
+    expect(summary.agy[key]).toMatchObject({ used: 0, resetsAt: null, projectedAtReset: null, exhaustsAt: null, verdict: 'ok' })
+  }
+})
+
+test('the agy reading comes from a relay status and from a plan-only snapshot', () => {
+  expect(agyPlanFrom(JSON.stringify(GEMINI_ONE))).toEqual({ rateLimits: AGY_PLAN, updatedAt: 100 })
+  expect(agyPlanFrom(JSON.stringify(GEMINI_SNAPSHOT))).toEqual({ rateLimits: AGY_PLAN, updatedAt: 300 })
+  expect(agyPlanFrom(JSON.stringify({ ...GEMINI_ONE, rateLimits: null }))).toBeUndefined()
+  expect(agyPlanFrom('broken')).toBeUndefined()
+})
+
+test('a Gemini status file sets the agy family\'s plan beside Gemini\'s', async ($, on) => {
+  const { state } = engine(on, { infos: [] }, 0, { HOME: '/home/worker' })
+  geminiFiles(on)
+  state.seed(AGENTS, [geminiRelay()])
+  await start($)
+  expect(state.usage().gemini).toEqual(GEMINI_PLAN)
+  expect(state.usage().agy).toEqual(AGY_PLAN)
+  expect(state.usage().agyReadAt).toBe(100)
+  expect(planUsageText(state.usage(), Date.parse('2026-11-24T00:00:00Z'))).toContain('Agy 50/0%')
+})
+
+const AGY_ASKS: UsageReadings = { statuses: {}, agy: { fiveHour: budgetWindow() }, policies: { agy: 'within' } }
+
+test("the gate holds agy's Claude relays while agy asks, and only them", () => {
+  for (const type of ['savvy-flow:savvy-agy-opus', 'savvy-agy-sonnet']) {
+    const refusal = budgetGate(type, AGY_ASKS, [], BUDGET_AT)
+    expect(refusal).toContain('Agy')
+    expect(refusal).toContain('/savvy-budget agy once')
+  }
+  for (const type of ['savvy-agy-gpt', 'savvy-gemini-hydrogen', 'savvy-careful']) {
+    expect(budgetGate(type, AGY_ASKS, [], BUDGET_AT)).toBeUndefined()
+  }
+  // A Gemini ask does not hold agy back, and Gemini's yes does not open it.
+  expect(budgetGate('savvy-agy-opus', GEMINI_ASKS, [], BUDGET_AT)).toBeUndefined()
+  expect(budgetGate('savvy-agy-opus', decideBudget(AGY_ASKS, 'gemini', BUDGET_AT, 'user'), [], BUDGET_AT)).toBeDefined()
+  expect(budgetGate('savvy-agy-opus', decideBudget(AGY_ASKS, 'agy', BUDGET_AT, 'user'), [], BUDGET_AT)).toBeUndefined()
+})
+
+test('an agy relay shows the model it runs, not the relay\'s, and its tokens on a line of their own', () => {
+  const opus = run('o', { type: 'savvy-flow:savvy-agy-opus', model: 'claude-sonnet-5-5', geminiModel: 'claude-opus-5-5', geminiEffort: 'high' })
+  expect(runModel(opus)).toBe('Opus 5.5 · high')
+  expect(runModel(run('g', { type: 'savvy-agy-gpt', model: 'claude-sonnet-5-5', geminiModel: 'gpt-oss-120b' }))).toBe('GPT-OSS 120B · medium')
+  expect(runModel(run('s', { type: 'savvy-agy-sonnet', model: 'claude-sonnet-5-5' }))).toBe('Sonnet')
+  expect(plannedModel({ title: 't', tier: 'agy-opus' } as never)).toBe('Opus')
+  const usage: UsageReadings = { statuses: {}, geminiStatuses: { 'agy-one': { ...GEMINI_ONE, sessionId: 'c1', model: 'claude-opus-5-5', state: 'done', rateLimits: undefined } as never } }
+  const t = totals([run('o', { type: 'savvy-agy-opus', geminiStatus: 'agy-one', status: 'done', endedAt: 5 })], 10, usage)
+  expect(t.showsAgy).toBe(true)
+  expect(t.showsGemini).toBe(false)
+  expect(t.agy.tokens).toBe(GEMINI_USAGE.input_tokens + GEMINI_USAGE.cache_read_tokens + GEMINI_USAGE.output_tokens)
+  expect(t.gemini.tokens).toBeUndefined()
 })

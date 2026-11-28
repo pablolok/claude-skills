@@ -38,7 +38,7 @@ REGISTERED = ("name: 'progress'", "name: 'step'", "name: 'agents-info'", "'mcp__
 #: the model its Agent call passes (the values that tool takes), and an agent of no tier by its type.
 DECLARED = ("const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max']",
             "const MODELS: readonly string[] = ['fable', 'opus', 'sonnet', 'haiku']", "enum: [...EFFORTS]",
-            "enum: [...MODELS]", "...Object.keys(CODEX_WEARS), 'other']", "agent: { type: 'string'")
+            "enum: [...MODELS]", "...Object.keys(CODEX_WEARS), ...Object.keys(AGY_WEARS), 'other']", "agent: { type: 'string'")
 #: What a worker may add to its closing count, as its definition tells it to: the planned steps it left undone.
 SKIPPED = ("skipped: {", "stepSkipped", "skipped: 'skipped'")
 #: The MIT licence asks for its copyright and permission notice to stay with every copy.

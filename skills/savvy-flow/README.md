@@ -33,6 +33,7 @@ plugin (its `agents/` folder): a managed copy under `.claude/skills/savvy-flow/`
 | `agents/savvy-tools.md` | Sonnet / medium with the session's connected tools (MCP servers, apps): mechanical work through them from a recipe in the brief. |
 | `agents/savvy-codex-luna.md` … `savvy-codex-astra.md` | Sonnet / low relays for the Codex CLI, one per OpenAI intensity (Luna, Terra, Sol, Astra): each picks the newest model of its family from Codex's model list, runs one task with `codex exec` (sandboxed), checks the diff and the tests, reports the Codex usage. |
 | `agents/savvy-gemini-flash.md` … `savvy-gemini-carbon.md` | Sonnet / low relays for the Antigravity CLI (`agy`), one per Gemini intensity (Flash, Argon, Neon, Hydrogen, Carbon): each runs one task with `agy -p` (sandboxed, git state and, for a second opinion, every write and command denied by its settings), checks the refusals, the diff and the tests, reports the Gemini usage. |
+| `agents/savvy-agy-opus.md`, `savvy-agy-sonnet.md`, `savvy-agy-gpt.md` | The same relays for the Claude and GPT models the Antigravity CLI serves on its own quota ("Claude and GPT models"): Opus 5.5 (high), Sonnet 5.5 (medium), GPT-OSS 120B (medium); they report that quota's windows. |
 | `LICENSE` | The upstream MIT licence. |
 
 `savvy-fable` runs on the Fable model (`model: fable` in its file). Every worker denies the host app's task-list and
@@ -128,6 +129,16 @@ Code's skills: the brief names each `SKILL.md` a task needs by absolute path. Th
 conversation, plan windows). The plan windows come from `agy -p /usage --output-format json`, which calls no model:
 the writer runs it once the stream ends and keeps its `command.data` as `rateLimits`. The rules are in
 `references/gemini.md`; the recorded probes behind the tests are in `scripts/fixtures/README.md`.
+
+### Claude and GPT through Antigravity
+
+The same sign-in also serves Claude Opus 5.5, Claude Sonnet 5.5 and GPT-OSS 120B on a quota of their own, the
+`/usage` group "Claude and GPT models", with 5-hour and weekly windows apart from Gemini's. When `agy models` lists
+them, the relays `savvy-agy-opus` (Careful-sized work, effort high, no xhigh), `savvy-agy-sonnet` (Medium) and
+`savvy-agy-gpt` (Light, mechanical work) run them exactly as the Gemini relays run Gemini. The savvy-progress panel
+budgets that quota as its own family, `agy`. The quota is small for Claude models (one trivial Opus run took about
+3 % of the 5-hour window), so the tier takes short, self-contained tasks, and Opus or Sonnet through it never counts
+as a second opinion from another family on Claude work. The rules are in `references/gemini.md`.
 
 ## Themes
 

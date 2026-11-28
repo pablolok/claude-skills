@@ -102,7 +102,7 @@ export type ModelHints = {
 
 export type PlanWindow = { percentUsed: number; resetsAt?: string }
 export type PlanUsage = { fiveHour?: PlanWindow; week?: PlanWindow }
-export type PlanFamily = 'claude' | 'codex' | 'gemini'
+export type PlanFamily = 'claude' | 'codex' | 'gemini' | 'agy'
 export type PlanWindowKey = keyof PlanUsage
 export type BudgetPolicy = 'within' | 'full' | 'pace'
 /** spentUsd: the family's estimated session spend when the reading was taken, when known. */
@@ -174,6 +174,8 @@ export type GeminiStatus = {
   action: string
   totalTokenUsage: GeminiTokens
   rateLimits?: PlanUsage
+  /** The same /usage reading's "Claude and GPT models" group: Antigravity's quota for third-party models. */
+  agyRateLimits?: PlanUsage
   updatedAt: number
 }
 export type UsageReadings = {
@@ -210,6 +212,10 @@ export type UsageReadings = {
   geminiProbeAt?: number
   /** When that ask last failed (signed out, agy missing or slow); cleared by the next answer. */
   geminiProbeFailedAt?: number
+  /** Antigravity's "Claude and GPT models" quota, read from the same status files and /usage answer as Gemini. */
+  agy?: PlanUsage
+  /** When the last valid reading of that quota was made (its file's updatedAt, or agy's answer). */
+  agyReadAt?: number
 }
 
 // What the agents panel shows, copied from the live values once a second: the

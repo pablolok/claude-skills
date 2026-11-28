@@ -57,3 +57,40 @@ the plan at each tier by the rules of "Balancing the families" in `references/ro
 - **Gemini has its own connected tools.** It reaches an MCP server only when the Antigravity CLI's own configuration
   declares it (`agy mcp list`), whatever the Claude session has. Check before routing a connected-tool task to a relay;
   a server Gemini lacks is added there on the user's yes, never by a worker.
+
+### The Antigravity Claude and GPT tier
+
+The Antigravity sign-in also serves third-party models on a quota of their own: the `/usage` group "Claude and GPT
+models" (Claude Opus 5.5, Claude Sonnet 5.5, GPT-OSS 120B on 2026-11-28), with a 5-hour and a weekly window apart from
+"Gemini Models". The progress tool budgets it as its own family, budget family `agy`, read from the same relay status
+files and the same `agy -p /usage` as Gemini; a window that has not started reads `reset_time` `1970-01-01T00:00:00Z`
+and counts as unused. Its relays run exactly as the Gemini relays do (the same preflight, settings, sandbox, status
+writer and checks), one model each:
+- **`savvy-agy-opus`** (`claude-opus-5-5`, effort high; it takes low, medium and high, no xhigh): Careful-sized work
+  with a clear approach, and Opus's check of a Codex or Gemini implementation for design and fit (rule 10 of
+  `references/routing.md`), moved off the Claude plan's windows. Heavy-sized investigation stays with Heavy: there is
+  no xhigh here.
+- **`savvy-agy-sonnet`** (`claude-sonnet-5-5`, effort medium; low for Light-sized work): Medium-sized work.
+- **`savvy-agy-gpt`** (`gpt-oss-120b`, effort medium, its only one): Light-sized mechanical work (edits, boilerplate,
+  running and reporting checks). It is an open-weight model with no rating here: no reviews, no second opinions and no
+  delicate code until "Observed in use" has evidence.
+
+Rules of the tier:
+- **The quota is small for Claude models.** Measured on 2026-11-28 with one trivial task (read a file, answer in a
+  word): `claude-opus-5-5` high, 14.4k tokens, moved the 5-hour window by 3.3 % and the week by 1.6 %;
+  `claude-sonnet-5-5` low, 12.3k tokens, by 1.4 % and 0.7 %; `gpt-oss-120b` medium, 9.5k tokens, by 0.04 % and 0.02 %.
+  The week holds about two full 5-hour windows, so it is the binding limit: give this tier short, self-contained
+  tasks (a handful of Opus runs per window), never long loops, and keep GPT-OSS for the bulk of mechanical work.
+- **Same family as Claude.** Opus and Sonnet through agy are Anthropic's models: their check of a Claude worker's
+  diff is not a second opinion from another family (that stays Codex Sol or Gemini Hydrogen). They move load off the
+  Claude plan and off Gemini's windows, nothing more.
+- **When to use it.** For its share when the user has asked to balance the families, by headroom like any other
+  family (the `agy` family's own windows at or under 100 %); when the Claude plan's or Gemini's windows are tight and
+  the user has asked to move work off them; or when the user asks for it. Never move work there on your own to spare
+  Claude.
+- **Budget gate.** Agy Opus and Agy Sonnet are the costly tiers of family `agy`: under `within`, its `ask` verdict
+  holds them back until the user decides, as for the other families (`/savvy-budget agy …`).
+- **Skills and instructions.** Through agy, Claude models do not load Claude Code's skills or `CLAUDE.md` either: the
+  brief names each `SKILL.md` by absolute path, as for Gemini.
+- Its report ends with the run's tokens and the "Claude and GPT models" windows. Pass them on in your close report;
+  its work gets the same adversarial review as any other tier.
